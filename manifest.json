@@ -1,0 +1,26 @@
+{
+  "name": "약효일지 · ON·OFF 기록",
+  "short_name": "약효일지",
+  "description": "파킨슨 약효 변동(ON·OFF·이상운동)을 기록하고 진료용 보고서를 만드는 도구",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F5F7FA",
+  "theme_color": "#1FA971",
+  "lang": "ko",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='42' fill='%231FA971'/%3E%3Cpath d='M28 116 L60 116 L74 70 L96 134 L116 96 L130 116 L164 116' fill='none' stroke='white' stroke-width='11' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%231FA971'/%3E%3Cpath d='M74 308 L160 308 L196 186 L256 358 L308 256 L346 308 L438 308' fill='none' stroke='white' stroke-width='28' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
