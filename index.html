@@ -250,6 +250,28 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
     <div id="dayCards"></div>
   </section>
 
+  <!-- CURVE -->
+  <section class="tab" id="tab-curve">
+    <div class="btn-row no-print" style="margin-bottom:10px">
+      <select id="curveDate" class="btn" style="font-weight:700"></select>
+    </div>
+    <div class="chart-card">
+      <div class="card-title"><span>약효 추정 곡선</span><span id="curveRange"></span></div>
+      <div id="curveChart"></div>
+      <div class="legend">
+        <span><i style="background:#1FA971"></i>추정 도파민 작용</span>
+        <span><i style="background:#5C93D6"></i>출력 점수</span>
+        <span><i style="background:#E0A030"></i>보행 점수</span>
+        <span><i style="background:#E8663C"></i>이상운동 구간</span>
+        <span><i style="background:#54657A"></i>OFF 구간</span>
+      </div>
+    </div>
+    <div class="disclaimer" style="margin:10px 0">
+      이 곡선은 실측 혈중 도파민 농도가 아니라, 복약 시간·약물별 일반적 흡수 프로파일(퍼킨=급상승형, HBS=완만 지속형, 온젠티스=연장형)과 형이 직접 기록한 출력·보행·이상운동 점수를 결합해 추정한 "기능적 약효 곡선"입니다. 주치의 상담 시 참고 자료로만 활용하세요.
+    </div>
+    <div id="curveEventList"></div>
+  </section>
+
   <!-- REPORT -->
   <section class="tab" id="tab-report">
     <div class="btn-row no-print">
@@ -304,6 +326,7 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
     <button data-tab="today" class="active"><span class="ic">🏠</span>오늘</button>
     <button data-tab="log"><span class="ic">📋</span>기록</button>
     <button data-tab="trend"><span class="ic">📈</span>추이</button>
+    <button data-tab="curve"><span class="ic">🌊</span>곡선</button>
     <button data-tab="report"><span class="ic">🩺</span>보고서</button>
     <button data-tab="set"><span class="ic">⚙️</span>설정</button>
   </div>
@@ -334,6 +357,51 @@ const LIFE = {
 };
 const MEAL_TYPES = ["아침","점심","저녁","간식"];
 const MED_PRESETS = ["마도파","마도파 HBS","시네메트","시네메트 CR","스타레보","퍼킨","온젠티스(엔타카폰)","아질렉트","미라펙스","리큅","아만타딘","컴탄"];
+
+/* ---------- kinetic profiles for curve tab ----------
+   type: "fast"  = 빠른 상승/짧은 지속 (즉시방출 레보도파류: 퍼킨, 시네메트, 마도파(일반), 스타레보)
+         "slow"  = 완만한 상승/긴 지속 (서방정: HBS, CR)
+         "extend"= 곡선을 옆으로 늘려주는 보조제 (온젠티스/컴탄=COMT억제제, 아질렉트=MAO-B억제제)
+         "flat"  = 완만한 기저 상승 (도파민 효능제, 아만타딘)
+   peakMin: 투여 후 피크까지 걸리는 시간(분)
+   durMin: 전체 지속시간(분, 반감기 기반 근사)
+   amp: 상대적 기여도(1.0 = 표준 1회 용량 기준) */
+const MED_KINETICS = {
+  "퍼킨":               {type:"fast",  peakMin:35,  durMin:150, amp:1.0},
+  "시네메트":            {type:"fast",  peakMin:40,  durMin:150, amp:1.0},
+  "마도파":              {type:"fast",  peakMin:40,  durMin:150, amp:1.0},
+  "스타레보":            {type:"fast",  peakMin:45,  durMin:200, amp:1.1},
+  "마도파 HBS":          {type:"slow",  peakMin:90,  durMin:300, amp:0.9},
+  "시네메트 CR":         {type:"slow",  peakMin:100, durMin:300, amp:0.9},
+  "온젠티스(엔타카폰)":   {type:"extend",peakMin:0,   durMin:0,   amp:0.25},
+  "컴탄":                {type:"extend",peakMin:0,   durMin:0,   amp:0.25},
+  "아질렉트":            {type:"extend",peakMin:0,   durMin:0,   amp:0.15},
+  "미라펙스":            {type:"flat",  peakMin:180, durMin:480, amp:0.5},
+  "리큅":                {type:"flat",  peakMin:180, durMin:480, amp:0.5},
+  "아만타딘":            {type:"flat",  peakMin:120, durMin:360, amp:0.3},
+};
+function kineticFor(name){
+  if(MED_KINETICS[name]) return MED_KINETICS[name];
+  // fuzzy match by substring for custom-named meds
+  const n=name||"";
+  if(n.includes("HBS")||n.includes("CR")||n.includes("서방")) return {type:"slow",peakMin:90,durMin:300,amp:0.9};
+  if(n.includes("온젠티스")||n.includes("엔타카폰")||n.includes("컴탄")||n.includes("콤탄")) return {type:"extend",peakMin:0,durMin:0,amp:0.25};
+  if(n.includes("아질렉트")||n.includes("셀레길린")) return {type:"extend",peakMin:0,durMin:0,amp:0.15};
+  if(n.includes("미라펙스")||n.includes("리큅")||n.includes("프라미펙솔")||n.includes("로피니롤")) return {type:"flat",peakMin:180,durMin:480,amp:0.5};
+  if(n.includes("아만타딘")) return {type:"flat",peakMin:120,durMin:360,amp:0.3};
+  return {type:"fast",peakMin:40,durMin:150,amp:1.0}; // default: assume immediate-release levodopa-like
+}
+/* single-dose contribution curve value at "minutes since dose" t, using a gamma-like rise/fall */
+function doseCurve(prof, t){
+  if(t<0) return 0;
+  const {peakMin,durMin,amp,type}=prof;
+  if(type==="extend") return 0; // extenders modify multiplier elsewhere, not additive
+  const k = peakMin<=0? 1 : t/peakMin;
+  const rise = 1-Math.exp(-3*k);
+  const fallTau = Math.max(durMin-peakMin, 30);
+  const fall = Math.exp(-Math.max(0,t-peakMin)/fallTau);
+  return amp*rise*fall;
+}
 const KEY = "yakhyo_log_v1";
 
 let db = load();
@@ -632,6 +700,144 @@ function buildChart(recent){
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet" style="display:block">${bars}</svg>`;
 }
 
+/* ---------- render: CURVE ---------- */
+function curveDayKeys(){ return Object.keys(byDay()).sort().reverse(); }
+function populateCurveDateSelect(){
+  const sel=document.getElementById("curveDate"); const keys=curveDayKeys();
+  const prev=sel.value;
+  sel.innerHTML = keys.length? keys.map(k=>`<option value="${k}">${fmtDateK(k)}</option>`).join("")
+                             : `<option value="${todayKey()}">${fmtDateK(todayKey())}</option>`;
+  if(prev && keys.includes(prev)) sel.value=prev; else sel.value=keys[0]||todayKey();
+}
+/* compute the estimated curve for one day's events, sampled every 10 min from 05:00 to 26:00 (next 2am) */
+function computeCurve(dayEvents, dayKey){
+  const [Y,Mo,Da] = dayKey.split("-").map(Number);
+  const dayStart = new Date(Y,Mo-1,Da,5,0,0).getTime(); // 05:00
+  const dayEnd   = new Date(Y,Mo-1,Da,26,0,0).getTime(); // 02:00 next day (extended)
+  const step = 10*60*1000;
+  const meds = dayEvents.filter(e=>e.type==="med");
+  const states = dayEvents.filter(e=>e.type==="state").sort((a,b)=>a.ts-b.ts);
+  // extend multiplier: sums of active extenders (COMT/MAO-B) at time t, decaying slowly over ~5h
+  function extendMultiplier(t){
+    let m=1;
+    meds.forEach(me=>{
+      const prof=kineticFor(me.drug);
+      if(prof.type==="extend" && t>=me.ts){
+        const hrs=(t-me.ts)/3600000;
+        if(hrs<5) m += prof.amp*(1-hrs/5);
+      }
+    });
+    return m;
+  }
+  const pts=[];
+  for(let t=dayStart; t<=dayEnd; t+=step){
+    let base=0;
+    meds.forEach(me=>{
+      const prof=kineticFor(me.drug);
+      if(prof.type==="extend") return;
+      const minsSince=(t-me.ts)/60000;
+      base += doseCurve(prof, minsSince) * (me.dose? Math.min(2,me.dose/100) : 1);
+    });
+    const val = Math.max(0, Math.min(100, base*extendMultiplier(t)*45));
+    pts.push({t,val});
+  }
+  // nearest-state lookup for output/gait/dysk overlay + off/dysk shading windows
+  function nearestState(t){
+    let best=null, bestDiff=Infinity;
+    states.forEach(s=>{ const d=Math.abs(s.ts-t); if(s.ts<=t+15*60000 && d<bestDiff){ bestDiff=d; best=s; } });
+    return best;
+  }
+  const overlay = pts.map(p=>{
+    const s=nearestState(p.t);
+    return { t:p.t, output:s&&s.output!=null? s.output:null, gait:s&&s.gait!=null? s.gait:null,
+             state: s? s.state:null };
+  });
+  return {pts, overlay, meds, states};
+}
+function svgCurve(dayKey){
+  const days=byDay(); const dayEvents=days[dayKey]||[];
+  if(!dayEvents.length) return `<div class="hint" style="padding:24px 0;text-align:center">이 날짜에는 아직 기록이 없어요.<br>홈 탭에서 상태·복약을 기록하면 여기에 곡선이 그려져요.</div>`;
+  const {pts,overlay,meds,states} = computeCurve(dayEvents, dayKey);
+  if(!pts.length || !meds.length) return `<div class="hint" style="padding:24px 0;text-align:center">이 날은 복약 기록이 없어서 약효 곡선을 계산할 수 없어요.<br>상태·생활 기록만으로는 곡선을 그릴 수 없고, 💊 복약 기록이 있어야 해요.</div>`;
+  const W=760, H=220, padL=30, padR=10, padT=10, padB=26;
+  const plotW=W-padL-padR, plotH=H-padT-padB;
+  const t0=pts[0].t, t1=pts[pts.length-1].t;
+  const x = t => padL + (t-t0)/(t1-t0)*plotW;
+  const y = v => padT + plotH - (v/100)*plotH;
+
+  // background shaded regions for dysk / off based on state events
+  let shading="";
+  for(let i=0;i<states.length;i++){
+    const s=states[i]; const next=states[i+1]; const segEnd = next? next.ts : t1;
+    const segStart = Math.max(s.ts, t0); const segEndC = Math.min(segEnd, t1);
+    if(segEndC<=segStart) continue;
+    let col=null;
+    if(s.state==="dysk"||s.state==="dyst") col="rgba(232,102,60,.16)";
+    else if(s.state==="off"||s.state==="wearoff") col="rgba(84,101,122,.14)";
+    else if(s.state==="on") col="rgba(31,169,113,.10)";
+    if(col) shading += `<rect x="${x(segStart)}" y="${padT}" width="${Math.max(0,x(segEndC)-x(segStart))}" height="${plotH}" fill="${col}"/>`;
+  }
+
+  // main estimated dopamine-action curve (filled area + line)
+  const linePts = pts.map(p=>`${x(p.t)},${y(p.val)}`).join(" ");
+  const areaPts = `${padL},${y(0)} ${linePts} ${x(t1)},${y(0)}`;
+
+  // output/gait overlay lines (scaled 0-10 -> 0-100)
+  const outputPts = overlay.filter(o=>o.output!=null).map(o=>`${x(o.t)},${y(o.output*10)}`);
+  const gaitPts = overlay.filter(o=>o.gait!=null).map(o=>`${x(o.t)},${y(o.gait*10)}`);
+
+  // med dose markers
+  let medMarks="";
+  meds.forEach(m=>{
+    if(m.ts<t0||m.ts>t1) return;
+    const mx=x(m.ts);
+    medMarks += `<line x1="${mx}" y1="${padT}" x2="${mx}" y2="${padT+plotH}" stroke="#516072" stroke-width="1" stroke-dasharray="2,3" opacity=".55"/>`;
+    medMarks += `<circle cx="${mx}" cy="${padT+plotH+2}" r="3" fill="#516072"/>`;
+  });
+
+  // x-axis hour labels every 2 hours
+  let axisLabels="";
+  const startHour = new Date(t0).getHours();
+  for(let h=0; h<=(t1-t0)/3600000; h+=2){
+    const tt = t0 + h*3600000;
+    const lab = new Date(tt).getHours()%24;
+    axisLabels += `<text x="${x(tt)}" y="${H-8}" font-size="9" fill="var(--ink-2)" text-anchor="middle">${lab}시</text>`;
+  }
+
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet" style="display:block">
+    ${shading}
+    <polygon points="${areaPts}" fill="#1FA971" opacity=".16"/>
+    <polyline points="${linePts}" fill="none" stroke="#1FA971" stroke-width="2.4"/>
+    ${outputPts.length>1? `<polyline points="${outputPts.join(" ")}" fill="none" stroke="#5C93D6" stroke-width="1.6" stroke-dasharray="4,3"/>`:""}
+    ${gaitPts.length>1? `<polyline points="${gaitPts.join(" ")}" fill="none" stroke="#E0A030" stroke-width="1.6" stroke-dasharray="1,3"/>`:""}
+    ${medMarks}
+    ${axisLabels}
+  </svg>`;
+}
+function curveEventListHtml(dayKey){
+  const days=byDay(); const evs=(days[dayKey]||[]).slice().sort((a,b)=>a.ts-b.ts);
+  if(!evs.length) return "";
+  const rows = evs.map(e=>{
+    if(e.type==="med") return `<div class="li"><div class="grow"><div class="name">💊 ${escapeHtml(e.drug)}${e.dose?` ${e.dose}mg`:""}</div><div class="meta">${hm(e.ts)}</div></div></div>`;
+    if(e.type==="state"){ const s=SMAP[e.state]; const extra=[e.output!=null?`출력 ${e.output}`:"",e.gait!=null?`보행 ${e.gait}`:"",e.dysk!=null?`이상운동 강도 ${e.dysk}`:""].filter(Boolean).join(" · ");
+      return `<div class="li"><div class="grow"><div class="name" style="color:${s.color}">${s.ko}</div><div class="meta">${hm(e.ts)}${extra?" · "+extra:""}</div></div></div>`; }
+    const L=LIFE[e.kind]; return `<div class="li"><div class="grow"><div class="name">${L.icon} ${e.kind==="meal"?(e.mealType||"식사"):L.ko}</div><div class="meta">${hm(e.ts)}</div></div></div>`;
+  }).join("");
+  return `<div class="section-label">이 날 기록</div><div class="list-card">${rows}</div>`;
+}
+function renderCurve(){
+  populateCurveDateSelect();
+  const sel=document.getElementById("curveDate");
+  const draw=()=>{
+    const k=sel.value||todayKey();
+    document.getElementById("curveRange").textContent=fmtDateK(k);
+    document.getElementById("curveChart").innerHTML=svgCurve(k);
+    document.getElementById("curveEventList").innerHTML=curveEventListHtml(k);
+  };
+  sel.onchange=draw;
+  draw();
+}
+
 /* ---------- render: REPORT ---------- */
 function renderReport(){
   const n=+document.getElementById("repRange").value;
@@ -849,7 +1055,7 @@ function openAddPast(){
 function switchTab(name){
   document.querySelectorAll("section.tab").forEach(s=>s.classList.toggle("active",s.id==="tab-"+name));
   document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.tab===name));
-  if(name==="log") renderLog(); if(name==="trend") renderTrend(); if(name==="report") renderReport(); if(name==="set") renderMeds();
+  if(name==="log") renderLog(); if(name==="trend") renderTrend(); if(name==="curve") renderCurve(); if(name==="report") renderReport(); if(name==="set") renderMeds();
   window.scrollTo(0,0);
 }
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
@@ -899,6 +1105,7 @@ document.getElementById("resetBtn").onclick=()=>{
 function renderAll(){ renderToday();
   if(document.getElementById("tab-log").classList.contains("active")) renderLog();
   if(document.getElementById("tab-trend").classList.contains("active")) renderTrend();
+  if(document.getElementById("tab-curve").classList.contains("active")) renderCurve();
   if(document.getElementById("tab-report").classList.contains("active")) renderReport();
   if(document.getElementById("tab-set").classList.contains("active")) renderMeds();
 }
