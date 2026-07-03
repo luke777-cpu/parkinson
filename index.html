@@ -68,6 +68,22 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
 .state-btn small{display:block; font-size:11px; font-weight:600; color:var(--ink-2); margin-top:1px}
 .med-btn{width:100%; min-height:58px; border-radius:16px; margin-top:12px; background:var(--ink); color:var(--bg); font-size:18px; font-weight:800; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:var(--shadow)}
 [data-theme="dark"] .med-btn{background:var(--accent); color:#04130C}
+.life-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+.life-btn{min-height:60px; border-radius:16px; background:var(--surface); box-shadow:var(--shadow); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-size:14px; font-weight:800; transition:transform .08s}
+.life-btn:active{transform:scale(.95)} .life-btn .ic{font-size:22px}
+.life-btn small{font-size:10px; font-weight:600; color:var(--ink-2)}
+.sched-row{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:8px}
+.sched-chip{display:inline-flex; align-items:center; gap:6px; background:var(--surface-2); border-radius:999px; padding:6px 8px 6px 12px; font-weight:700; font-variant-numeric:tabular-nums}
+.sched-chip button{color:var(--ink-2); font-size:15px; padding:0 2px}
+.intensity-wrap{display:none}
+.intensity-wrap.show{display:block; animation:fade .2s}
+.alarm-banner{position:fixed; left:12px; right:12px; bottom:calc(88px + env(safe-area-inset-bottom)); max-width:536px; margin:0 auto; background:var(--accent); color:#04130C; border-radius:16px; padding:14px 16px; box-shadow:0 8px 24px rgba(0,0,0,.2); z-index:55; display:none; align-items:center; gap:12px}
+.alarm-banner.show{display:flex; animation:slideup .3s}
+.alarm-banner .txt{flex:1; font-weight:800} .alarm-banner .txt small{display:block; font-weight:600; opacity:.8; font-size:12px}
+.alarm-banner button{background:#04130C; color:#fff; border-radius:10px; padding:9px 14px; font-weight:800}
+.alarm-banner .x{background:transparent; color:#04130C; padding:6px}
+.toggle{width:52px; height:30px; border-radius:999px; background:var(--line); position:relative; transition:background .2s; flex:0 0 auto}
+.toggle.on{background:var(--accent)} .toggle::after{content:""; position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:50%; background:#fff; transition:left .2s} .toggle.on::after{left:25px}
 
 .today-list{margin-top:16px}
 .evrow{display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--line)}
@@ -204,6 +220,9 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
     <div class="state-grid" id="stateGrid"></div>
     <button class="med-btn" id="medBtn">💊 약 먹음</button>
 
+    <div class="grid-title" style="margin-top:16px">생활 기록 — 수면·식사·운동은 약효에 영향을 줘요</div>
+    <div class="life-grid" id="lifeGrid"></div>
+
     <div class="today-list" id="todayList"></div>
   </section>
 
@@ -246,9 +265,16 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
 
   <!-- SETTINGS -->
   <section class="tab" id="tab-set">
-    <div class="section-label">내 약 목록</div>
+    <div class="section-label">내 약 · 복용 시간 예약</div>
     <div class="list-card" id="medList"></div>
     <button class="btn ghost no-print" id="addMedBtn" style="margin-bottom:8px">+ 약 추가</button>
+
+    <div class="section-label">약 알림</div>
+    <div class="list-card">
+      <div class="li"><div class="grow"><div class="name">앱 알림 켜기</div><div class="meta">앱이 켜져 있을 때 예약 시간에 알려줘요</div></div><div class="toggle" id="notifyToggle"></div></div>
+      <div class="li"><div class="grow"><div class="name">폰 캘린더에 알람 등록</div><div class="meta">앱을 꺼도 확실히 울려요 (.ics 파일)</div></div><button class="btn ghost" id="icsBtn" style="width:auto">내보내기</button></div>
+    </div>
+    <div class="disclaimer" style="margin-bottom:6px">앱 알림은 브라우저가 켜져 있을 때 동작해요. <b>앱을 완전히 끈 상태에서 확실히 알림을 받으려면</b> 위의 ‘폰 캘린더에 알람 등록’을 함께 쓰는 걸 권해요.</div>
 
     <div class="section-label">데이터</div>
     <div class="btn-row">
@@ -268,7 +294,7 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
       약물 용량·복용 간격 조정은 반드시 주치의와 상의하세요. 모든 기록은 이 기기 안에만 저장되며, 다른 곳으로 전송되지 않습니다.
     </div>
     <button class="btn danger no-print" id="resetBtn" style="margin-top:14px">모든 기록 삭제</button>
-    <div style="text-align:center; color:var(--ink-2); font-size:12px; margin:18px 0 8px">약효일지 · v1.0</div>
+    <div style="text-align:center; color:var(--ink-2); font-size:12px; margin:18px 0 8px">약효일지 · v2.0</div>
   </section>
 
 </main>
@@ -283,6 +309,7 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
   </div>
 </nav>
 
+<div class="alarm-banner" id="alarmBanner"><span style="font-size:22px">💊</span><div class="txt"></div><button class="take">복용함</button><button class="x">✕</button></div>
 <div class="scrim" id="scrim"><div class="sheet" id="sheet"></div></div>
 <div class="toast" id="toast"></div>
 
@@ -300,13 +327,19 @@ const STATES = [
   {key:"wearoff", ko:"약효 빠짐", hint:"wearing off", color:"#C98A4B"},
 ];
 const SMAP = Object.fromEntries(STATES.map(s=>[s.key,s]));
+const LIFE = {
+  sleep:    {ko:"수면", icon:"🌙", color:"#3F5B8B"},
+  meal:     {ko:"식사", icon:"🍚", color:"#C0863E"},
+  exercise: {ko:"운동", icon:"🏃", color:"#2C9C8F"},
+};
+const MEAL_TYPES = ["아침","점심","저녁","간식"];
 const MED_PRESETS = ["마도파","마도파 HBS","시네메트","시네메트 CR","스타레보","퍼킨","온젠티스(엔타카폰)","아질렉트","미라펙스","리큅","아만타딘","컴탄"];
 const KEY = "yakhyo_log_v1";
 
 let db = load();
 function load(){
-  try{ const d = JSON.parse(localStorage.getItem(KEY)); if(d&&d.events) return d; }catch(e){}
-  return { events:[], meds:[], questions:defaultQuestions(), settings:{theme:"light"} };
+  try{ const d = JSON.parse(localStorage.getItem(KEY)); if(d&&d.events){ d.meds=(d.meds||[]).map(m=>({sched:[],...m})); d.settings=d.settings||{theme:"light"}; return d; } }catch(e){}
+  return { events:[], meds:[], questions:defaultQuestions(), settings:{theme:"light",notify:false} };
 }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){ toast("저장 공간이 부족합니다"); } }
 function defaultQuestions(){ return [
@@ -339,7 +372,73 @@ function addMed(name, dose, ts){
   db.events.sort((a,b)=>a.ts-b.ts); save(); renderAll();
   toast(`${name}${dose?(" "+dose+"mg"):""} 복약 기록됨`);
 }
+function addLife(kind, data={}){
+  const ts = data.ts || Date.now();
+  db.events.push({ id:uid(), type:"life", kind, phase:data.phase||null, mealType:data.mealType||null, protein:!!data.protein, ts, memo:data.memo||"" });
+  db.events.sort((a,b)=>a.ts-b.ts); save(); renderAll();
+  const L=LIFE[kind]; const lab = kind==="meal"? `${data.mealType||"식사"}` : (data.phase==="start"?(kind==="sleep"?"취침":"운동 시작"):(kind==="sleep"?"기상":"운동 종료"));
+  toast(`${L.icon} ${lab} 기록됨 · ${hm(ts)}`);
+}
 function delEvent(id){ db.events = db.events.filter(e=>e.id!==id); save(); renderAll(); }
+
+/* ---------- alarms (med schedule) ---------- */
+let _firedAlarms = new Set();
+function alarmLoop(){
+  if(!db.settings.notify) return;
+  const now=new Date(); const cur=`${pad(now.getHours())}:${pad(now.getMinutes())}`; const day=todayKey();
+  db.meds.forEach(m=>{
+    (m.sched||[]).forEach(t=>{
+      const tag=`${day}|${m.id}|${t}`;
+      if(t===cur && !_firedAlarms.has(tag)){ _firedAlarms.add(tag); fireAlarm(m,t); }
+    });
+  });
+}
+function fireAlarm(med,t){
+  showAlarmBanner(med,t);
+  try{
+    if("Notification" in window && Notification.permission==="granted"){
+      const n=new Notification("💊 약 먹을 시간", { body:`${med.name}${med.dose?` ${med.dose}mg`:""} · ${t}`, tag:"med-"+med.id, requireInteraction:true });
+      n.onclick=()=>{ window.focus(); openMedConfirm(med); n.close(); };
+    }
+  }catch(e){}
+  try{ if(navigator.vibrate) navigator.vibrate([200,100,200]); }catch(e){}
+}
+function showAlarmBanner(med,t){
+  const b=document.getElementById("alarmBanner");
+  b.querySelector(".txt").innerHTML=`${escapeHtml(med.name)}${med.dose?` ${med.dose}mg`:""} 드실 시간<small>예약 ${t}</small>`;
+  b.querySelector(".take").onclick=()=>{ addMed(med.name, med.dose); b.classList.remove("show"); };
+  b.querySelector(".x").onclick=()=>b.classList.remove("show");
+  b.classList.add("show");
+  clearTimeout(b._t); b._t=setTimeout(()=>b.classList.remove("show"), 120000);
+}
+async function enableNotify(){
+  if(!("Notification" in window)){ toast("이 브라우저는 알림을 지원하지 않아요"); return false; }
+  let p=Notification.permission;
+  if(p==="default") p=await Notification.requestPermission();
+  if(p==="granted"){ db.settings.notify=true; save(); toast("약 알림을 켰어요"); return true; }
+  toast("알림이 차단돼 있어요. 브라우저 설정에서 허용해주세요"); return false;
+}
+/* export schedule to phone calendar (reliable OS alarm) */
+function exportICS(){
+  const withSched=db.meds.filter(m=>(m.sched||[]).length);
+  if(!withSched.length){ toast("예약된 약 시간이 없어요"); return; }
+  const dt=new Date(); const stamp=`${dt.getUTCFullYear()}${pad(dt.getUTCMonth()+1)}${pad(dt.getUTCDate())}T${pad(dt.getUTCHours())}${pad(dt.getUTCMinutes())}00Z`;
+  let ics="BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//yakhyo//KR\r\nCALSCALE:GREGORIAN\r\n";
+  const today=new Date();
+  withSched.forEach(m=>(m.sched||[]).forEach(t=>{
+    const[h,mi]=t.split(":").map(Number);
+    const local=`${today.getFullYear()}${pad(today.getMonth()+1)}${pad(today.getDate())}T${pad(h)}${pad(mi)}00`;
+    ics+="BEGIN:VEVENT\r\n"+
+      `UID:${m.id}-${t.replace(":","")}@yakhyo\r\nDTSTAMP:${stamp}\r\n`+
+      `DTSTART:${local}\r\nRRULE:FREQ=DAILY\r\n`+
+      `SUMMARY:💊 ${m.name}${m.dose?` ${m.dose}mg`:""} 복용\r\n`+
+      "BEGIN:VALARM\r\nACTION:DISPLAY\r\nTRIGGER:PT0M\r\nDESCRIPTION:약 복용 시간\r\nEND:VALARM\r\nEND:VEVENT\r\n";
+  }));
+  ics+="END:VCALENDAR\r\n";
+  const blob=new Blob([ics],{type:"text/calendar"}); const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download="약_복용알람.ics"; a.click(); URL.revokeObjectURL(a.href);
+  toast("캘린더 파일을 저장했어요 — 열어서 등록하면 폰이 알려줘요");
+}
 
 /* ---------- aggregation (state intervals within a day) ---------- */
 function byDay(){
@@ -362,14 +461,29 @@ function summarize(events){
   const firstOn  = states.find(s=>s.state==="on");
   const latency = (firstMed && firstOn) ? Math.round((firstOn.ts-firstMed)/60000) : null;
   const outs = states.map(s=>s.output).filter(v=>v!=null);
-  const dyskCount = states.filter(s=>s.state==="dysk").length;
+  const dyskEvents = states.filter(s=>s.state==="dysk");
+  const dyskInt = dyskEvents.map(s=>s.dysk).filter(v=>v!=null);
+  // life
+  const life = events.filter(e=>e.type==="life");
+  const sleepMin = pairDuration(life,"sleep");
+  const exMin = pairDuration(life,"exercise");
+  const meals = life.filter(e=>e.kind==="meal");
+  const proteinMeals = meals.filter(e=>e.protein).length;
   return {
     dur, latency,
     firstMed, firstOn: firstOn?firstOn.ts:null,
     maxOut: outs.length? Math.max(...outs):null,
     avgOut: outs.length? Math.round(outs.reduce((a,b)=>a+b,0)/outs.length):null,
-    dyskCount, meds
+    dyskCount: dyskEvents.length,
+    dyskMaxInt: dyskInt.length? Math.max(...dyskInt):null,
+    sleepMin, exMin, mealCount:meals.length, proteinMeals, meds
   };
+}
+function pairDuration(life,kind){ // sum start->end pairs
+  const evs=life.filter(e=>e.kind===kind).sort((a,b)=>a.ts-b.ts);
+  let total=0, open=null;
+  evs.forEach(e=>{ if(e.phase==="start") open=e.ts; else if(e.phase==="end"&&open!=null){ total+=(e.ts-open)/60000; open=null; } });
+  return Math.round(total);
 }
 function endOfDayCap(ts){ // cap interval at "now" if today, else 23:00 of that day
   const d=new Date(ts);
@@ -384,6 +498,12 @@ function renderToday(){
     const b=document.createElement("button"); b.className="state-btn";
     b.innerHTML=`<span class="sw" style="background:${s.color}"></span><span>${s.ko}<small>${s.hint}</small></span>`;
     b.onclick=()=>openStateSheet(s.key); grid.appendChild(b);
+  });
+  const lgrid=document.getElementById("lifeGrid"); lgrid.innerHTML="";
+  Object.entries(LIFE).forEach(([k,L])=>{
+    const b=document.createElement("button"); b.className="life-btn";
+    b.innerHTML=`<span class="ic">${L.icon}</span>${L.ko}`;
+    b.onclick=()=>openLifeSheet(k); lgrid.appendChild(b);
   });
   const tEvents = (byDay()[todayKey()]||[]);
   const states = tEvents.filter(e=>e.type==="state");
@@ -404,12 +524,20 @@ function renderToday(){
 function evRow(e){
   const row=document.createElement("div"); row.className="evrow";
   if(e.type==="state"){ const s=SMAP[e.state];
+    const title = e.state==="dysk" && e.dysk!=null ? `${s.ko} · 강도 ${e.dysk}` : s.ko;
     const extra=[e.output!=null?`출력 ${e.output}`:"", e.gait!=null?`보행 ${e.gait}`:"", e.memo].filter(Boolean).join(" · ");
-    row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">${s.ko}</div>${extra?`<div class="m">${escapeHtml(extra)}</div>`:""}</div>
+    row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">${title}</div>${extra?`<div class="m">${escapeHtml(extra)}</div>`:""}</div>
       <span class="pill" style="background:${s.color}">상태</span>`;
-  } else {
+  } else if(e.type==="med"){
     row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">💊 ${escapeHtml(e.drug)}${e.dose?` ${e.dose}mg`:""}</div>${e.memo?`<div class="m">${escapeHtml(e.memo)}</div>`:""}</div>
       <span class="pill" style="background:var(--ink-2)">복약</span>`;
+  } else { // life
+    const L=LIFE[e.kind];
+    let s;
+    if(e.kind==="meal") s=`${L.icon} ${e.mealType||"식사"}${e.protein?" · 단백질↑":""}`;
+    else s=`${L.icon} ${e.kind==="sleep"?(e.phase==="start"?"취침":"기상"):(e.phase==="start"?"운동 시작":"운동 종료")}`;
+    row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">${s}</div>${e.memo?`<div class="m">${escapeHtml(e.memo)}</div>`:""}</div>
+      <span class="pill" style="background:${L.color}">생활</span>`;
   }
   const del=document.createElement("button"); del.className="del"; del.innerHTML="✕";
   del.onclick=()=>{ if(confirm("이 기록을 삭제할까요?")) delEvent(e.id); };
@@ -513,12 +641,13 @@ function renderReport(){
   const rows=keys.map(k=>({k,s:summarize(days[k])}));
   const avg=(f)=>{ const a=rows.map(f).filter(v=>v!=null); return a.length? Math.round(a.reduce((x,y)=>x+y,0)/a.length):null; };
   const aLat=avg(d=>d.s.latency), aON=avg(d=>d.s.dur.on), aOFF=avg(d=>d.s.dur.off), aPart=avg(d=>d.s.dur.partial), aDy=avg(d=>d.s.dur.dysk);
-  const medList = db.meds.length? db.meds.map(m=>`${escapeHtml(m.name)}${m.dose?` ${m.dose}mg`:""}${m.note?` (${escapeHtml(m.note)})`:""}`).join(" · ") : "등록된 약 없음 (설정에서 추가)";
+  const aSleep=avg(d=>d.s.sleepMin||null);
+  const medList = db.meds.length? db.meds.map(m=>`${escapeHtml(m.name)}${m.dose?` ${m.dose}mg`:""}${(m.sched&&m.sched.length)?` [${m.sched.join(", ")}]`:""}${m.note?` (${escapeHtml(m.note)})`:""}`).join(" · ") : "등록된 약 없음 (설정에서 추가)";
   const start=fmtDateK(keys[0]), end=fmtDateK(keys[keys.length-1]);
-  let tbl=`<table><thead><tr><th>날짜</th><th>첫 ON</th><th>ON까지</th><th>ON</th><th>불완전</th><th>OFF</th><th>이상운동</th></tr></thead><tbody>`;
+  let tbl=`<table><thead><tr><th>날짜</th><th>첫 ON</th><th>ON까지</th><th>ON</th><th>불완전</th><th>OFF</th><th>이상운동</th><th>수면</th></tr></thead><tbody>`;
   rows.forEach(({k,s})=>{ tbl+=`<tr><td>${k.slice(5)}</td><td>${s.firstOn?hm(s.firstOn):"–"}</td><td>${s.latency!=null?s.latency+"분":"–"}</td>
-    <td>${Math.round(s.dur.on)}</td><td>${Math.round(s.dur.partial)}</td><td>${Math.round(s.dur.off)}</td><td>${Math.round(s.dur.dysk)}</td></tr>`; });
-  tbl+=`</tbody></table>`;
+    <td>${Math.round(s.dur.on)}</td><td>${Math.round(s.dur.partial)}</td><td>${Math.round(s.dur.off)}</td><td>${Math.round(s.dur.dysk)}${s.dyskMaxInt!=null?`(${s.dyskMaxInt})`:""}</td><td>${s.sleepMin?fmtDur(s.sleepMin):"–"}</td></tr>`; });
+  tbl+=`</tbody></table><div style="font-size:11px;color:var(--ink-2);margin-top:4px">이상운동 칸의 (숫자)는 최고 강도. 생활요인(수면·단백질 식사·운동)은 약효 변동과 함께 참고하세요.</div>`;
   const q=db.questions.map((x,i)=>`<div class="qitem"><input type="checkbox" ${x.done?"checked":""} onchange="toggleQ(${i})"><div class="grow">${escapeHtml(x.t)}</div><button class="qx no-print" onclick="rmQ(${i})">✕</button></div>`).join("");
   body.innerHTML=`
     <h2>파킨슨 약효·운동변동 기록</h2>
@@ -528,7 +657,8 @@ function renderReport(){
     <div style="font-size:13.5px; line-height:1.7">
       · 아침 ON까지 평균 <b>${aLat!=null?aLat+"분":"–"}</b><br>
       · ON 시간 평균 <b>${aON!=null?fmtDur(aON):"–"}</b> / 불완전 ON <b>${aPart!=null?fmtDur(aPart):"–"}</b><br>
-      · OFF 시간 평균 <b>${aOFF!=null?fmtDur(aOFF):"–"}</b> · 이상운동 평균 <b>${aDy!=null?aDy+"분":"–"}</b>
+      · OFF 시간 평균 <b>${aOFF!=null?fmtDur(aOFF):"–"}</b> · 이상운동 평균 <b>${aDy!=null?aDy+"분":"–"}</b><br>
+      · 수면 평균 <b>${aSleep?fmtDur(aSleep):"–"}</b>
     </div>
     <div class="rsec">날짜별 기록 (분 단위)</div>${tbl}
     <div class="rsec">주치의에게 묻고 싶은 것</div>${q}
@@ -543,12 +673,24 @@ window.addQ=()=>{ const t=prompt("질문을 입력하세요"); if(t){ db.questio
 /* ---------- render: SETTINGS ---------- */
 function renderMeds(){
   const el=document.getElementById("medList"); el.innerHTML="";
-  if(!db.meds.length){ el.innerHTML=`<div class="li"><div class="grow"><div class="meta">아직 등록된 약이 없어요. 아래에서 추가하세요.</div></div></div>`; return; }
+  if(!db.meds.length){ el.innerHTML=`<div class="li"><div class="grow"><div class="meta">아직 등록된 약이 없어요. 아래에서 추가하세요.</div></div></div>`; }
   db.meds.forEach((m,i)=>{
-    const li=document.createElement("div"); li.className="li";
-    li.innerHTML=`<div class="grow"><div class="name">${escapeHtml(m.name)}${m.dose?` <span class="meta">${m.dose}mg</span>`:""}</div>${m.note?`<div class="meta">${escapeHtml(m.note)}</div>`:""}</div>`;
+    const li=document.createElement("div"); li.className="li"; li.style.flexWrap="wrap";
+    const chips=(m.sched||[]).slice().sort().map((t,j)=>`<span class="sched-chip">${t}<button data-rm="${i}:${j}">✕</button></span>`).join("");
+    li.innerHTML=`<div class="grow"><div class="name">${escapeHtml(m.name)}${m.dose?` <span class="meta">${m.dose}mg</span>`:""}</div>${m.note?`<div class="meta">${escapeHtml(m.note)}</div>`:""}
+      <div class="sched-row">${chips}<span class="sched-chip" style="background:transparent;border:1px dashed var(--line)"><input type="time" data-add="${i}" style="border:none;background:transparent;font-weight:700;padding:0;width:88px"></span></div></div>`;
     const del=document.createElement("button"); del.className="del"; del.innerHTML="✕"; del.style.fontSize="18px"; del.style.color="var(--ink-2)";
-    del.onclick=()=>{ db.meds.splice(i,1); save(); renderMeds(); }; li.appendChild(del); el.appendChild(li);
+    del.onclick=()=>{ if(confirm(`${m.name}을(를) 삭제할까요?`)){ db.meds.splice(i,1); save(); renderMeds(); } };
+    li.appendChild(del); el.appendChild(li);
+  });
+  el.querySelectorAll("[data-add]").forEach(inp=>inp.onchange=function(){
+    const i=+this.dataset.add; const t=this.value; if(!t) return;
+    db.meds[i].sched=db.meds[i].sched||[]; if(!db.meds[i].sched.includes(t)) db.meds[i].sched.push(t);
+    save(); renderMeds(); toast("복용 시간 예약됨 "+t);
+  });
+  el.querySelectorAll("[data-rm]").forEach(b=>b.onclick=function(){
+    const[i,j]=this.dataset.rm.split(":").map(Number); const s=db.meds[i].sched.slice().sort(); const t=s[j];
+    db.meds[i].sched=db.meds[i].sched.filter(x=>x!==t); save(); renderMeds();
   });
 }
 
@@ -568,6 +710,8 @@ function openStateSheet(key){
       <button class="chip" onclick="document.getElementById('f_out').disabled=!document.getElementById('f_out').disabled; this.classList.toggle('sel'); window._skipOut=!window._skipOut" id="c_out">입력 안 함</button></div></div>
     <div class="field"><label>보행 (0–10, 선택)</label>
       <div class="slider-row"><input type="range" id="f_gait" min="0" max="10" step="1" value="6" oninput="document.getElementById('o_gait').textContent=this.value"><div class="v" id="o_gait">6</div></div></div>
+    <div class="field intensity-wrap ${key==="dysk"?"show":""}"><label>이상운동 강도 (0–10)</label>
+      <div class="slider-row"><input type="range" id="f_int" min="0" max="10" step="1" value="4" oninput="document.getElementById('o_int').textContent=this.value"><div class="v" id="o_int">4</div></div></div>
     <div class="field"><label>메모 (선택)</label><textarea id="f_memo" placeholder="예: 공복, 운동 후, 단백질 식사 등"></textarea></div>
     <div class="btn-row" style="margin-top:6px">
       <button class="btn ghost" onclick="closeSheet()">취소</button>
@@ -577,9 +721,44 @@ function openStateSheet(key){
   document.getElementById("saveState").onclick=()=>{
     const out = window._skipOut? null : +document.getElementById("f_out").value;
     const gait = +document.getElementById("f_gait").value;
+    const dysk = key==="dysk"? +document.getElementById("f_int").value : null;
     const memo = document.getElementById("f_memo").value.trim();
-    closeSheet(); addState(key,{output:out, gait, memo});
+    closeSheet(); addState(key,{output:out, gait, dysk, memo});
   };
+}
+
+function openLifeSheet(kind){
+  const L=LIFE[kind];
+  if(kind==="meal"){
+    const chips=MEAL_TYPES.map(t=>`<button class="chip" data-t="${t}">${t}</button>`).join("");
+    openSheet(`<h2>${L.icon} 식사 기록</h2><div class="hint">지금(${hm(Date.now())})으로 저장돼요. 단백질이 많은 식사는 약효에 영향을 줄 수 있어요.</div>
+      <div class="field"><label>종류</label><div class="chips" id="mealChips">${chips}</div></div>
+      <div class="field"><label>단백질 많은 식사</label><div class="chips"><button class="chip" id="protChip">고기·생선·콩·계란 많음</button></div></div>
+      <div class="field"><label>메모 (선택)</label><input id="life_memo" placeholder="예: 아침 겸 약"></div>
+      <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">취소</button><button class="btn primary" id="life_save" disabled>저장</button></div>`);
+    let mt=null, prot=false;
+    document.getElementById("mealChips").addEventListener("click",e=>{ const b=e.target.closest(".chip"); if(!b) return;
+      document.querySelectorAll("#mealChips .chip").forEach(c=>c.classList.remove("sel")); b.classList.add("sel"); mt=b.dataset.t; document.getElementById("life_save").disabled=false; });
+    document.getElementById("protChip").onclick=function(){ prot=!prot; this.classList.toggle("sel"); };
+    document.getElementById("life_save").onclick=()=>{ closeSheet(); addLife("meal",{mealType:mt,protein:prot,memo:document.getElementById("life_memo").value.trim()}); };
+    return;
+  }
+  // sleep or exercise: start/end
+  const startLab = kind==="sleep"?"🌙 지금 잠자리에 듦":"🏃 지금 운동 시작";
+  const endLab   = kind==="sleep"?"☀️ 지금 일어남":"🏁 지금 운동 끝";
+  openSheet(`<h2>${L.icon} ${L.ko} 기록</h2><div class="hint">지금(${hm(Date.now())})으로 저장돼요.</div>
+    <div class="btn-row" style="flex-direction:column; gap:10px">
+      <button class="btn primary" id="ls_start" style="min-height:60px">${startLab}</button>
+      <button class="btn" id="ls_end" style="min-height:60px">${endLab}</button>
+    </div>
+    <button class="btn ghost" style="margin-top:8px" onclick="closeSheet()">취소</button>`);
+  document.getElementById("ls_start").onclick=()=>{ closeSheet(); addLife(kind,{phase:"start"}); };
+  document.getElementById("ls_end").onclick=()=>{ closeSheet(); addLife(kind,{phase:"end"}); };
+}
+function openMedConfirm(med){ // called from alarm
+  openSheet(`<h2>💊 ${escapeHtml(med.name)} 복용</h2><div class="hint">지금(${hm(Date.now())}) 복용으로 기록할까요?</div>
+    <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">나중에</button><button class="btn primary" id="mc_ok">복용함</button></div>`);
+  document.getElementById("mc_ok").onclick=()=>{ closeSheet(); addMed(med.name, med.dose); };
 }
 
 function openMedSheet(){
@@ -674,6 +853,14 @@ function toggleTheme(){ db.settings.theme = db.settings.theme==="dark"?"light":"
 document.getElementById("themeBtn").onclick=toggleTheme;
 document.getElementById("darkToggle").onclick=toggleTheme;
 
+/* notifications */
+function renderNotifyToggle(){ document.getElementById("notifyToggle").classList.toggle("on", !!db.settings.notify); }
+document.getElementById("notifyToggle").onclick=async()=>{
+  if(db.settings.notify){ db.settings.notify=false; save(); renderNotifyToggle(); toast("약 알림을 껐어요"); }
+  else { if(await enableNotify()) renderNotifyToggle(); }
+};
+document.getElementById("icsBtn").onclick=exportICS;
+
 /* backup */
 document.getElementById("exportBtn").onclick=()=>{
   const blob=new Blob([JSON.stringify(db,null,2)],{type:"application/json"});
@@ -684,7 +871,7 @@ document.getElementById("importBtn").onclick=()=>document.getElementById("import
 document.getElementById("importFile").onchange=function(){
   const f=this.files[0]; if(!f) return; const r=new FileReader();
   r.onload=()=>{ try{ const d=JSON.parse(r.result); if(!d.events) throw 0;
-    if(confirm("현재 기록을 불러온 데이터로 덮어쓸까요?")){ db=Object.assign({questions:defaultQuestions(),settings:{theme:db.settings.theme},meds:[]},d); save(); applyTheme(); renderAll(); switchTab("today"); toast("불러왔어요"); } }
+    if(confirm("현재 기록을 불러온 데이터로 덮어쓸까요?")){ db=Object.assign({questions:defaultQuestions(),settings:{theme:db.settings.theme,notify:false},meds:[]},d); db.meds=(db.meds||[]).map(m=>({sched:[],...m})); db.settings=db.settings||{theme:"light"}; save(); applyTheme(); renderAll(); renderNotifyToggle(); switchTab("today"); toast("불러왔어요"); } }
     catch(e){ toast("올바른 백업 파일이 아니에요"); } };
   r.readAsText(f); this.value="";
 };
@@ -702,7 +889,11 @@ function renderAll(){ renderToday();
 function setHeadDate(){ const d=new Date(); const wd=["일","월","화","수","목","금","토"][d.getDay()];
   document.getElementById("headDate").textContent=`${d.getMonth()+1}.${d.getDate()} (${wd})`; }
 
-applyTheme(); setHeadDate(); renderAll();
+applyTheme(); setHeadDate(); renderAll(); renderNotifyToggle();
+
+/* alarm loop: check every 30s while app is open */
+setInterval(alarmLoop, 30000); alarmLoop();
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden) alarmLoop(); });
 
 /* first-run disclaimer */
 if(!db.settings.seen){
