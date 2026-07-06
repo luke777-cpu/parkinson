@@ -1,4 +1,4 @@
-const CACHE = "yakhyo-v4";
+const CACHE = "yakhyo-v6";
 const ASSETS = ["./", "./index.html", "./manifest.json"];
 
 self.addEventListener("install", e => {

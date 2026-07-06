@@ -68,7 +68,7 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
 .state-btn small{display:block; font-size:11px; font-weight:600; color:var(--ink-2); margin-top:1px}
 .med-btn{width:100%; min-height:58px; border-radius:16px; margin-top:12px; background:var(--ink); color:var(--bg); font-size:18px; font-weight:800; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:var(--shadow)}
 [data-theme="dark"] .med-btn{background:var(--accent); color:#04130C}
-.life-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+.life-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(90px,1fr)); gap:10px}
 .life-btn{min-height:60px; border-radius:16px; background:var(--surface); box-shadow:var(--shadow); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-size:14px; font-weight:800; transition:transform .08s}
 .life-btn:active{transform:scale(.95)} .life-btn .ic{font-size:22px}
 .life-btn small{font-size:10px; font-weight:600; color:var(--ink-2)}
@@ -340,22 +340,55 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
 "use strict";
 /* ---------- model ---------- */
 const STATES = [
-  {key:"wake",    ko:"기상",      hint:"하루 시작", color:"#8A97A6"},
-  {key:"off",     ko:"OFF",       hint:"약효 없음", color:"#54657A"},
-  {key:"signal",  ko:"신호",      hint:"약효 오는 느낌", color:"#5C93D6"},
-  {key:"on",      ko:"ON",        hint:"잘 움직임", color:"#1FA971"},
-  {key:"partial", ko:"불완전 ON", hint:"될 듯 말 듯", color:"#E0A030"},
-  {key:"dysk",    ko:"이상운동",  hint:"dyskinesia", color:"#E8663C"},
-  {key:"dyst",    ko:"근긴장",    hint:"dystonia·발가락", color:"#8A6BBF"},
-  {key:"wearoff", ko:"약효 빠짐", hint:"wearing off", color:"#C98A4B"},
+  {key:"wake",    ko:"기상",        hint:"하루 시작",        color:"#8A97A6", main:true},
+  {key:"off",     ko:"OFF",         hint:"약효 없음",        color:"#54657A", main:true},
+  {key:"rising",  ko:"상승 전환기", hint:"OFF→ON 올라오는 중", color:"#5C93D6", main:true},
+  {key:"on",      ko:"ON",          hint:"잘 움직임",        color:"#1FA971", main:true},
+  {key:"falling", ko:"하강 전환기", hint:"ON→OFF 떨어지는 중", color:"#C98A4B", main:true},
+  /* 아래는 예전 방식으로 기록된 과거 데이터 표시용으로만 남겨둠 (더 이상 새로 선택할 수 없음) */
+  {key:"signal",  ko:"신호",        hint:"약효 오는 느낌",   color:"#5C93D6", legacy:true},
+  {key:"partial", ko:"불완전 ON",   hint:"될 듯 말 듯",      color:"#E0A030", legacy:true},
+  {key:"dysk",    ko:"이상운동",    hint:"dyskinesia",       color:"#E8663C", legacy:true},
+  {key:"dyst",    ko:"근긴장",      hint:"dystonia·발가락",  color:"#8A6BBF", legacy:true},
+  {key:"wearoff", ko:"약효 빠짐",   hint:"wearing off",     color:"#C98A4B", legacy:true},
 ];
 const SMAP = Object.fromEntries(STATES.map(s=>[s.key,s]));
+const MAIN_STATES = STATES.filter(s=>s.main);
+/* 상승 전환기의 결과(선택) */
+const RISE_RESULTS = [
+  {key:"reached", ko:"ON 도달"},
+  {key:"partial",  ko:"불완전 ON"},
+  {key:"failed",   ko:"ON 실패"},
+];
+/* 동반 증상 (복수 선택) */
+const SYMPTOMS = [
+  {key:"dysk",          ko:"이상운동"},
+  {key:"dyst",          ko:"근긴장"},
+  {key:"tremor",        ko:"떨림"},
+  {key:"freeze",        ko:"동결"},
+  {key:"rigid",         ko:"경직"},
+  {key:"pain",          ko:"통증"},
+  {key:"toecurl",       ko:"발가락 말림"},
+  {key:"gait_unstable", ko:"보행 불안"},
+];
 const LIFE = {
   sleep:    {ko:"수면", icon:"🌙", color:"#3F5B8B"},
   meal:     {ko:"식사", icon:"🍚", color:"#C0863E"},
   exercise: {ko:"운동", icon:"🏃", color:"#2C9C8F"},
+  bowel:    {ko:"배변", icon:"🚽", color:"#8A6BBF"},
+  body:     {ko:"몸 상태", icon:"⚡", color:"#D6455C"},
 };
 const MEAL_TYPES = ["아침","점심","저녁","간식"];
+const MEAL_AMOUNTS = ["소량","보통","과식"];
+const MEAL_EXTRAS = ["단백질 많음","기름진 식사"];
+const SLEEP_TYPES = [{key:"start",ko:"취침"},{key:"end",ko:"기상"},{key:"nap",ko:"낮잠"}];
+const SLEEP_QUALITY = ["숙면","자주 깸","잠들기 어려움","REM 행동 의심"];
+const EXERCISE_TYPES = ["걷기","실내자전거","근력","탁구","등산","기타"];
+const EXERCISE_INTENSITY = ["가벼움","보통","강함"];
+const EXERCISE_DURATIONS = [10,30,60];
+const BOWEL_CONSISTENCY = ["딱딱함","보통","묽음"];
+const BOWEL_EXTRAS = ["힘들었음","잔변감"];
+const BODY_SYMPTOMS = ["어지럼","기립 시 어지럼","소변 급박","빈뇨","땀 증가","침 흘림","메스꺼움","극심한 피로","불안","졸림","통증"];
 const MED_PRESETS = ["마도파","마도파 HBS","시네메트","시네메트 CR","스타레보","퍼킨","온젠티스(엔타카폰)","아질렉트","미라펙스","리큅","아만타딘","컴탄"];
 
 /* ---------- kinetic profiles for curve tab ----------
@@ -431,7 +464,8 @@ function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(
 function addState(key, extra={}){
   const ts = extra.ts || Date.now();
   db.events.push({ id:uid(), type:"state", state:key, ts,
-    output:extra.output??null, gait:extra.gait??null, dysk:extra.dysk??null, dyst:extra.dyst??null, memo:extra.memo||"" });
+    output:extra.output??null, gait:extra.gait??null, dysk:extra.dysk??null, dyst:extra.dyst??null, memo:extra.memo||"",
+    symptoms:extra.symptoms||[], customSymptom:extra.customSymptom||"", riseResult:extra.riseResult||null });
   db.events.sort((a,b)=>a.ts-b.ts); save(); renderAll();
   toast(`${SMAP[key].ko} 기록됨 · ${hm(ts)}`);
 }
@@ -442,9 +476,15 @@ function addMed(name, dose, ts){
 }
 function addLife(kind, data={}){
   const ts = data.ts || Date.now();
-  db.events.push({ id:uid(), type:"life", kind, phase:data.phase||null, mealType:data.mealType||null, protein:!!data.protein, ts, memo:data.memo||"" });
+  db.events.push({ id:uid(), type:"life", kind, phase:data.phase||null, mealType:data.mealType||null,
+    protein:!!data.protein, ts, memo:data.memo||"",
+    quality:data.quality||[], exType:data.exType||null, exTypeCustom:data.exTypeCustom||"",
+    intensity:data.intensity||null, durationMin:data.durationMin??null, amount:data.amount||null,
+    extras:data.extras||[], consistency:data.consistency||null, firstToday:!!data.firstToday,
+    symptoms:data.symptoms||[], customSymptom:data.customSymptom||"" });
   db.events.sort((a,b)=>a.ts-b.ts); save(); renderAll();
-  const L=LIFE[kind]; const lab = kind==="meal"? `${data.mealType||"식사"}` : (data.phase==="start"?(kind==="sleep"?"취침":"운동 시작"):(kind==="sleep"?"기상":"운동 종료"));
+  const L=LIFE[kind]; const lab = kind==="meal"? `${data.mealType||"식사"}` : kind==="bowel"? "배변" : kind==="body"? "몸 상태" :
+    (data.phase==="nap"?"낮잠":(data.phase==="start"?(kind==="sleep"?"취침":"운동"):(kind==="sleep"?"기상":"운동 종료")));
   toast(`${L.icon} ${lab} 기록됨 · ${hm(ts)}`);
 }
 function delEvent(id){ db.events = db.events.filter(e=>e.id!==id); save(); renderAll(); }
@@ -529,7 +569,7 @@ function summarize(events){
   const firstOn  = states.find(s=>s.state==="on");
   const latency = (firstMed && firstOn) ? Math.round((firstOn.ts-firstMed)/60000) : null;
   const outs = states.map(s=>s.output).filter(v=>v!=null);
-  const dyskEvents = states.filter(s=>s.state==="dysk");
+  const dyskEvents = states.filter(s=>s.state==="dysk" || (s.symptoms&&s.symptoms.includes("dysk")));
   const dyskInt = dyskEvents.map(s=>s.dysk).filter(v=>v!=null);
   // life
   const life = events.filter(e=>e.type==="life");
@@ -562,7 +602,7 @@ function endOfDayCap(ts){ // cap interval at "now" if today, else 23:00 of that 
 /* ---------- render: TODAY ---------- */
 function renderToday(){
   const grid=document.getElementById("stateGrid"); grid.innerHTML="";
-  STATES.forEach(s=>{
+  MAIN_STATES.forEach(s=>{
     const b=document.createElement("button"); b.className="state-btn";
     b.innerHTML=`<span class="sw" style="background:${s.color}"></span><span>${s.ko}<small>${s.hint}</small></span>`;
     b.onclick=()=>openStateSheet(s.key); grid.appendChild(b);
@@ -592,8 +632,10 @@ function renderToday(){
 function evRow(e){
   const row=document.createElement("div"); row.className="evrow";
   if(e.type==="state"){ const s=SMAP[e.state];
-    const title = e.state==="dysk" && e.dysk!=null ? `${s.ko} · 강도 ${e.dysk}` : s.ko;
-    const extra=[e.output!=null?`출력 ${e.output}`:"", e.gait!=null?`보행 ${e.gait}`:"", e.memo].filter(Boolean).join(" · ");
+    const riseTxt = e.riseResult? RISE_RESULTS.find(r=>r.key===e.riseResult)?.ko : "";
+    const symTxt = [...(e.symptoms||[]).map(k=>SYMPTOMS.find(sy=>sy.key===k)?.ko).filter(Boolean), e.customSymptom].filter(Boolean).join(", ");
+    const title = riseTxt? `${s.ko} · ${riseTxt}` : (e.state==="dysk" && e.dysk!=null ? `${s.ko} · 강도 ${e.dysk}` : s.ko);
+    const extra=[e.output!=null?`출력 ${e.output}`:"", e.gait!=null?`보행 ${e.gait}`:"", symTxt?`동반증상: ${symTxt}`:"", e.memo].filter(Boolean).join(" · ");
     row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">${title}</div>${extra?`<div class="m">${escapeHtml(extra)}</div>`:""}</div>
       <span class="pill" style="background:${s.color}">상태</span>`;
   } else if(e.type==="med"){
@@ -601,10 +643,30 @@ function evRow(e){
       <span class="pill" style="background:var(--ink-2)">복약</span>`;
   } else { // life
     const L=LIFE[e.kind];
-    let s;
-    if(e.kind==="meal") s=`${L.icon} ${e.mealType||"식사"}${e.protein?" · 단백질↑":""}`;
-    else s=`${L.icon} ${e.kind==="sleep"?(e.phase==="start"?"취침":"기상"):(e.phase==="start"?"운동 시작":"운동 종료")}`;
-    row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">${s}</div>${e.memo?`<div class="m">${escapeHtml(e.memo)}</div>`:""}</div>
+    let s, extraTxt="";
+    if(e.kind==="meal"){
+      s=`${L.icon} ${e.mealType||"식사"}`;
+      extraTxt=[e.amount, ...(e.extras||[])].filter(Boolean).join(", ");
+    } else if(e.kind==="sleep"){
+      const lab = e.phase==="nap"?"낮잠":(e.phase==="start"?"취침":"기상");
+      s=`${L.icon} ${lab}`;
+      extraTxt=(e.quality||[]).join(", ");
+    } else if(e.kind==="exercise"){
+      const nm = e.exType==="기타"? (e.exTypeCustom||"운동") : (e.exType||"운동");
+      const lab = e.phase==="start"?`${nm} 시작`:`${nm} 종료`;
+      s=`${L.icon} ${lab}`;
+      extraTxt=[e.intensity, e.durationMin?`${e.durationMin}분`:""].filter(Boolean).join(", ");
+    } else if(e.kind==="bowel"){
+      s=`${L.icon} 배변${e.firstToday?" · 오늘 첫":""}`;
+      extraTxt=[e.consistency, ...(e.extras||[])].filter(Boolean).join(", ");
+    } else if(e.kind==="body"){
+      s=`${L.icon} 몸 상태`;
+      extraTxt=[...(e.symptoms||[]), e.customSymptom].filter(Boolean).join(", ");
+    } else {
+      s=`${L.icon} ${L.ko}`;
+    }
+    const memoLine=[extraTxt, e.memo].filter(Boolean).join(" · ");
+    row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">${s}</div>${memoLine?`<div class="m">${escapeHtml(memoLine)}</div>`:""}</div>
       <span class="pill" style="background:${L.color}">생활</span>`;
   }
   const del=document.createElement("button"); del.className="del"; del.innerHTML="✕";
@@ -772,9 +834,12 @@ function svgCurve(dayKey){
     const segStart = Math.max(s.ts, t0); const segEndC = Math.min(segEnd, t1);
     if(segEndC<=segStart) continue;
     let col=null;
-    if(s.state==="dysk"||s.state==="dyst") col="rgba(232,102,60,.16)";
+    const hasDysk = s.state==="dysk" || s.state==="dyst" || (s.symptoms&&(s.symptoms.includes("dysk")||s.symptoms.includes("dyst")));
+    if(hasDysk) col="rgba(232,102,60,.16)";
     else if(s.state==="off"||s.state==="wearoff") col="rgba(84,101,122,.14)";
     else if(s.state==="on") col="rgba(31,169,113,.10)";
+    else if(s.state==="rising") col="rgba(92,147,214,.10)";
+    else if(s.state==="falling") col="rgba(201,138,75,.12)";
     if(col) shading += `<rect x="${x(segStart)}" y="${padT}" width="${Math.max(0,x(segEndC)-x(segStart))}" height="${plotH}" fill="${col}"/>`;
   }
 
@@ -819,8 +884,11 @@ function curveEventListHtml(dayKey){
   if(!evs.length) return "";
   const rows = evs.map(e=>{
     if(e.type==="med") return `<div class="li"><div class="grow"><div class="name">💊 ${escapeHtml(e.drug)}${e.dose?` ${e.dose}mg`:""}</div><div class="meta">${hm(e.ts)}</div></div></div>`;
-    if(e.type==="state"){ const s=SMAP[e.state]; const extra=[e.output!=null?`출력 ${e.output}`:"",e.gait!=null?`보행 ${e.gait}`:"",e.dysk!=null?`이상운동 강도 ${e.dysk}`:""].filter(Boolean).join(" · ");
-      return `<div class="li"><div class="grow"><div class="name" style="color:${s.color}">${s.ko}</div><div class="meta">${hm(e.ts)}${extra?" · "+extra:""}</div></div></div>`; }
+    if(e.type==="state"){ const s=SMAP[e.state];
+      const riseTxt = e.riseResult? RISE_RESULTS.find(r=>r.key===e.riseResult)?.ko : "";
+      const symTxt = [...(e.symptoms||[]).map(k=>SYMPTOMS.find(sy=>sy.key===k)?.ko).filter(Boolean), e.customSymptom].filter(Boolean).join(", ");
+      const extra=[e.output!=null?`출력 ${e.output}`:"",e.gait!=null?`보행 ${e.gait}`:"",e.dysk!=null?`이상운동 강도 ${e.dysk}`:"",symTxt?`동반증상 ${symTxt}`:""].filter(Boolean).join(" · ");
+      return `<div class="li"><div class="grow"><div class="name" style="color:${s.color}">${s.ko}${riseTxt?` · ${riseTxt}`:""}</div><div class="meta">${hm(e.ts)}${extra?" · "+extra:""}</div></div></div>`; }
     const L=LIFE[e.kind]; return `<div class="li"><div class="grow"><div class="name">${L.icon} ${e.kind==="meal"?(e.mealType||"식사"):L.ko}</div><div class="meta">${hm(e.ts)}</div></div></div>`;
   }).join("");
   return `<div class="section-label">이 날 기록</div><div class="list-card">${rows}</div>`;
@@ -924,58 +992,201 @@ scrim.addEventListener("click",e=>{ if(e.target===scrim) closeSheet(); });
 
 function openStateSheet(key){
   const s=SMAP[key];
+  const riseBlock = key==="rising" ? `
+    <div class="field"><label>결과 (선택, 나중에 알면 다시 기록해도 돼요)</label>
+      <div class="chips" id="riseChips">
+        ${RISE_RESULTS.map(r=>`<button type="button" class="chip" data-k="${r.key}">${r.ko}</button>`).join("")}
+      </div></div>` : "";
   openSheet(`
     <h2>${s.ko} 기록</h2>
     <div class="hint">시각은 지금(${hm(Date.now())})으로 저장돼요. 점수·메모는 선택이에요.</div>
+    ${riseBlock}
     <div class="field"><label>출력감 (0–100, 선택)</label>
       <div class="slider-row"><input type="range" id="f_out" min="0" max="100" step="5" value="50" oninput="document.getElementById('o_out').textContent=this.value"><div class="v" id="o_out">50</div>
       <button class="chip" onclick="document.getElementById('f_out').disabled=!document.getElementById('f_out').disabled; this.classList.toggle('sel'); window._skipOut=!window._skipOut" id="c_out">입력 안 함</button></div></div>
     <div class="field"><label>보행 (0–10, 선택)</label>
       <div class="slider-row"><input type="range" id="f_gait" min="0" max="10" step="1" value="6" oninput="document.getElementById('o_gait').textContent=this.value"><div class="v" id="o_gait">6</div></div></div>
-    <div class="field intensity-wrap ${key==="dysk"?"show":""}"><label>이상운동 강도 (0–10)</label>
+    <div class="field"><label>동반 증상 (복수 선택 가능)</label>
+      <div class="chips" id="symChips">
+        ${SYMPTOMS.map(sy=>`<button type="button" class="chip" data-k="${sy.key}">${sy.ko}</button>`).join("")}
+      </div></div>
+    <div class="field intensity-wrap" id="dyskIntWrap" style="display:none"><label>이상운동 강도 (0–10)</label>
       <div class="slider-row"><input type="range" id="f_int" min="0" max="10" step="1" value="4" oninput="document.getElementById('o_int').textContent=this.value"><div class="v" id="o_int">4</div></div></div>
+    <div class="field"><label>기타 증상 직접 입력 (선택)</label><input id="f_symCustom" placeholder="예: 발가락 뒤틀림, 소변 급박감 등"></div>
     <div class="field"><label>메모 (선택)</label><textarea id="f_memo" placeholder="예: 공복, 운동 후, 단백질 식사 등"></textarea></div>
     <div class="btn-row" style="margin-top:6px">
       <button class="btn ghost" onclick="closeSheet()">취소</button>
       <button class="btn primary" id="saveState">저장</button>
     </div>`);
   window._skipOut=false;
+  let riseResult=null;
+  if(key==="rising"){
+    document.getElementById("riseChips").addEventListener("click",e=>{
+      const b=e.target.closest(".chip"); if(!b) return;
+      const already=b.classList.contains("sel");
+      document.querySelectorAll("#riseChips .chip").forEach(c=>c.classList.remove("sel"));
+      if(!already){ b.classList.add("sel"); riseResult=b.dataset.k; } else riseResult=null;
+    });
+  }
+  document.getElementById("symChips").addEventListener("click",e=>{
+    const b=e.target.closest(".chip"); if(!b) return;
+    b.classList.toggle("sel");
+    const dyskOn = document.querySelector('#symChips .chip[data-k="dysk"]').classList.contains("sel");
+    document.getElementById("dyskIntWrap").style.display = dyskOn? "block":"none";
+  });
   document.getElementById("saveState").onclick=()=>{
     const out = window._skipOut? null : +document.getElementById("f_out").value;
     const gait = +document.getElementById("f_gait").value;
-    const dysk = key==="dysk"? +document.getElementById("f_int").value : null;
+    const symptoms = [...document.querySelectorAll("#symChips .chip.sel")].map(c=>c.dataset.k);
+    const dysk = symptoms.includes("dysk")? +document.getElementById("f_int").value : null;
+    const customSymptom = document.getElementById("f_symCustom").value.trim();
     const memo = document.getElementById("f_memo").value.trim();
-    closeSheet(); addState(key,{output:out, gait, dysk, memo});
+    closeSheet(); addState(key,{output:out, gait, dysk, memo, symptoms, customSymptom, riseResult});
   };
 }
 
+function timeFieldHtml(id, ts){
+  const d=new Date(ts||Date.now());
+  return `<div class="field"><label>시각 (필요하면 수정하세요)</label><input type="time" id="${id}" value="${pad(d.getHours())}:${pad(d.getMinutes())}"></div>`;
+}
+function tsFromTimeField(id, base){
+  const v=document.getElementById(id).value; if(!v) return base;
+  const [h,m]=v.split(":").map(Number); const d=new Date(base);
+  d.setHours(h,m,0,0); return d.getTime();
+}
+function multiChipToggle(containerId){
+  document.getElementById(containerId).addEventListener("click",e=>{
+    const b=e.target.closest(".chip"); if(!b) return; b.classList.toggle("sel");
+  });
+}
+function singleChipToggle(containerId){
+  document.getElementById(containerId).addEventListener("click",e=>{
+    const b=e.target.closest(".chip"); if(!b) return;
+    document.querySelectorAll(`#${containerId} .chip`).forEach(c=>c.classList.remove("sel")); b.classList.add("sel");
+  });
+}
+function selectedChips(containerId){ return [...document.querySelectorAll(`#${containerId} .chip.sel`)].map(c=>c.dataset.t||c.textContent.trim()); }
+function selectedChip(containerId){ const b=document.querySelector(`#${containerId} .chip.sel`); return b? (b.dataset.t||b.textContent.trim()) : null; }
+
 function openLifeSheet(kind){
-  const L=LIFE[kind];
+  const L=LIFE[kind]; const now=Date.now();
+
   if(kind==="meal"){
-    const chips=MEAL_TYPES.map(t=>`<button class="chip" data-t="${t}">${t}</button>`).join("");
-    openSheet(`<h2>${L.icon} 식사 기록</h2><div class="hint">지금(${hm(Date.now())})으로 저장돼요. 단백질이 많은 식사는 약효에 영향을 줄 수 있어요.</div>
+    const chips=MEAL_TYPES.map(t=>`<button type="button" class="chip" data-t="${t}">${t}</button>`).join("");
+    const amtChips=MEAL_AMOUNTS.map(t=>`<button type="button" class="chip" data-t="${t}">${t}</button>`).join("");
+    const exChips=MEAL_EXTRAS.map(t=>`<button type="button" class="chip" data-t="${t}">${t}</button>`).join("");
+    openSheet(`<h2>${L.icon} 식사 기록</h2><div class="hint">단백질이 많거나 기름진 식사는 약효 흡수에 영향을 줄 수 있어요.</div>
+      ${timeFieldHtml("life_time", now)}
       <div class="field"><label>종류</label><div class="chips" id="mealChips">${chips}</div></div>
-      <div class="field"><label>단백질 많은 식사</label><div class="chips"><button class="chip" id="protChip">고기·생선·콩·계란 많음</button></div></div>
+      <div class="field"><label>식사량 (선택)</label><div class="chips" id="amtChips">${amtChips}</div></div>
+      <div class="field"><label>추가 (복수 선택 가능)</label><div class="chips" id="mealExChips">${exChips}</div></div>
       <div class="field"><label>메모 (선택)</label><input id="life_memo" placeholder="예: 아침 겸 약"></div>
       <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">취소</button><button class="btn primary" id="life_save" disabled>저장</button></div>`);
-    let mt=null, prot=false;
-    document.getElementById("mealChips").addEventListener("click",e=>{ const b=e.target.closest(".chip"); if(!b) return;
-      document.querySelectorAll("#mealChips .chip").forEach(c=>c.classList.remove("sel")); b.classList.add("sel"); mt=b.dataset.t; document.getElementById("life_save").disabled=false; });
-    document.getElementById("protChip").onclick=function(){ prot=!prot; this.classList.toggle("sel"); };
-    document.getElementById("life_save").onclick=()=>{ closeSheet(); addLife("meal",{mealType:mt,protein:prot,memo:document.getElementById("life_memo").value.trim()}); };
+    singleChipToggle("mealChips"); singleChipToggle("amtChips"); multiChipToggle("mealExChips");
+    document.getElementById("mealChips").addEventListener("click",()=>{ document.getElementById("life_save").disabled=false; });
+    document.getElementById("life_save").onclick=()=>{
+      const mt=selectedChip("mealChips"); const amount=selectedChip("amtChips"); const extras=selectedChips("mealExChips");
+      const ts=tsFromTimeField("life_time", now);
+      closeSheet(); addLife("meal",{mealType:mt, amount, extras, protein:extras.includes("단백질 많음"), ts, memo:document.getElementById("life_memo").value.trim()});
+    };
     return;
   }
-  // sleep or exercise: start/end
-  const startLab = kind==="sleep"?"🌙 지금 잠자리에 듦":"🏃 지금 운동 시작";
-  const endLab   = kind==="sleep"?"☀️ 지금 일어남":"🏁 지금 운동 끝";
-  openSheet(`<h2>${L.icon} ${L.ko} 기록</h2><div class="hint">지금(${hm(Date.now())})으로 저장돼요.</div>
-    <div class="btn-row" style="flex-direction:column; gap:10px">
-      <button class="btn primary" id="ls_start" style="min-height:60px">${startLab}</button>
-      <button class="btn" id="ls_end" style="min-height:60px">${endLab}</button>
-    </div>
-    <button class="btn ghost" style="margin-top:8px" onclick="closeSheet()">취소</button>`);
-  document.getElementById("ls_start").onclick=()=>{ closeSheet(); addLife(kind,{phase:"start"}); };
-  document.getElementById("ls_end").onclick=()=>{ closeSheet(); addLife(kind,{phase:"end"}); };
+
+  if(kind==="sleep"){
+    const typeChips=SLEEP_TYPES.map(t=>`<button type="button" class="chip" data-t="${t.key}">${t.ko}</button>`).join("");
+    const qChips=SLEEP_QUALITY.map(t=>`<button type="button" class="chip" data-t="${t}">${t}</button>`).join("");
+    openSheet(`<h2>${L.icon} 수면 기록</h2>
+      ${timeFieldHtml("life_time", now)}
+      <div class="field"><label>유형</label><div class="chips" id="sleepTypeChips">${typeChips}</div></div>
+      <div class="field"><label>수면 특징 (복수 선택 가능, 선택)</label><div class="chips" id="sleepQChips">${qChips}</div></div>
+      <div class="field"><label>기타 (선택)</label><input id="life_symCustom" placeholder="직접 입력"></div>
+      <div class="field"><label>메모 (선택)</label><input id="life_memo"></div>
+      <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">취소</button><button class="btn primary" id="life_save" disabled>저장</button></div>`);
+    document.getElementById("sleepTypeChips").addEventListener("click",e=>{
+      const b=e.target.closest(".chip"); if(!b) return;
+      document.querySelectorAll("#sleepTypeChips .chip").forEach(c=>c.classList.remove("sel")); b.classList.add("sel");
+      document.getElementById("life_save").disabled=false;
+    });
+    multiChipToggle("sleepQChips");
+    document.getElementById("life_save").onclick=()=>{
+      const typeBtn=document.querySelector("#sleepTypeChips .chip.sel"); const phase=typeBtn?typeBtn.dataset.t:"start";
+      const quality=selectedChips("sleepQChips"); const ts=tsFromTimeField("life_time", now);
+      closeSheet(); addLife("sleep",{phase, quality, ts, memo:[document.getElementById("life_symCustom").value.trim(), document.getElementById("life_memo").value.trim()].filter(Boolean).join(" · ")});
+    };
+    return;
+  }
+
+  if(kind==="exercise"){
+    const tChips=EXERCISE_TYPES.map(t=>`<button type="button" class="chip" data-t="${t}">${t}</button>`).join("");
+    const iChips=EXERCISE_INTENSITY.map(t=>`<button type="button" class="chip" data-t="${t}">${t}</button>`).join("");
+    const dChips=EXERCISE_DURATIONS.map(m=>`<button type="button" class="chip" data-t="${m}">${m}분</button>`).join("");
+    openSheet(`<h2>${L.icon} 운동 기록</h2><div class="hint">방금 마친 운동을 기록해요. 시각은 끝난 시간으로 저장돼요.</div>
+      ${timeFieldHtml("life_time", now)}
+      <div class="field"><label>종류</label><div class="chips" id="exTypeChips">${tChips}</div></div>
+      <div class="field" id="exCustomWrap" style="display:none"><label>운동 이름 직접 입력</label><input id="exTypeCustom" placeholder="예: 요가"></div>
+      <div class="field"><label>강도</label><div class="chips" id="exIntChips">${iChips}</div></div>
+      <div class="field"><label>시간</label><div class="chips" id="exDurChips">${dChips}<button type="button" class="chip" data-t="custom">직접 입력</button></div></div>
+      <div class="field" id="exDurCustomWrap" style="display:none"><label>운동 시간 (분)</label><input type="number" id="exDurCustom" min="1" placeholder="예: 45"></div>
+      <div class="field"><label>메모 (선택)</label><input id="life_memo"></div>
+      <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">취소</button><button class="btn primary" id="life_save">저장</button></div>`);
+    singleChipToggle("exTypeChips"); singleChipToggle("exIntChips"); singleChipToggle("exDurChips");
+    document.getElementById("exTypeChips").addEventListener("click",()=>{
+      const sel=selectedChip("exTypeChips"); document.getElementById("exCustomWrap").style.display = sel==="기타"?"block":"none";
+    });
+    document.getElementById("exDurChips").addEventListener("click",()=>{
+      const b=document.querySelector("#exDurChips .chip.sel"); document.getElementById("exDurCustomWrap").style.display = (b&&b.dataset.t==="custom")?"block":"none";
+    });
+    document.getElementById("life_save").onclick=()=>{
+      const exType=selectedChip("exTypeChips"); const exTypeCustom=document.getElementById("exTypeCustom").value.trim();
+      const intensity=selectedChip("exIntChips");
+      const durBtn=document.querySelector("#exDurChips .chip.sel");
+      const durationMin = durBtn? (durBtn.dataset.t==="custom"? (+document.getElementById("exDurCustom").value||null) : +durBtn.dataset.t) : null;
+      const endTs=tsFromTimeField("life_time", now);
+      const startTs = durationMin? endTs-durationMin*60000 : endTs;
+      const memo=document.getElementById("life_memo").value.trim();
+      closeSheet();
+      addLife("exercise",{phase:"start", ts:startTs, exType, exTypeCustom, intensity, durationMin});
+      addLife("exercise",{phase:"end", ts:endTs, exType, exTypeCustom, intensity, durationMin, memo});
+    };
+    return;
+  }
+
+  if(kind==="bowel"){
+    const cChips=BOWEL_CONSISTENCY.map(t=>`<button type="button" class="chip" data-t="${t}">${t}</button>`).join("");
+    const eChips=BOWEL_EXTRAS.map(t=>`<button type="button" class="chip" data-t="${t}">${t}</button>`).join("");
+    openSheet(`<h2>${L.icon} 배변 기록</h2>
+      ${timeFieldHtml("life_time", now)}
+      <div class="field"><label>굳기 (선택)</label><div class="chips" id="bowelCChips">${cChips}</div></div>
+      <div class="field"><label>추가 (복수 선택 가능)</label><div class="chips" id="bowelEChips">${eChips}</div></div>
+      <div class="field"><label><input type="checkbox" id="bowelFirst" style="width:auto;margin-right:6px"> 오늘 첫 배변</label></div>
+      <div class="field"><label>메모 (선택)</label><input id="life_memo"></div>
+      <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">취소</button><button class="btn primary" id="life_save">저장</button></div>`);
+    singleChipToggle("bowelCChips"); multiChipToggle("bowelEChips");
+    document.getElementById("life_save").onclick=()=>{
+      const consistency=selectedChip("bowelCChips"); const extras=selectedChips("bowelEChips");
+      const firstToday=document.getElementById("bowelFirst").checked;
+      const ts=tsFromTimeField("life_time", now);
+      closeSheet(); addLife("bowel",{consistency, extras, firstToday, ts, memo:document.getElementById("life_memo").value.trim()});
+    };
+    return;
+  }
+
+  if(kind==="body"){
+    const sChips=BODY_SYMPTOMS.map(t=>`<button type="button" class="chip" data-t="${t}">${t}</button>`).join("");
+    openSheet(`<h2>${L.icon} 몸 상태 기록</h2><div class="hint">자율신경·비운동 증상을 복수 선택할 수 있어요.</div>
+      ${timeFieldHtml("life_time", now)}
+      <div class="field"><label>증상 (복수 선택 가능)</label><div class="chips" id="bodyChips">${sChips}</div></div>
+      <div class="field"><label>직접 입력 (선택)</label><input id="life_symCustom" placeholder="예: 두통, 이명 등"></div>
+      <div class="field"><label>메모 (선택)</label><input id="life_memo"></div>
+      <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">취소</button><button class="btn primary" id="life_save">저장</button></div>`);
+    multiChipToggle("bodyChips");
+    document.getElementById("life_save").onclick=()=>{
+      const symptoms=selectedChips("bodyChips"); const customSymptom=document.getElementById("life_symCustom").value.trim();
+      const ts=tsFromTimeField("life_time", now);
+      closeSheet(); addLife("body",{symptoms, customSymptom, ts, memo:document.getElementById("life_memo").value.trim()});
+    };
+    return;
+  }
 }
 function openMedConfirm(med){ // called from alarm
   openSheet(`<h2>💊 ${escapeHtml(med.name)} 복용</h2><div class="hint">지금(${hm(Date.now())}) 복용으로 기록할까요?</div>
@@ -1022,7 +1233,7 @@ function openAddMed(fromMedFlow){
 }
 
 function openAddPast(){
-  const sOpts=STATES.map(s=>`<option value="${s.key}">${s.ko}</option>`).join("");
+  const sOpts=MAIN_STATES.map(s=>`<option value="${s.key}">${s.ko}</option>`).join("");
   const now=new Date(); const dval=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
   openSheet(`
     <h2>지난 기록 추가</h2><div class="hint">깜빡한 상태 변화를 날짜·시각을 지정해 추가해요.</div>
