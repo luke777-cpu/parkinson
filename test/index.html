@@ -1,0 +1,1703 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1FA971">
+<title>약효일지 · ON·OFF 기록</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root{
+  --bg:#F5F7FA; --surface:#FFFFFF; --surface-2:#EEF2F6; --ink:#15212E; --ink-2:#516072;
+  --line:#DCE3EB; --accent:#1FA971; --accent-ink:#0C7A52;
+  --on:#1FA971; --off:#54657A; --signal:#5C93D6; --partial:#E0A030;
+  --dysk:#E8663C; --dyst:#8A6BBF; --wearoff:#C98A4B; --wake:#8A97A6;
+  --shadow:0 1px 2px rgba(21,33,46,.06),0 6px 18px rgba(21,33,46,.06);
+  --radius:18px; --tap:64px;
+}
+[data-theme="dark"]{
+  --bg:#0E151D; --surface:#16202B; --surface-2:#1E2A37; --ink:#E8EEF4; --ink-2:#9DB0C2;
+  --line:#27333F; --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  background:var(--bg); color:var(--ink); line-height:1.45;
+  -webkit-font-smoothing:antialiased; font-size:17px;
+  padding-bottom:calc(78px + env(safe-area-inset-bottom));
+}
+button{font-family:inherit; cursor:pointer; border:none; background:none; color:inherit}
+h1,h2,h3{margin:0; font-weight:800; letter-spacing:-.02em}
+.wrap{max-width:560px; margin:0 auto; padding:0 16px}
+.app-head{position:sticky; top:0; z-index:20; background:color-mix(in srgb,var(--bg) 86%, transparent); backdrop-filter:blur(10px); padding:14px 0 10px; border-bottom:1px solid var(--line)}
+.app-head .wrap{display:flex; align-items:center; justify-content:space-between; gap:12px}
+.brand{display:flex; align-items:baseline; gap:10px}
+.brand .mark{font-size:20px; font-weight:900; letter-spacing:-.04em}
+.brand .mark b{color:var(--on)} .brand .mark i{font-style:normal; color:var(--off)}
+.brand .date{font-size:13px; color:var(--ink-2); font-variant-numeric:tabular-nums}
+.icon-btn{width:42px; height:42px; border-radius:12px; display:grid; place-items:center; background:var(--surface); box-shadow:var(--shadow); font-size:18px}
+.icon-btn.listening{background:var(--dysk); color:#fff; animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+
+section.tab{display:none; padding-top:16px} section.tab.active{display:block; animation:fade .25s ease}
+@keyframes fade{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+
+/* current state hero */
+.now-card{background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:18px; margin-bottom:14px}
+.now-row{display:flex; align-items:center; gap:14px}
+.now-dot{width:54px; height:54px; border-radius:16px; flex:0 0 auto; box-shadow:inset 0 0 0 1px rgba(0,0,0,.05)}
+.now-label{font-size:13px; color:var(--ink-2); font-weight:600}
+.now-state{font-size:26px; font-weight:900; letter-spacing:-.03em; line-height:1.1}
+.now-since{font-size:13px; color:var(--ink-2); margin-top:2px; font-variant-numeric:tabular-nums}
+
+/* ribbon */
+.ribbon-card{background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px 18px 12px; margin-bottom:14px}
+.card-title{font-size:13px; font-weight:700; color:var(--ink-2); text-transform:none; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center}
+.ribbon{position:relative; height:34px; border-radius:8px; overflow:hidden; background:var(--surface-2); border:1px solid var(--line)}
+.ribbon .seg{position:absolute; top:0; bottom:0}
+.ribbon .medmark{position:absolute; top:-3px; width:2px; height:40px; background:var(--ink); opacity:.55}
+.ribbon-axis{display:flex; justify-content:space-between; font-size:11px; color:var(--ink-2); margin-top:5px; font-variant-numeric:tabular-nums}
+.ribbon-empty{font-size:13px; color:var(--ink-2); text-align:center; padding:6px 0}
+.daysum-card{background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px 18px; margin-bottom:14px}
+.daysum-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px 6px}
+.daysum-item{text-align:center}
+.daysum-item .dn{font-size:18px; font-weight:900; font-variant-numeric:tabular-nums; letter-spacing:-.02em}
+.daysum-item .dl{font-size:11px; color:var(--ink-2); font-weight:600; margin-top:2px}
+
+/* state buttons */
+.grid-title{font-size:14px; font-weight:700; color:var(--ink-2); margin:4px 2px 10px}
+.state-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:10px}
+.state-btn{min-height:var(--tap); border-radius:16px; background:var(--surface); box-shadow:var(--shadow); display:flex; align-items:center; gap:12px; padding:0 16px; font-size:18px; font-weight:700; transition:transform .08s ease; border:1px solid transparent}
+.state-btn:active{transform:scale(.96)}
+.state-btn .sw{width:18px; height:18px; border-radius:6px; flex:0 0 auto}
+.state-btn small{display:block; font-size:11px; font-weight:600; color:var(--ink-2); margin-top:1px}
+.med-btn{width:100%; min-height:58px; border-radius:16px; margin-top:12px; background:var(--ink); color:var(--bg); font-size:18px; font-weight:800; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:var(--shadow)}
+[data-theme="dark"] .med-btn{background:var(--accent); color:#04130C}
+.quick-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:9px}
+.quick-btn{min-height:64px; border-radius:16px; background:var(--surface); box-shadow:var(--shadow); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; font-size:13px; font-weight:800; transition:transform .08s ease, background .15s; border:1.5px solid transparent}
+.quick-btn:active{transform:scale(.94); background:var(--surface-2)}
+.quick-btn .qic{font-size:24px; line-height:1}
+.recent-med-row{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
+.recent-med-chip{display:inline-flex; align-items:center; gap:6px; background:var(--surface); box-shadow:var(--shadow); border-radius:999px; padding:9px 14px; font-weight:700; font-size:14px}
+.recent-med-chip .r-ic{font-size:15px}
+.life-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(90px,1fr)); gap:10px}
+.life-btn{min-height:60px; border-radius:16px; background:var(--surface); box-shadow:var(--shadow); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-size:14px; font-weight:800; transition:transform .08s}
+.life-btn:active{transform:scale(.95)} .life-btn .ic{font-size:22px}
+.life-btn small{font-size:10px; font-weight:600; color:var(--ink-2)}
+.sched-row{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:8px}
+.sched-chip{display:inline-flex; align-items:center; gap:6px; background:var(--surface-2); border-radius:999px; padding:6px 8px 6px 12px; font-weight:700; font-variant-numeric:tabular-nums}
+.sched-chip button{color:var(--ink-2); font-size:15px; padding:0 2px}
+.intensity-wrap{display:none}
+.intensity-wrap.show{display:block; animation:fade .2s}
+.alarm-banner{position:fixed; left:12px; right:12px; bottom:calc(88px + env(safe-area-inset-bottom)); max-width:536px; margin:0 auto; background:var(--accent); color:#04130C; border-radius:16px; padding:14px 16px; box-shadow:0 8px 24px rgba(0,0,0,.2); z-index:55; display:none; align-items:center; gap:12px}
+.alarm-banner.show{display:flex; animation:slideup .3s}
+.alarm-banner .txt{flex:1; font-weight:800} .alarm-banner .txt small{display:block; font-weight:600; opacity:.8; font-size:12px}
+.alarm-banner button{background:#04130C; color:#fff; border-radius:10px; padding:9px 14px; font-weight:800}
+.alarm-banner .x{background:transparent; color:#04130C; padding:6px}
+.toggle{width:52px; height:30px; border-radius:999px; background:var(--line); position:relative; transition:background .2s; flex:0 0 auto}
+.toggle.on{background:var(--accent)} .toggle::after{content:""; position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:50%; background:#fff; transition:left .2s} .toggle.on::after{left:25px}
+
+.today-list{margin-top:16px}
+.evrow{display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--line)}
+.evrow:last-child{border-bottom:none}
+.evrow .t{font-size:15px; font-weight:700; font-variant-numeric:tabular-nums; width:54px; flex:0 0 auto; border-radius:8px; padding:4px 2px; text-align:center}
+.evrow .t:active{background:var(--surface-2)}
+.evrow .b{flex:1; min-width:0}
+.evrow .b .s{font-weight:700; font-size:15px}
+.evrow .b .m{font-size:13px; color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.evrow .pill{font-size:12px; font-weight:700; padding:3px 9px; border-radius:999px; color:#fff}
+.evrow .del{color:var(--ink-2); font-size:18px; padding:6px}
+
+/* generic cards / kpi */
+.kpi-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:14px}
+.kpi{background:var(--surface); border-radius:14px; box-shadow:var(--shadow); padding:14px}
+.kpi .n{font-size:26px; font-weight:900; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
+.kpi .l{font-size:12px; color:var(--ink-2); font-weight:600; margin-top:2px}
+.kpi .n small{font-size:14px; font-weight:700; color:var(--ink-2)}
+
+.daycard{background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:12px}
+.daycard h3{font-size:16px; margin-bottom:4px} .daycard .sub{font-size:12px; color:var(--ink-2); margin-bottom:12px; font-variant-numeric:tabular-nums}
+.bars{display:flex; flex-direction:column; gap:7px}
+.bar{display:flex; align-items:center; gap:8px; font-size:12px}
+.bar .lab{width:74px; flex:0 0 auto; color:var(--ink-2); font-weight:600}
+.bar .track{flex:1; height:14px; background:var(--surface-2); border-radius:7px; overflow:hidden}
+.bar .fill{height:100%; border-radius:7px}
+.bar .val{width:48px; text-align:right; font-variant-numeric:tabular-nums; font-weight:700}
+
+/* trend chart */
+.chart-card{background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px}
+.legend{display:flex; flex-wrap:wrap; gap:12px; font-size:12px; color:var(--ink-2); margin-top:8px}
+.legend span{display:inline-flex; align-items:center; gap:5px}
+.legend i{width:11px; height:11px; border-radius:3px; display:inline-block}
+
+/* settings / meds */
+.list-card{background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:6px 16px; margin-bottom:14px}
+.li{display:flex; align-items:center; gap:12px; padding:13px 0; border-bottom:1px solid var(--line)}
+.li:last-child{border-bottom:none}
+.li .grow{flex:1; min-width:0}
+.li .name{font-weight:700} .li .meta{font-size:13px; color:var(--ink-2)}
+.section-label{font-size:13px; font-weight:800; color:var(--ink-2); margin:18px 2px 8px; letter-spacing:.02em}
+.btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:50px; padding:0 18px; border-radius:13px; font-weight:800; font-size:16px; background:var(--surface-2); color:var(--ink); width:100%; box-shadow:var(--shadow)}
+.btn.primary{background:var(--accent); color:#04130C}
+.btn.ghost{background:transparent; box-shadow:none; border:1px solid var(--line)}
+.btn.danger{background:transparent; color:var(--dysk); box-shadow:none; border:1px solid color-mix(in srgb,var(--dysk) 40%,transparent)}
+.btn-row{display:flex; gap:10px; margin-bottom:10px}
+
+.disclaimer{font-size:12.5px; color:var(--ink-2); background:var(--surface-2); border-radius:12px; padding:12px 14px; line-height:1.5}
+.disclaimer b{color:var(--ink)}
+
+/* bottom nav */
+.nav{position:fixed; left:0; right:0; bottom:0; z-index:30; background:color-mix(in srgb,var(--surface) 92%,transparent); backdrop-filter:blur(12px); border-top:1px solid var(--line); padding-bottom:env(safe-area-inset-bottom)}
+.nav .wrap{display:flex; justify-content:space-around; padding:0}
+.nav button{flex:1; padding:9px 0 7px; display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--ink-2); font-size:11px; font-weight:700}
+.nav button .ic{font-size:21px; line-height:1}
+.nav button.active{color:var(--accent)}
+
+/* sheet / modal */
+.scrim{position:fixed; inset:0; background:rgba(8,14,20,.45); z-index:50; display:none; align-items:flex-end; justify-content:center}
+.scrim.open{display:flex; animation:fade .2s ease}
+.sheet{background:var(--surface); width:100%; max-width:560px; border-radius:22px 22px 0 0; padding:18px 18px calc(20px + env(safe-area-inset-bottom)); box-shadow:0 -8px 30px rgba(0,0,0,.2); max-height:88vh; overflow:auto; animation:slideup .26s cubic-bezier(.2,.8,.2,1)}
+@keyframes slideup{from{transform:translateY(40px)} to{transform:none}}
+.sheet h2{font-size:19px; margin-bottom:4px}
+.sheet .hint{font-size:13px; color:var(--ink-2); margin-bottom:16px}
+.field{margin-bottom:14px} .field label{display:block; font-size:13px; font-weight:700; color:var(--ink-2); margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%; font-size:16px; font-family:inherit; padding:12px 14px; border:1.5px solid var(--line); border-radius:12px; background:var(--surface); color:var(--ink)}
+.field textarea{min-height:64px; resize:vertical}
+.slider-row{display:flex; align-items:center; gap:12px}
+.slider-row input[type=range]{flex:1; accent-color:var(--accent)}
+.slider-row .v{width:46px; text-align:right; font-weight:800; font-variant-numeric:tabular-nums}
+.chips{display:flex; flex-wrap:wrap; gap:8px}
+.chip{padding:10px 14px; border-radius:999px; background:var(--surface-2); font-weight:700; font-size:15px; border:1.5px solid transparent}
+.chip.sel{border-color:var(--accent); background:color-mix(in srgb,var(--accent) 14%,transparent); color:var(--accent-ink)}
+[data-theme="dark"] .chip.sel{color:#9af0c8}
+.toast{position:fixed; left:50%; bottom:calc(92px + env(safe-area-inset-bottom)); transform:translateX(-50%); background:var(--ink); color:var(--bg); padding:11px 18px; border-radius:999px; font-weight:700; font-size:14px; z-index:60; opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; white-space:nowrap}
+.toast.show{opacity:1; transform:translateX(-50%) translateY(-4px)}
+.empty{text-align:center; color:var(--ink-2); padding:40px 20px; font-size:15px}
+.empty .big{font-size:34px; margin-bottom:10px}
+
+/* report / print */
+.report{background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:20px}
+.report h2{font-size:20px; margin-bottom:2px} .report .rmeta{font-size:13px; color:var(--ink-2); margin-bottom:16px}
+.report table{width:100%; border-collapse:collapse; font-size:13px; margin:8px 0 4px; font-variant-numeric:tabular-nums}
+.report th,.report td{border:1px solid var(--line); padding:6px 8px; text-align:center}
+.report th{background:var(--surface-2); font-weight:800}
+.report .rsec{font-size:14px; font-weight:800; margin:18px 0 8px}
+.qitem{display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-bottom:1px solid var(--line)}
+.qitem input{margin-top:4px}
+.qitem .qx{color:var(--ink-2); padding:2px 6px}
+@media print{
+  body{background:#fff; color:#000; padding:0; font-size:12px}
+  .app-head,.nav,.no-print{display:none!important}
+  section.tab{display:none!important} #tab-report{display:block!important; padding:0}
+  .wrap{max-width:none; padding:0}
+  .report{box-shadow:none; border-radius:0; padding:0}
+  .report th{background:#eee!important; -webkit-print-color-adjust:exact; print-color-adjust:exact}
+  .ribbon .seg,.bar .fill{-webkit-print-color-adjust:exact; print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+
+<header class="app-head">
+  <div class="wrap">
+    <div class="brand">
+      <div class="mark"><b data-i18n="appTitle">약효일지</b></div>
+      <div class="date" id="headDate"></div>
+    </div>
+    <div style="display:flex; gap:8px">
+      <button class="icon-btn" id="voiceBtn" data-i18n-aria="voiceBtn" aria-label="음성으로 기록">🎤</button>
+      <button class="icon-btn" id="themeBtn" data-i18n-aria="themeBtn" aria-label="화면 밝기 전환">◐</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- TODAY -->
+  <section class="tab active" id="tab-today">
+    <div class="now-card">
+      <div class="now-row">
+        <div class="now-dot" id="nowDot" style="background:var(--wake)"></div>
+        <div>
+          <div class="now-label" data-i18n="curState">현재 상태</div>
+          <div class="now-state" id="nowState" data-i18n="noRecord">기록 없음</div>
+          <div class="now-since" id="nowSince" data-i18n="tapToStart">상태 버튼을 눌러 시작하세요</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ribbon-card">
+      <div class="card-title"><span data-i18n="todayFlow">오늘 흐름</span><span id="ribbonRange"></span></div>
+      <div class="ribbon" id="ribbon"><div class="ribbon-empty" id="ribbonEmpty" data-i18n="noTodayRecord">아직 오늘 기록이 없어요</div></div>
+      <div class="ribbon-axis"><span data-i18n="h6">6시</span><span data-i18n="h10">10시</span><span data-i18n="h14">14시</span><span data-i18n="h18">18시</span><span data-i18n="h22">22시</span></div>
+    </div>
+
+    <div class="daysum-card" id="daysumCard" style="display:none">
+      <div class="card-title"><span data-i18n="daySummary">오늘 자동 요약</span><span style="font-weight:400" data-i18n="realtimeCalc">실시간 계산</span></div>
+      <div class="daysum-grid" id="daysumGrid"></div>
+    </div>
+
+    <div class="grid-title" data-i18n="quickTitle">⚡ 빠른 기록 — 한 번 누르면 바로 저장</div>
+    <div class="quick-grid" id="quickGrid"></div>
+
+    <div class="grid-title" style="margin-top:16px" data-i18n="stateTitle">지금 상태 기록 — 누르면 현재 시각으로 저장</div>
+    <div class="state-grid" id="stateGrid"></div>
+    <button class="med-btn" id="medBtn" data-i18n="medBtn">💊 약 먹음</button>
+    <div class="recent-med-row" id="recentMedRow"></div>
+
+    <div class="grid-title" style="margin-top:16px" data-i18n="lifeTitle">생활 기록 — 수면·식사·운동은 약효에 영향을 줘요</div>
+    <div class="life-grid" id="lifeGrid"></div>
+
+    <div class="today-list" id="todayList"></div>
+  </section>
+
+  <!-- LOG -->
+  <section class="tab" id="tab-log">
+    <div class="btn-row no-print">
+      <button class="btn ghost" id="addPastBtn" data-i18n="addPast">+ 지난 기록 직접 추가</button>
+    </div>
+    <div id="logBody"></div>
+  </section>
+
+  <!-- TREND -->
+  <section class="tab" id="tab-trend">
+    <div class="kpi-grid" id="kpiGrid"></div>
+    <div class="chart-card">
+      <div class="card-title"><span data-i18n="recentTrend">최근 추이 (분/일)</span><span id="trendRange"></span></div>
+      <div id="trendChart"></div>
+      <div class="legend">
+        <span><i style="background:var(--on)"></i>ON</span>
+        <span><i style="background:var(--partial)"></i><span data-i18n="legendPartial">불완전ON</span></span>
+        <span><i style="background:var(--off)"></i>OFF</span>
+        <span><i style="background:var(--dysk)"></i><span data-i18n="legendDysk2">이상운동</span></span>
+      </div>
+    </div>
+    <div id="dayCards"></div>
+  </section>
+
+  <!-- CURVE -->
+  <section class="tab" id="tab-curve">
+    <div class="btn-row no-print" style="margin-bottom:10px">
+      <select id="curveDate" class="btn" style="font-weight:700"></select>
+    </div>
+    <div class="chart-card">
+      <div class="card-title"><span data-i18n="estCurve">약효 추정 곡선</span><span id="curveRange"></span></div>
+      <div id="curveChart"></div>
+      <div class="legend">
+        <span><i style="background:#1FA971"></i><span data-i18n="legendDA">추정 도파민 작용</span></span>
+        <span><i style="background:#5C93D6"></i><span data-i18n="legendOutput">출력 점수</span></span>
+        <span><i style="background:#E0A030"></i><span data-i18n="legendGait">보행 점수</span></span>
+        <span><i style="background:#E8663C"></i><span data-i18n="legendDysk">이상운동 구간</span></span>
+        <span><i style="background:#54657A"></i><span data-i18n="legendOff">OFF 구간</span></span>
+      </div>
+    </div>
+    <div class="disclaimer" style="margin:10px 0" data-i18n="curveDisclaimer">
+      이 곡선은 실측 혈중 도파민 농도가 아니라, 복약 시간·약물별 일반적 흡수 프로파일(퍼킨=급상승형, HBS=완만 지속형, 온젠티스=연장형)과 형이 직접 기록한 출력·보행·이상운동 점수를 결합해 추정한 "기능적 약효 곡선"입니다. 주치의 상담 시 참고 자료로만 활용하세요.
+    </div>
+    <div id="curveEventList"></div>
+  </section>
+
+  <!-- REPORT -->
+  <section class="tab" id="tab-report">
+    <div class="btn-row no-print">
+      <select id="repRange" class="btn" style="font-weight:700">
+        <option value="7" data-i18n="range7">최근 7일</option>
+        <option value="14" selected data-i18n="range14">최근 14일</option>
+        <option value="30" data-i18n="range30">최근 30일</option>
+      </select>
+      <button class="btn primary" id="printBtn" data-i18n="printPdf">🖨 인쇄 / PDF</button>
+    </div>
+    <div class="report" id="reportBody"></div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="tab" id="tab-set">
+    <div class="section-label" data-i18n="myMeds">내 약 · 복용 시간 예약</div>
+    <div class="list-card" id="medList"></div>
+    <button class="btn ghost no-print" id="addMedBtn" style="margin-bottom:8px" data-i18n="addMed">+ 약 추가</button>
+
+    <div class="section-label" data-i18n="medAlarm">약 알림</div>
+    <div class="list-card">
+      <div class="li"><div class="grow"><div class="name" data-i18n="appNotify">앱 알림 켜기</div><div class="meta" data-i18n="appNotifyDesc">앱이 켜져 있을 때 예약 시간에 알려줘요</div></div><div class="toggle" id="notifyToggle"></div></div>
+      <div class="li"><div class="grow"><div class="name" data-i18n="calAlarm">폰 캘린더에 알람 등록</div><div class="meta" data-i18n="calAlarmDesc">앱을 꺼도 확실히 울려요 (.ics 파일)</div></div><button class="btn ghost" id="icsBtn" style="width:auto" data-i18n="exportBtn">내보내기</button></div>
+    </div>
+    <div class="disclaimer" style="margin-bottom:6px" data-i18n-html="notifyHint">앱 알림은 브라우저가 켜져 있을 때 동작해요. <b>앱을 완전히 끈 상태에서 확실히 알림을 받으려면</b> 위의 '폰 캘린더에 알람 등록'을 함께 쓰는 걸 권해요.</div>
+
+    <div class="section-label" data-i18n="data">데이터</div>
+    <div class="btn-row">
+      <button class="btn" id="exportBtn" data-i18n="backupExport">⬇ 백업 내보내기</button>
+      <button class="btn" id="importBtn" data-i18n="backupImport">⬆ 불러오기</button>
+    </div>
+    <input type="file" id="importFile" accept="application/json" style="display:none">
+
+    <div class="section-label" data-i18n="screen">화면</div>
+    <div class="list-card">
+      <div class="li"><div class="grow"><div class="name" data-i18n="darkScreen">어두운 화면</div></div><button class="btn ghost" id="darkToggle" style="width:auto" data-i18n="toggleBtn">전환</button></div>
+      <div class="li"><div class="grow"><div class="name" data-i18n="lang">언어</div><div class="meta" data-i18n="langDesc">한국어 / English</div></div><button class="btn ghost" id="langToggle" style="width:auto">한국어</button></div>
+    </div>
+
+    <div class="section-label" data-i18n="guide">안내</div>
+    <div class="disclaimer" data-i18n-html="guideText">
+      <b>약효일지는 증상과 약효 패턴을 기록·관찰하는 도구입니다.</b> 의학적 진단이나 처방을 대체하지 않습니다.
+      약물 용량·복용 간격 조정은 반드시 주치의와 상의하세요. 모든 기록은 이 기기 안에만 저장되며, 다른 곳으로 전송되지 않습니다.
+    </div>
+    <button class="btn danger no-print" id="resetBtn" style="margin-top:14px" data-i18n="resetAll">모든 기록 삭제</button>
+    <div style="text-align:center; color:var(--ink-2); font-size:12px; margin:18px 0 8px">약효일지 · v3.1.0</div>
+  </section>
+
+</main>
+
+<nav class="nav">
+  <div class="wrap">
+    <button data-tab="today" class="active"><span class="ic">🏠</span><span data-i18n="navToday">오늘</span></button>
+    <button data-tab="log"><span class="ic">📋</span><span data-i18n="navLog">기록</span></button>
+    <button data-tab="trend"><span class="ic">📈</span><span data-i18n="navTrend">추이</span></button>
+    <button data-tab="curve"><span class="ic">🌊</span><span data-i18n="navCurve">곡선</span></button>
+    <button data-tab="report"><span class="ic">🩺</span><span data-i18n="navReport">보고서</span></button>
+    <button data-tab="set"><span class="ic">⚙️</span><span data-i18n="navSet">설정</span></button>
+  </div>
+</nav>
+
+<div class="alarm-banner" id="alarmBanner"><span style="font-size:22px">💊</span><div class="txt"></div><button class="take" data-i18n="takeMed">복용함</button><button class="x">✕</button></div>
+<div class="scrim" id="scrim"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ---------- i18n ---------- */
+const I18N = {
+  ko:{
+    appTitle:"약효일지", appSub:"ON·OFF 기록",
+    voiceBtn:"음성으로 기록", themeBtn:"화면 밝기 전환",
+    curState:"현재 상태", noRecord:"기록 없음", tapToStart:"상태 버튼을 눌러 시작하세요",
+    todayFlow:"오늘 흐름", noTodayRecord:"아직 오늘 기록이 없어요",
+    daySummary:"오늘 자동 요약", realtimeCalc:"실시간 계산",
+    quickTitle:"⚡ 빠른 기록 — 한 번 누르면 바로 저장",
+    stateTitle:"지금 상태 기록 — 누르면 현재 시각으로 저장",
+    medBtn:"💊 약 먹음",
+    lifeTitle:"생활 기록 — 수면·식사·운동은 약효에 영향을 줘요",
+    todayRecords:"오늘 기록",
+    addPast:"+ 지난 기록 직접 추가",
+    recentTrend:"최근 추이 (분/일)", legendPartial:"불완전ON", legendDysk2:"이상운동",
+    estCurve:"약효 추정 곡선", legendDA:"추정 도파민 작용", legendOutput:"출력 점수", legendGait:"보행 점수", legendDysk:"이상운동 구간", legendOff:"OFF 구간",
+    curveDisclaimer:"이 곡선은 실측 혈중 도파민 농도가 아니라, 복약 시간·약물별 일반적 흡수 프로파일(퍼킨=급상승형, HBS=완만 지속형, 온젠티스=연장형)과 형이 직접 기록한 출력·보행·이상운동 점수를 결합해 추정한 \"기능적 약효 곡선\"입니다. 주치의 상담 시 참고 자료로만 활용하세요.",
+    thisDayRecord:"이 날 기록",
+    printPdf:"🖨 인쇄 / PDF",
+    range7:"최근 7일", range14:"최근 14일", range30:"최근 30일",
+    myMeds:"내 약 · 복용 시간 예약", addMed:"+ 약 추가",
+    medAlarm:"약 알림", appNotify:"앱 알림 켜기", appNotifyDesc:"앱이 켜져 있을 때 예약 시간에 알려줘요",
+    calAlarm:"폰 캘린더에 알람 등록", calAlarmDesc:"앱을 꺼도 확실히 울려요 (.ics 파일)", exportBtn:"내보내기",
+    notifyHint:"앱 알림은 브라우저가 켜져 있을 때 동작해요. <b>앱을 완전히 끈 상태에서 확실히 알림을 받으려면</b> 위의 '폰 캘린더에 알람 등록'을 함께 쓰는 걸 권해요.",
+    data:"데이터", backupExport:"⬇ 백업 내보내기", backupImport:"⬆ 불러오기",
+    screen:"화면", darkScreen:"어두운 화면", toggleBtn:"전환",
+    guide:"안내",
+    guideText:"<b>약효일지는 증상과 약효 패턴을 기록·관찰하는 도구입니다.</b> 의학적 진단이나 처방을 대체하지 않습니다. 약물 용량·복용 간격 조정은 반드시 주치의와 상의하세요. 모든 기록은 이 기기 안에만 저장되며, 다른 곳으로 전송되지 않습니다.",
+    resetAll:"모든 기록 삭제",
+    lang:"언어", langDesc:"한국어 / English",
+    navToday:"오늘", navLog:"기록", navTrend:"추이", navCurve:"곡선", navReport:"보고서", navSet:"설정",
+    takeMed:"복용함",
+    since:"부터", elapsed:"경과",
+    h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
+  },
+  en:{
+    appTitle:"Med Log", appSub:"ON·OFF Tracker",
+    voiceBtn:"Record by voice", themeBtn:"Toggle brightness",
+    curState:"Current state", noRecord:"No record yet", tapToStart:"Tap a state button to start",
+    todayFlow:"Today's flow", noTodayRecord:"No records yet today",
+    daySummary:"Today's auto summary", realtimeCalc:"Updated live",
+    quickTitle:"⚡ Quick log — tap once to save instantly",
+    stateTitle:"Log current state — saved at the current time",
+    medBtn:"💊 Took medication",
+    lifeTitle:"Life log — sleep, meals, and exercise affect medication response",
+    todayRecords:"Today's records",
+    addPast:"+ Add a past record",
+    recentTrend:"Recent trend (min/day)", legendPartial:"Partial ON", legendDysk2:"Dyskinesia",
+    estCurve:"Estimated medication curve", legendDA:"Estimated dopamine action", legendOutput:"Output score", legendGait:"Gait score", legendDysk:"Dyskinesia window", legendOff:"OFF window",
+    curveDisclaimer:"This curve is not a measured blood dopamine level. It's a \"functional effect curve\" estimated from your dosing times, typical absorption profiles per drug (e.g. fast-acting levodopa, slow-release HBS, extended-action COMT inhibitors), and your own output/gait/dyskinesia scores. Use it as reference material when talking with your doctor, not as a clinical measurement.",
+    thisDayRecord:"Records for this day",
+    printPdf:"🖨 Print / PDF",
+    range7:"Last 7 days", range14:"Last 14 days", range30:"Last 30 days",
+    myMeds:"My medications · Scheduled times", addMed:"+ Add medication",
+    medAlarm:"Medication alarm", appNotify:"Enable in-app alerts", appNotifyDesc:"Alerts you at scheduled times while the app is open",
+    calAlarm:"Add alarms to phone calendar", calAlarmDesc:"Rings reliably even with the app closed (.ics file)", exportBtn:"Export",
+    notifyHint:"In-app alerts only work while the browser is open. <b>To be reliably notified even with the app fully closed</b>, we recommend also using 'Add alarms to phone calendar' above.",
+    data:"Data", backupExport:"⬇ Export backup", backupImport:"⬆ Import",
+    screen:"Display", darkScreen:"Dark mode", toggleBtn:"Toggle",
+    guide:"About",
+    guideText:"<b>Med Log is a tool for recording and observing symptom and medication-response patterns.</b> It does not replace medical diagnosis or prescription. Always consult your doctor before adjusting dosage or timing. All records are stored only on this device and are never transmitted anywhere.",
+    resetAll:"Delete all records",
+    lang:"Language", langDesc:"한국어 / English",
+    navToday:"Today", navLog:"Log", navTrend:"Trend", navCurve:"Curve", navReport:"Report", navSet:"Settings",
+    takeMed:"Taken",
+    since:"since", elapsed:"elapsed",
+    h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
+  }
+};
+function currentLang(){ try{ return (db && db.settings && db.settings.lang) || "ko"; }catch(e){ return "ko"; } }
+function tr(key){ const lang=currentLang(); return (I18N[lang]&&I18N[lang][key]!=null)? I18N[lang][key] : (I18N.ko[key]!=null? I18N.ko[key] : key); }
+function L(koText, enText){ return currentLang()==="en" ? enText : koText; }
+function applyI18nStatic(){
+  document.documentElement.lang = currentLang()==="en" ? "en" : "ko";
+  document.querySelectorAll("[data-i18n]").forEach(el=>{ el.textContent = tr(el.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-html]").forEach(el=>{ el.innerHTML = tr(el.dataset.i18nHtml); });
+  document.querySelectorAll("[data-i18n-aria]").forEach(el=>{ el.setAttribute("aria-label", tr(el.dataset.i18nAria)); });
+  document.querySelectorAll("[data-i18n-title]").forEach(el=>{ el.title = tr(el.dataset.i18nTitle); });
+}
+/* ---------- model ---------- */
+const STATES = [
+  {key:"wake",    ko:"기상",        en:"Wake",     hint:"하루 시작",        hintEn:"Start of day",              color:"#8A97A6", main:true},
+  {key:"off",     ko:"OFF",         en:"OFF",      hint:"약효 없음",        hintEn:"No medication effect",      color:"#54657A", main:true},
+  {key:"rising",  ko:"상승 전환기", en:"Rising",   hint:"OFF→ON 올라오는 중", hintEn:"Transitioning OFF→ON",      color:"#5C93D6", main:true},
+  {key:"on",      ko:"ON",          en:"ON",       hint:"잘 움직임",        hintEn:"Moving well",               color:"#1FA971", main:true},
+  {key:"falling", ko:"하강 전환기", en:"Falling",  hint:"ON→OFF 떨어지는 중", hintEn:"Transitioning ON→OFF",      color:"#C98A4B", main:true},
+  /* 아래는 예전 방식으로 기록된 과거 데이터 표시용으로만 남겨둠 (더 이상 새로 선택할 수 없음) */
+  {key:"signal",  ko:"신호",        en:"Signal",   hint:"약효 오는 느낌",   hintEn:"Feeling it coming on",      color:"#5C93D6", legacy:true},
+  {key:"partial", ko:"불완전 ON",   en:"Partial ON", hint:"될 듯 말 듯",    hintEn:"Almost there",              color:"#E0A030", legacy:true},
+  {key:"dysk",    ko:"이상운동",    en:"Dyskinesia", hint:"dyskinesia",     hintEn:"Dyskinesia",                color:"#E8663C", legacy:true},
+  {key:"dyst",    ko:"근긴장",      en:"Dystonia", hint:"dystonia·발가락",  hintEn:"Dystonia · toes",           color:"#8A6BBF", legacy:true},
+  {key:"wearoff", ko:"약효 빠짐",   en:"Wearing off", hint:"wearing off",  hintEn:"Wearing off",               color:"#C98A4B", legacy:true},
+];
+const SMAP = Object.fromEntries(STATES.map(s=>[s.key,s]));
+const MAIN_STATES = STATES.filter(s=>s.main);
+function stateName(key){ const s=SMAP[key]; return s? L(s.ko,s.en) : key; }
+function stateHint(key){ const s=SMAP[key]; return s? L(s.hint,s.hintEn) : ""; }
+/* 상승 전환기의 결과(선택) */
+const RISE_RESULTS = [
+  {key:"reached", ko:"ON 도달",   en:"Reached ON"},
+  {key:"partial",  ko:"불완전 ON", en:"Partial ON"},
+  {key:"failed",   ko:"ON 실패",   en:"Failed to reach ON"},
+];
+function riseLabel(key){ const r=RISE_RESULTS.find(x=>x.key===key); return r? L(r.ko,r.en) : ""; }
+/* 동반 증상 (복수 선택) */
+const SYMPTOMS = [
+  {key:"dysk",          ko:"이상운동",   en:"Dyskinesia"},
+  {key:"dyst",          ko:"근긴장",     en:"Dystonia"},
+  {key:"tremor",        ko:"떨림",       en:"Tremor"},
+  {key:"freeze",        ko:"동결",       en:"Freezing"},
+  {key:"rigid",         ko:"경직",       en:"Rigidity"},
+  {key:"pain",          ko:"통증",       en:"Pain"},
+  {key:"toecurl",       ko:"발가락 말림", en:"Toe curling"},
+  {key:"gait_unstable", ko:"보행 불안",   en:"Unstable gait"},
+];
+function symLabel(key){ const s=SYMPTOMS.find(x=>x.key===key); return s? L(s.ko,s.en) : key; }
+const LIFE = {
+  sleep:    {ko:"수면",    en:"Sleep",    icon:"🌙", color:"#3F5B8B"},
+  meal:     {ko:"식사",    en:"Meal",     icon:"🍚", color:"#C0863E"},
+  exercise: {ko:"운동",    en:"Exercise", icon:"🏃", color:"#2C9C8F"},
+  bowel:    {ko:"배변",    en:"Bowel",    icon:"🚽", color:"#8A6BBF"},
+  body:     {ko:"몸 상태", en:"Body",     icon:"⚡", color:"#D6455C"},
+};
+function lifeLabel(kind){ const l=LIFE[kind]; return l? L(l.ko,l.en) : kind; }
+/* 생활기록 태그: 기존 데이터 호환을 위해 저장값은 한글 그대로 유지하고, 화면 표시만 번역 */
+const TAG_EN = {
+  "아침":"Breakfast","점심":"Lunch","저녁":"Dinner","간식":"Snack",
+  "소량":"Small","보통":"Normal","과식":"Overate",
+  "단백질 많음":"High protein","기름진 식사":"Fatty meal",
+  "취침":"Bedtime","기상":"Wake up","낮잠":"Nap",
+  "숙면":"Slept well","자주 깸":"Frequent waking","잠들기 어려움":"Hard to fall asleep","REM 행동 의심":"Possible REM behavior",
+  "걷기":"Walking","실내자전거":"Stationary bike","근력":"Strength","탁구":"Table tennis","등산":"Hiking","기타":"Other",
+  "가벼움":"Light","강함":"Intense",
+  "딱딱함":"Hard","묽음":"Loose",
+  "힘들었음":"Difficult","잔변감":"Incomplete feeling",
+  "이상 없음":"No symptoms","어지럼":"Dizziness","기립 시 어지럼":"Dizziness on standing","소변 급박":"Urinary urgency","빈뇨":"Frequent urination","땀 증가":"Increased sweating","침 흘림":"Drooling","메스꺼움":"Nausea","극심한 피로":"Severe fatigue","불안":"Anxiety","졸림":"Drowsiness","통증":"Pain",
+  "직접 입력":"Custom",
+};
+function tagLabel(ko){ return currentLang()==="en" ? (TAG_EN[ko]||ko) : ko; }
+const MEAL_TYPES = ["아침","점심","저녁","간식"];
+const MEAL_AMOUNTS = ["소량","보통","과식"];
+const MEAL_EXTRAS = ["단백질 많음","기름진 식사"];
+const SLEEP_TYPES = [{key:"start",ko:"취침"},{key:"end",ko:"기상"},{key:"nap",ko:"낮잠"}];
+const SLEEP_QUALITY = ["숙면","자주 깸","잠들기 어려움","REM 행동 의심"];
+const EXERCISE_TYPES = ["걷기","실내자전거","근력","탁구","등산","기타"];
+const EXERCISE_INTENSITY = ["가벼움","보통","강함"];
+const EXERCISE_DURATIONS = [10,30,60];
+const BOWEL_CONSISTENCY = ["딱딱함","보통","묽음"];
+const BOWEL_EXTRAS = ["힘들었음","잔변감"];
+const BODY_SYMPTOMS = ["이상 없음","어지럼","기립 시 어지럼","소변 급박","빈뇨","땀 증가","침 흘림","메스꺼움","극심한 피로","불안","졸림","통증"];
+const MED_PRESETS = ["마도파","마도파 HBS","시네메트","시네메트 CR","스타레보","퍼킨","온젠티스(엔타카폰)","아질렉트","미라펙스","리큅","아만타딘","컴탄"];
+
+/* 빠른 기록: 시트 없이 한 번의 탭으로 바로 저장되는 버튼들 (가장 많이 나온 피드백 반영) */
+const QUICK_ACTIONS = [
+  {key:"good",   ic:"😊", ko:"괜찮음",  en:"Okay",       kind:"state", state:"on"},
+  {key:"better", ic:"↗",  ko:"좋아짐",  en:"Better",     kind:"state", state:"rising", riseResult:"reached"},
+  {key:"worse",  ic:"↘",  ko:"나빠짐",  en:"Worse",      kind:"state", state:"falling"},
+  {key:"off",    ic:"⚫", ko:"OFF",     en:"OFF",        kind:"state", state:"off"},
+  {key:"on",     ic:"🟢", ko:"ON",      en:"ON",         kind:"state", state:"on"},
+  {key:"dysk",   ic:"⚡", ko:"이상운동", en:"Dyskinesia", kind:"state", state:"on", symptoms:["dysk"]},
+];
+
+/* ---------- kinetic profiles for curve tab ----------
+   type: "fast"  = 빠른 상승/짧은 지속 (즉시방출 레보도파류: 퍼킨, 시네메트, 마도파(일반), 스타레보)
+         "slow"  = 완만한 상승/긴 지속 (서방정: HBS, CR)
+         "extend"= 곡선을 옆으로 늘려주는 보조제 (온젠티스/컴탄=COMT억제제, 아질렉트=MAO-B억제제)
+         "flat"  = 완만한 기저 상승 (도파민 효능제, 아만타딘)
+   peakMin: 투여 후 피크까지 걸리는 시간(분)
+   durMin: 전체 지속시간(분, 반감기 기반 근사)
+   amp: 상대적 기여도(1.0 = 표준 1회 용량 기준) */
+const MED_KINETICS = {
+  "퍼킨":               {type:"fast",  peakMin:35,  durMin:150, amp:1.0},
+  "시네메트":            {type:"fast",  peakMin:40,  durMin:150, amp:1.0},
+  "마도파":              {type:"fast",  peakMin:40,  durMin:150, amp:1.0},
+  "스타레보":            {type:"fast",  peakMin:45,  durMin:200, amp:1.1},
+  "마도파 HBS":          {type:"slow",  peakMin:90,  durMin:300, amp:0.9},
+  "시네메트 CR":         {type:"slow",  peakMin:100, durMin:300, amp:0.9},
+  "온젠티스(엔타카폰)":   {type:"extend",peakMin:0,   durMin:0,   amp:0.25},
+  "컴탄":                {type:"extend",peakMin:0,   durMin:0,   amp:0.25},
+  "아질렉트":            {type:"extend",peakMin:0,   durMin:0,   amp:0.15},
+  "미라펙스":            {type:"flat",  peakMin:180, durMin:480, amp:0.5},
+  "리큅":                {type:"flat",  peakMin:180, durMin:480, amp:0.5},
+  "아만타딘":            {type:"flat",  peakMin:120, durMin:360, amp:0.3},
+};
+function kineticFor(name){
+  if(MED_KINETICS[name]) return MED_KINETICS[name];
+  const n=name||"";
+  if(n.includes("HBS")||n.includes("CR")||n.includes("서방")) return {type:"slow",peakMin:90,durMin:300,amp:0.9};
+  if(n.includes("온젠티스")||n.includes("엔타카폰")||n.includes("컴탄")||n.includes("콤탄")) return {type:"extend",peakMin:0,durMin:0,amp:0.25};
+  if(n.includes("아질렉트")||n.includes("셀레길린")) return {type:"extend",peakMin:0,durMin:0,amp:0.15};
+  if(n.includes("미라펙스")||n.includes("리큅")||n.includes("프라미펙솔")||n.includes("로피니롤")) return {type:"flat",peakMin:180,durMin:480,amp:0.5};
+  if(n.includes("아만타딘")) return {type:"flat",peakMin:120,durMin:360,amp:0.3};
+  return {type:"fast",peakMin:40,durMin:150,amp:1.0};
+}
+function doseCurve(prof, t){
+  if(t<0) return 0;
+  const {peakMin,durMin,amp,type}=prof;
+  if(type==="extend") return 0;
+  const k = peakMin<=0? 1 : t/peakMin;
+  const rise = 1-Math.exp(-3*k);
+  const fallTau = Math.max(durMin-peakMin, 30);
+  const fall = Math.exp(-Math.max(0,t-peakMin)/fallTau);
+  return amp*rise*fall;
+}
+const KEY = "yakhyo_log_v1";
+
+let db = load();
+function load(){
+  try{ const d = JSON.parse(localStorage.getItem(KEY)); if(d&&d.events){ d.meds=(d.meds||[]).map(m=>({sched:[],...m})); d.settings=d.settings||{theme:"light"}; return d; } }catch(e){}
+  return { events:[], meds:[], questions:defaultQuestions(), settings:{theme:"light",notify:false} };
+}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){ toast(L("저장 공간이 부족합니다","Storage space is full")); } }
+function defaultQuestions(){ return (currentLang()==="en" ? [
+  "How can I reduce the delay before morning ON?",
+  "How should I adjust timing to manage dyskinesia?",
+  "How should I think about partial ON states?",
+  "How can I make medication response less sharp/sudden?",
+] : [
+  "아침에 ON이 늦게 오는 문제를 줄일 방법이 있을지",
+  "이상운동(dyskinesia)이 생기는 시간대 조절 방법",
+  "불완전 ON 상태를 어떻게 봐야 할지",
+  "약효가 급하게 오르내리지 않게 하는 방법",
+]).map(t=>({t,done:false})); }
+
+/* ---------- helpers ---------- */
+const pad=n=>String(n).padStart(2,"0");
+const dkey=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const todayKey=()=>dkey(new Date());
+function hm(ts){const d=new Date(ts); return `${pad(d.getHours())}:${pad(d.getMinutes())}`;}
+function minOfDay(ts){const d=new Date(ts); return d.getHours()*60+d.getMinutes();}
+function fmtDur(m){ if(m<=0) return L("0분","0min"); const h=Math.floor(m/60),mm=Math.round(m%60); return h? L(`${h}시간 ${mm}분`,`${h}h ${mm}m`) : L(`${mm}분`,`${mm}m`); }
+function fmtDateK(k){ const[a,b,c]=k.split("-");
+  if(currentLang()==="en"){ const dt=new Date(k); return dt.toLocaleDateString("en-US",{month:"short",day:"numeric",weekday:"short"}); }
+  const wd=["일","월","화","수","목","금","토"][new Date(k).getDay()]; return `${+b}월 ${+c}일 (${wd})`; }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+/* ---------- event ops ---------- */
+function addState(key, extra={}){
+  const ts = extra.ts || Date.now();
+  db.events.push({ id:uid(), type:"state", state:key, ts,
+    output:extra.output??null, gait:extra.gait??null, dysk:extra.dysk??null, dyst:extra.dyst??null, memo:extra.memo||"",
+    symptoms:extra.symptoms||[], customSymptom:extra.customSymptom||"", riseResult:extra.riseResult||null });
+  db.events.sort((a,b)=>a.ts-b.ts); save(); renderAll();
+  toast(`${stateName(key)} ${L("기록됨","recorded")} · ${hm(ts)}`);
+}
+function addMed(name, dose, ts){
+  db.events.push({ id:uid(), type:"med", drug:name, dose:dose||null, ts:ts||Date.now(), memo:"" });
+  db.events.sort((a,b)=>a.ts-b.ts); save(); renderAll();
+  toast(`${name}${dose?(" "+dose+"mg"):""} ${L("복약 기록됨","medication recorded")}`);
+}
+function addLife(kind, data={}){
+  const ts = data.ts || Date.now();
+  db.events.push({ id:uid(), type:"life", kind, phase:data.phase||null, mealType:data.mealType||null,
+    protein:!!data.protein, ts, memo:data.memo||"",
+    quality:data.quality||[], exType:data.exType||null, exTypeCustom:data.exTypeCustom||"",
+    intensity:data.intensity||null, durationMin:data.durationMin??null, amount:data.amount||null,
+    extras:data.extras||[], consistency:data.consistency||null, firstToday:!!data.firstToday,
+    symptoms:data.symptoms||[], customSymptom:data.customSymptom||"" });
+  db.events.sort((a,b)=>a.ts-b.ts); save(); renderAll();
+  const lf=LIFE[kind]; const lab = kind==="meal"? `${data.mealType?tagLabel(data.mealType):L("식사","Meal")}` : kind==="bowel"? L("배변","Bowel movement") : kind==="body"? L("몸 상태","Body") :
+    (data.phase==="nap"?L("낮잠","Nap"):(data.phase==="start"?(kind==="sleep"?L("취침","Bedtime"):L("운동","Exercise")):(kind==="sleep"?L("기상","Wake up"):L("운동 종료","Exercise ended"))));
+  toast(`${lf.icon} ${lab} ${L("기록됨","recorded")} · ${hm(ts)}`);
+}
+function delEvent(id){ db.events = db.events.filter(e=>e.id!==id); save(); renderAll(); }
+
+/* ---------- quick record (원터치 저장, 시트 안 열림) ---------- */
+function quickSave(q){
+  addState(q.state, { symptoms:q.symptoms||[], riseResult:q.riseResult||null });
+}
+/* 최근 복용한 약 원터치 복사 — "퍼킨 100mg" 눌러서 바로 저장 */
+function renderRecentMedRow(){
+  const row=document.getElementById("recentMedRow"); if(!row) return; row.innerHTML="";
+  const recentMeds = db.events.filter(e=>e.type==="med").slice(-6).reverse();
+  const seen=new Set(); const uniq=[];
+  recentMeds.forEach(e=>{ const key=e.drug+"|"+e.dose; if(!seen.has(key)){ seen.add(key); uniq.push(e); } });
+  uniq.slice(0,4).forEach(e=>{
+    const chip=document.createElement("button"); chip.className="recent-med-chip";
+    chip.innerHTML=`<span class="r-ic">🔁</span>${escapeHtml(e.drug)}${e.dose?` ${e.dose}mg`:""}`;
+    chip.onclick=()=>addMed(e.drug, e.dose);
+    row.appendChild(chip);
+  });
+}
+
+/* ---------- alarms (med schedule) ---------- */
+let _firedAlarms = new Set();
+function alarmLoop(){
+  if(!db.settings.notify) return;
+  const now=new Date(); const cur=`${pad(now.getHours())}:${pad(now.getMinutes())}`; const day=todayKey();
+  db.meds.forEach(m=>{
+    (m.sched||[]).forEach(t=>{
+      const tag=`${day}|${m.id}|${t}`;
+      if(t===cur && !_firedAlarms.has(tag)){ _firedAlarms.add(tag); fireAlarm(m,t); }
+    });
+  });
+}
+function fireAlarm(med,t){
+  showAlarmBanner(med,t);
+  try{
+    if("Notification" in window && Notification.permission==="granted"){
+      const n=new Notification(L("💊 약 먹을 시간","💊 Time for medication"), { body:`${med.name}${med.dose?` ${med.dose}mg`:""} · ${t} · ${L("복용하셨습니까?","Have you taken it?")}`, tag:"med-"+med.id, requireInteraction:true });
+      n.onclick=()=>{ window.focus(); openMedConfirm(med); n.close(); };
+    }
+  }catch(e){}
+  try{ if(navigator.vibrate) navigator.vibrate([200,100,200]); }catch(e){}
+  // 5분 내 응답 없으면 재알림 1회 (기록 누락 방지 핵심 요청 반영)
+  clearTimeout(_snoozeTimers[med.id]);
+  _snoozeTimers[med.id]=setTimeout(()=>{
+    const tag=`${todayKey()}|${med.id}|${t}|taken`;
+    if(!_firedAlarms.has(tag)) showAlarmBanner(med,t,true);
+  }, 5*60000);
+}
+let _snoozeTimers={};
+function showAlarmBanner(med,t,isReminder){
+  const b=document.getElementById("alarmBanner");
+  b.querySelector(".txt").innerHTML=`${isReminder?L("⏰ 아직 안 드셨나요? · ","⏰ Haven't taken it yet? · "):""}${escapeHtml(med.name)}${med.dose?` ${med.dose}mg`:""} ${L("드실 시간","time to take")}<small>${L("복용하셨습니까? · 예약","Have you taken it? · Scheduled")} ${t}</small>`;
+  b.querySelector(".take").textContent=L("예, 복용함","Yes, taken");
+  b.querySelector(".take").onclick=()=>{
+    addMed(med.name, med.dose); b.classList.remove("show");
+    _firedAlarms.add(`${todayKey()}|${med.id}|${t}|taken`);
+  };
+  b.querySelector(".x").onclick=()=>b.classList.remove("show");
+  b.classList.add("show");
+  clearTimeout(b._t); b._t=setTimeout(()=>b.classList.remove("show"), 120000);
+}
+async function enableNotify(){
+  if(!("Notification" in window)){ toast(L("이 브라우저는 알림을 지원하지 않아요","This browser doesn't support notifications")); return false; }
+  let p=Notification.permission;
+  if(p==="default") p=await Notification.requestPermission();
+  if(p==="granted"){ db.settings.notify=true; save(); toast(L("약 알림을 켰어요","Medication alerts enabled")); return true; }
+  toast(L("알림이 차단돼 있어요. 브라우저 설정에서 허용해주세요","Notifications are blocked. Please allow them in your browser settings")); return false;
+}
+function exportICS(){
+  const withSched=db.meds.filter(m=>(m.sched||[]).length);
+  if(!withSched.length){ toast(L("예약된 약 시간이 없어요","No scheduled medication times")); return; }
+  const dt=new Date(); const stamp=`${dt.getUTCFullYear()}${pad(dt.getUTCMonth()+1)}${pad(dt.getUTCDate())}T${pad(dt.getUTCHours())}${pad(dt.getUTCMinutes())}00Z`;
+  let ics="BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//yakhyo//KR\r\nCALSCALE:GREGORIAN\r\n";
+  const today=new Date();
+  withSched.forEach(m=>(m.sched||[]).forEach(t=>{
+    const[h,mi]=t.split(":").map(Number);
+    const local=`${today.getFullYear()}${pad(today.getMonth()+1)}${pad(today.getDate())}T${pad(h)}${pad(mi)}00`;
+    ics+="BEGIN:VEVENT\r\n"+
+      `UID:${m.id}-${t.replace(":","")}@yakhyo\r\nDTSTAMP:${stamp}\r\n`+
+      `DTSTART:${local}\r\nRRULE:FREQ=DAILY\r\n`+
+      `SUMMARY:💊 ${m.name}${m.dose?` ${m.dose}mg`:""} ${L("복용","dose")}\r\n`+
+      `BEGIN:VALARM\r\nACTION:DISPLAY\r\nTRIGGER:PT0M\r\nDESCRIPTION:${L("약 복용 시간","Time for medication")}\r\nEND:VALARM\r\nEND:VEVENT\r\n`;
+  }));
+  ics+="END:VCALENDAR\r\n";
+  const blob=new Blob([ics],{type:"text/calendar"}); const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download=L("약_복용알람.ics","medication_alarms.ics"); a.click(); URL.revokeObjectURL(a.href);
+  toast(L("캘린더 파일을 저장했어요 — 열어서 등록하면 폰이 알려줘요","Calendar file saved — open it to register alarms on your phone"));
+}
+
+/* ---------- aggregation (state intervals within a day) ---------- */
+function byDay(){
+  const map={};
+  for(const e of db.events){ const k=dkey(new Date(e.ts)); (map[k]||(map[k]=[])).push(e); }
+  for(const k in map) map[k].sort((a,b)=>a.ts-b.ts);
+  return map;
+}
+function summarize(events){
+  const states = events.filter(e=>e.type==="state");
+  const meds = events.filter(e=>e.type==="med");
+  const dur = {}; STATES.forEach(s=>dur[s.key]=0);
+  for(let i=0;i<states.length;i++){
+    const cur=states[i], next=states[i+1];
+    const end = next ? next.ts : endOfDayCap(cur.ts);
+    dur[cur.state]+= Math.max(0,(end-cur.ts)/60000);
+  }
+  const firstMed = meds.length? meds[0].ts : null;
+  const firstOn  = states.find(s=>s.state==="on");
+  const latency = (firstMed && firstOn) ? Math.round((firstOn.ts-firstMed)/60000) : null;
+  const outs = states.map(s=>s.output).filter(v=>v!=null);
+  const dyskEvents = states.filter(s=>s.state==="dysk" || (s.symptoms&&s.symptoms.includes("dysk")));
+  const dyskInt = dyskEvents.map(s=>s.dysk).filter(v=>v!=null);
+  const life = events.filter(e=>e.type==="life");
+  const sleepMin = pairDuration(life,"sleep");
+  const exMin = pairDuration(life,"exercise");
+  const meals = life.filter(e=>e.kind==="meal");
+  const proteinMeals = meals.filter(e=>e.protein).length;
+  return {
+    dur, latency,
+    firstMed, firstOn: firstOn?firstOn.ts:null,
+    maxOut: outs.length? Math.max(...outs):null,
+    avgOut: outs.length? Math.round(outs.reduce((a,b)=>a+b,0)/outs.length):null,
+    dyskCount: dyskEvents.length,
+    dyskMaxInt: dyskInt.length? Math.max(...dyskInt):null,
+    sleepMin, exMin, mealCount:meals.length, proteinMeals, meds
+  };
+}
+function pairDuration(life,kind){
+  const evs=life.filter(e=>e.kind===kind).sort((a,b)=>a.ts-b.ts);
+  let total=0, open=null;
+  evs.forEach(e=>{ if(e.phase==="start") open=e.ts; else if(e.phase==="end"&&open!=null){ total+=(e.ts-open)/60000; open=null; } });
+  return Math.round(total);
+}
+function endOfDayCap(ts){
+  const d=new Date(ts);
+  if(dkey(d)===todayKey()) return Math.min(Date.now(), new Date(d.getFullYear(),d.getMonth(),d.getDate(),23,30).getTime());
+  return new Date(d.getFullYear(),d.getMonth(),d.getDate(),23,0).getTime();
+}
+
+/* ---------- 오늘 자동 요약 (보고서용 핵심 수치 자동 계산) ---------- */
+function renderDaySummary(tEvents){
+  const card=document.getElementById("daysumCard"), grid=document.getElementById("daysumGrid");
+  if(!tEvents.length){ card.style.display="none"; return; }
+  card.style.display="block";
+  const s=summarize(tEvents);
+  const states=tEvents.filter(e=>e.type==="state");
+  const outs=states.map(x=>x.output).filter(v=>v!=null);
+  const offCount=states.filter(x=>x.state==="off").length;
+  const item=(n,l)=>`<div class="daysum-item"><div class="dn">${n}</div><div class="dl">${l}</div></div>`;
+  grid.innerHTML=[
+    item(s.avgOut??"–", L("평균 출력","Avg output")),
+    item(outs.length?Math.max(...outs):"–", L("최고 출력","Max output")),
+    item(outs.length?Math.min(...outs):"–", L("최저 출력","Min output")),
+    item(s.dur.on?fmtDur(s.dur.on):"–", L("ON 시간","ON time")),
+    item(s.dur.off?fmtDur(s.dur.off):"–", L("OFF 시간","OFF time")+(offCount?L(` (${offCount}회)`,` (${offCount}x)`):"")),
+    item(s.latency!=null?s.latency+L("분","min"):"–", "Delayed ON"),
+  ].join("");
+}
+/* ---------- render: TODAY ---------- */
+function renderToday(){
+  const qgrid=document.getElementById("quickGrid"); qgrid.innerHTML="";
+  QUICK_ACTIONS.forEach(q=>{
+    const b=document.createElement("button"); b.className="quick-btn";
+    b.innerHTML=`<span class="qic">${q.ic}</span><span>${L(q.ko,q.en)}</span>`;
+    b.onclick=()=>quickSave(q); qgrid.appendChild(b);
+  });
+  renderRecentMedRow();
+  const grid=document.getElementById("stateGrid"); grid.innerHTML="";
+  MAIN_STATES.forEach(s=>{
+    const b=document.createElement("button"); b.className="state-btn";
+    b.innerHTML=`<span class="sw" style="background:${s.color}"></span><span>${stateName(s.key)}<small>${stateHint(s.key)}</small></span>`;
+    b.onclick=()=>openStateSheet(s.key); grid.appendChild(b);
+  });
+  const lgrid=document.getElementById("lifeGrid"); lgrid.innerHTML="";
+  Object.entries(LIFE).forEach(([k,lf])=>{
+    const b=document.createElement("button"); b.className="life-btn";
+    b.innerHTML=`<span class="ic">${lf.icon}</span>${L(lf.ko,lf.en)}`;
+    b.onclick=()=>openLifeSheet(k); lgrid.appendChild(b);
+  });
+  const tEvents = (byDay()[todayKey()]||[]);
+  const states = tEvents.filter(e=>e.type==="state");
+  const last = states[states.length-1];
+  const dot=document.getElementById("nowDot"), ns=document.getElementById("nowState"), si=document.getElementById("nowSince");
+  if(last){ const s=SMAP[last.state]; dot.style.background=s.color; ns.textContent=stateName(last.state);
+    si.textContent=`${hm(last.ts)}${L("부터","")} · ${fmtDur((Date.now()-last.ts)/60000)} ${L("경과","elapsed")}`; }
+  else { dot.style.background="var(--wake)"; ns.textContent=tr("noRecord"); si.textContent=tr("tapToStart"); }
+  renderRibbon(tEvents);
+  renderDaySummary(tEvents);
+  const list=document.getElementById("todayList"); list.innerHTML="";
+  if(tEvents.length){
+    const title=document.createElement("div"); title.className="card-title"; title.style.marginTop="6px"; title.textContent=tr("todayRecords");
+    list.appendChild(title);
+    [...tEvents].reverse().forEach(e=>list.appendChild(evRow(e)));
+  }
+}
+function editEventTime(id){
+  const ev=db.events.find(x=>x.id===id); if(!ev) return;
+  const d=new Date(ev.ts);
+  openSheet(`<h2>${L("시각 수정","Edit time")}</h2><div class="hint">${L("이 기록의 시간을 고쳐요.","Change the time of this record.")}</div>
+    <div class="field"><label>${L("날짜","Date")}</label><input type="date" id="et_date" value="${dkey(d)}"></div>
+    <div class="field"><label>${L("시각","Time")}</label><input type="time" id="et_time" value="${pad(d.getHours())}:${pad(d.getMinutes())}"></div>
+    <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="et_save">${L("저장","Save")}</button></div>`);
+  document.getElementById("et_save").onclick=()=>{
+    const dv=document.getElementById("et_date").value, tv=document.getElementById("et_time").value;
+    if(!dv||!tv){ toast(L("날짜와 시각을 입력하세요","Please enter a date and time")); return; }
+    ev.ts=new Date(`${dv}T${tv}`).getTime();
+    db.events.sort((a,b)=>a.ts-b.ts); save(); closeSheet(); renderAll(); toast(L("시각을 수정했어요","Time updated"));
+  };
+}
+function evRow(e){
+  const row=document.createElement("div"); row.className="evrow";
+  if(e.type==="state"){ const s=SMAP[e.state];
+    const riseTxt = e.riseResult? riseLabel(e.riseResult) : "";
+    const symTxt = [...(e.symptoms||[]).map(k=>symLabel(k)), e.customSymptom].filter(Boolean).join(", ");
+    const title = riseTxt? `${stateName(e.state)} · ${riseTxt}` : (e.state==="dysk" && e.dysk!=null ? `${stateName(e.state)} · ${L("강도","intensity")} ${e.dysk}` : stateName(e.state));
+    const extra=[e.output!=null?`${L("출력","Output")} ${e.output}`:"", e.gait!=null?`${L("보행","Gait")} ${e.gait}`:"", symTxt?`${L("동반증상","Symptoms")}: ${symTxt}`:"", e.memo].filter(Boolean).join(" · ");
+    row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">${title}</div>${extra?`<div class="m">${escapeHtml(extra)}</div>`:""}</div>
+      <span class="pill" style="background:${s.color}">${L("상태","State")}</span>`;
+  } else if(e.type==="med"){
+    row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">💊 ${escapeHtml(e.drug)}${e.dose?` ${e.dose}mg`:""}</div>${e.memo?`<div class="m">${escapeHtml(e.memo)}</div>`:""}</div>
+      <span class="pill" style="background:var(--ink-2)">${L("복약","Medication")}</span>`;
+  } else {
+    const lf=LIFE[e.kind];
+    let s, extraTxt="";
+    if(e.kind==="meal"){
+      s=`${lf.icon} ${e.mealType?tagLabel(e.mealType):L("식사","Meal")}`;
+      extraTxt=[e.amount?tagLabel(e.amount):"", ...(e.extras||[]).map(tagLabel)].filter(Boolean).join(", ");
+    } else if(e.kind==="sleep"){
+      const lab = e.phase==="nap"?L("낮잠","Nap"):(e.phase==="start"?L("취침","Bedtime"):L("기상","Wake up"));
+      s=`${lf.icon} ${lab}`;
+      extraTxt=(e.quality||[]).map(tagLabel).join(", ");
+    } else if(e.kind==="exercise"){
+      const nm = e.exType==="기타"? (e.exTypeCustom||L("운동","Exercise")) : (e.exType?tagLabel(e.exType):L("운동","Exercise"));
+      const lab = e.phase==="start"?`${nm} ${L("시작","started")}`:`${nm} ${L("종료","ended")}`;
+      s=`${lf.icon} ${lab}`;
+      extraTxt=[e.intensity?tagLabel(e.intensity):"", e.durationMin?`${e.durationMin}${L("분","min")}`:""].filter(Boolean).join(", ");
+    } else if(e.kind==="bowel"){
+      s=`${lf.icon} ${L("배변","Bowel movement")}${e.firstToday?` · ${L("오늘 첫","first today")}`:""}`;
+      extraTxt=[e.consistency?tagLabel(e.consistency):"", ...(e.extras||[]).map(tagLabel)].filter(Boolean).join(", ");
+    } else if(e.kind==="body"){
+      s=`${lf.icon} ${L("몸 상태","Body")}`;
+      extraTxt=[...(e.symptoms||[]).map(tagLabel), e.customSymptom].filter(Boolean).join(", ");
+    } else {
+      s=`${lf.icon} ${L(lf.ko,lf.en)}`;
+    }
+    const memoLine=[extraTxt, e.memo].filter(Boolean).join(" · ");
+    row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">${s}</div>${memoLine?`<div class="m">${escapeHtml(memoLine)}</div>`:""}</div>
+      <span class="pill" style="background:${lf.color}">${L("생활","Life")}</span>`;
+  }
+  const del=document.createElement("button"); del.className="del"; del.innerHTML="✕";
+  del.onclick=()=>{ if(confirm(L("이 기록을 삭제할까요?","Delete this record?"))) delEvent(e.id); };
+  row.appendChild(del);
+  const tEl=row.querySelector(".t"); if(tEl) tEl.onclick=()=>editEventTime(e.id);
+  return row;
+}
+function renderRibbon(events){
+  const rb=document.getElementById("ribbon"); const empty=document.getElementById("ribbonEmpty");
+  rb.querySelectorAll(".seg,.medmark").forEach(n=>n.remove());
+  const states=events.filter(e=>e.type==="state");
+  const range=document.getElementById("ribbonRange");
+  if(!states.length){ empty.style.display="block"; range.textContent=""; return; }
+  empty.style.display="none";
+  const START=6*60, END=23*60, SPAN=END-START;
+  const clamp=v=>Math.max(0,Math.min(1,(v-START)/SPAN));
+  for(let i=0;i<states.length;i++){
+    const cur=states[i], next=states[i+1];
+    const a=minOfDay(cur.ts);
+    const bEnd = next? minOfDay(next.ts) : (dkey(new Date(cur.ts))===todayKey()? minOfDay(Date.now()) : END);
+    const Lp=clamp(a), Rp=clamp(bEnd); if(Rp<=Lp) continue;
+    const seg=document.createElement("div"); seg.className="seg";
+    seg.style.left=(Lp*100)+"%"; seg.style.width=((Rp-Lp)*100)+"%"; seg.style.background=SMAP[cur.state].color;
+    rb.appendChild(seg);
+  }
+  events.filter(e=>e.type==="med").forEach(m=>{
+    const x=clamp(minOfDay(m.ts)); const mk=document.createElement("div"); mk.className="medmark"; mk.style.left=(x*100)+"%"; rb.appendChild(mk);
+  });
+  range.textContent=`${hm(states[0].ts)} ~ ${L("지금","now")}`;
+}
+
+/* ---------- render: LOG ---------- */
+function renderLog(){
+  const body=document.getElementById("logBody"); body.innerHTML="";
+  const days=byDay(); const keys=Object.keys(days).sort().reverse();
+  if(!keys.length){ body.innerHTML=`<div class="empty"><div class="big">📋</div>${L("아직 기록이 없어요.","No records yet.")}<br>${L("'오늘' 탭에서 상태를 눌러 시작하세요.","Tap a state in the 'Today' tab to get started.")}</div>`; return; }
+  keys.forEach(k=>{
+    const card=document.createElement("div"); card.className="daycard";
+    const h=document.createElement("h3"); h.textContent=fmtDateK(k); card.appendChild(h);
+    const sub=document.createElement("div"); sub.className="sub"; sub.textContent=L(`${days[k].length}건`,`${days[k].length} records`); card.appendChild(sub);
+    [...days[k]].reverse().forEach(e=>card.appendChild(evRow(e)));
+    body.appendChild(card);
+  });
+}
+
+/* ---------- render: TREND ---------- */
+function renderTrend(){
+  const days=byDay(); const keys=Object.keys(days).sort();
+  const kpi=document.getElementById("kpiGrid"); const chart=document.getElementById("trendChart"); const cards=document.getElementById("dayCards");
+  if(!keys.length){ kpi.innerHTML=""; chart.innerHTML=""; cards.innerHTML=`<div class="empty"><div class="big">📈</div>${L("기록이 쌓이면 추이가 보여요.","Trends will appear once you have more records.")}</div>`; document.getElementById("trendRange").textContent=""; return; }
+  const sums=keys.map(k=>({k, s:summarize(days[k])}));
+  const recent=sums.slice(-14);
+  document.getElementById("trendRange").textContent=L(`${recent.length}일`,`${recent.length} days`);
+  const avg=(f)=>{ const a=recent.map(f).filter(v=>v!=null); return a.length? Math.round(a.reduce((x,y)=>x+y,0)/a.length):null; };
+  const kON=avg(d=>d.s.dur.on), kOFF=avg(d=>d.s.dur.off), kDY=avg(d=>d.s.dur.dysk), kLat=avg(d=>d.s.latency);
+  kpi.innerHTML=`
+    ${kpiCard(kON==null?"–":fmtShort(kON),L("평균 ON 시간","Avg ON time"))}
+    ${kpiCard(kLat==null?"–":kLat+`<small>${L("분","min")}</small>`,L("평균 ON까지(아침)","Avg time to ON (morning)"))}
+    ${kpiCard(kOFF==null?"–":fmtShort(kOFF),L("평균 OFF 시간","Avg OFF time"))}
+    ${kpiCard(kDY==null?"–":kDY+`<small>${L("분","min")}</small>`,L("평균 이상운동","Avg dyskinesia"))}`;
+  chart.innerHTML=buildChart(recent);
+  cards.innerHTML="";
+  [...sums].reverse().slice(0,14).forEach(({k,s})=>{
+    const tot=Math.max(1, s.dur.on+s.dur.partial+s.dur.off+s.dur.dysk);
+    const bar=(lab,v,col)=>`<div class="bar"><div class="lab">${lab}</div><div class="track"><div class="fill" style="width:${Math.min(100,v/tot*100)}%;background:${col}"></div></div><div class="val">${Math.round(v)}${L("분","min")}</div></div>`;
+    const c=document.createElement("div"); c.className="daycard";
+    c.innerHTML=`<h3>${fmtDateK(k)}</h3>
+      <div class="sub">${L("첫 ON","First ON")} ${s.firstOn?hm(s.firstOn):"–"} · ${L("ON까지","To ON")} ${s.latency!=null?s.latency+L("분","min"):"–"} · ${L("최고출력","Max output")} ${s.maxOut??"–"} · ${L("이상운동","Dyskinesia")} ${s.dyskCount}${L("회","x")}</div>
+      <div class="bars">
+        ${bar("ON",s.dur.on,"var(--on)")}
+        ${bar(L("불완전ON","Partial ON"),s.dur.partial,"var(--partial)")}
+        ${bar("OFF",s.dur.off,"var(--off)")}
+        ${bar(L("이상운동","Dyskinesia"),s.dur.dysk,"var(--dysk)")}
+      </div>`;
+    cards.appendChild(c);
+  });
+}
+function kpiCard(n,l){ return `<div class="kpi"><div class="n">${n}</div><div class="l">${l}</div></div>`; }
+function fmtShort(m){ const h=Math.floor(m/60),mm=Math.round(m%60); return h?`${h}<small>${L("시간","h")}</small>${mm?` ${mm}<small>${L("분","m")}</small>`:""}`:`${mm}<small>${L("분","m")}</small>`; }
+function buildChart(recent){
+  const W=Math.max(recent.length*34, 220), H=150, pad=18, base=H-24, maxV=Math.max(60, ...recent.map(d=>d.s.dur.on+d.s.dur.partial+d.s.dur.off+d.s.dur.dysk));
+  const bw=Math.min(24,(W-pad*2)/recent.length-6);
+  let bars="";
+  recent.forEach((d,i)=>{
+    const x=pad+i*((W-pad*2)/recent.length)+((W-pad*2)/recent.length-bw)/2;
+    let y=base; const segs=[["on","var(--on)"],["partial","var(--partial)"],["off","var(--off)"],["dysk","var(--dysk)"]];
+    segs.forEach(([key,col])=>{ const v=d.s.dur[key]; const h=v/maxV*(base-10); if(h>0){ y-=h; bars+=`<rect x="${x}" y="${y}" width="${bw}" height="${h}" fill="${col}" rx="1.5"/>`; } });
+    const lab=d.k.slice(5).replace("-","/");
+    bars+=`<text x="${x+bw/2}" y="${base+13}" font-size="9" fill="var(--ink-2)" text-anchor="middle">${lab}</text>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet" style="display:block">${bars}</svg>`;
+}
+
+/* ---------- render: CURVE ---------- */
+function curveDayKeys(){ return Object.keys(byDay()).sort().reverse(); }
+function populateCurveDateSelect(){
+  const sel=document.getElementById("curveDate"); const keys=curveDayKeys();
+  const prev=sel.value;
+  sel.innerHTML = keys.length? keys.map(k=>`<option value="${k}">${fmtDateK(k)}</option>`).join("")
+                             : `<option value="${todayKey()}">${fmtDateK(todayKey())}</option>`;
+  if(prev && keys.includes(prev)) sel.value=prev; else sel.value=keys[0]||todayKey();
+}
+function computeCurve(dayEvents, dayKey){
+  const [Y,Mo,Da] = dayKey.split("-").map(Number);
+  const dayStart = new Date(Y,Mo-1,Da,5,0,0).getTime();
+  const dayEnd   = new Date(Y,Mo-1,Da,26,0,0).getTime();
+  const step = 10*60*1000;
+  const meds = dayEvents.filter(e=>e.type==="med");
+  const states = dayEvents.filter(e=>e.type==="state").sort((a,b)=>a.ts-b.ts);
+  function extendMultiplier(t){
+    let m=1;
+    meds.forEach(me=>{
+      const prof=kineticFor(me.drug);
+      if(prof.type==="extend" && t>=me.ts){
+        const hrs=(t-me.ts)/3600000;
+        if(hrs<5) m += prof.amp*(1-hrs/5);
+      }
+    });
+    return m;
+  }
+  const pts=[];
+  for(let t=dayStart; t<=dayEnd; t+=step){
+    let base=0;
+    meds.forEach(me=>{
+      const prof=kineticFor(me.drug);
+      if(prof.type==="extend") return;
+      const minsSince=(t-me.ts)/60000;
+      base += doseCurve(prof, minsSince) * (me.dose? Math.min(2,me.dose/100) : 1);
+    });
+    const val = Math.max(0, Math.min(100, base*extendMultiplier(t)*45));
+    pts.push({t,val});
+  }
+  function nearestState(t){
+    let best=null, bestDiff=Infinity;
+    states.forEach(s=>{ const d=Math.abs(s.ts-t); if(s.ts<=t+15*60000 && d<bestDiff){ bestDiff=d; best=s; } });
+    return best;
+  }
+  const overlay = pts.map(p=>{
+    const s=nearestState(p.t);
+    return { t:p.t, output:s&&s.output!=null? s.output:null, gait:s&&s.gait!=null? s.gait:null,
+             state: s? s.state:null };
+  });
+  return {pts, overlay, meds, states};
+}
+function svgCurve(dayKey){
+  const days=byDay(); const dayEvents=days[dayKey]||[];
+  if(!dayEvents.length) return `<div class="hint" style="padding:24px 0;text-align:center">${L("이 날짜에는 아직 기록이 없어요.","No records for this date yet.")}<br>${L("홈 탭에서 상태·복약을 기록하면 여기에 곡선이 그려져요.","Log a state or medication on the Today tab and the curve will appear here.")}</div>`;
+  const {pts,overlay,meds,states} = computeCurve(dayEvents, dayKey);
+  if(!pts.length || !meds.length) return `<div class="hint" style="padding:24px 0;text-align:center">${L("이 날은 복약 기록이 없어서 약효 곡선을 계산할 수 없어요.","No medication record for this day, so the curve can't be calculated.")}<br>${L("상태·생활 기록만으로는 곡선을 그릴 수 없고, 💊 복약 기록이 있어야 해요.","State or life records alone aren't enough — a 💊 medication record is required.")}</div>`;
+  const W=760, H=220, padL=30, padR=10, padT=10, padB=26;
+  const plotW=W-padL-padR, plotH=H-padT-padB;
+  const t0=pts[0].t, t1=pts[pts.length-1].t;
+  const x = t => padL + (t-t0)/(t1-t0)*plotW;
+  const y = v => padT + plotH - (v/100)*plotH;
+
+  let shading="";
+  for(let i=0;i<states.length;i++){
+    const s=states[i]; const next=states[i+1]; const segEnd = next? next.ts : t1;
+    const segStart = Math.max(s.ts, t0); const segEndC = Math.min(segEnd, t1);
+    if(segEndC<=segStart) continue;
+    let col=null;
+    const hasDysk = s.state==="dysk" || s.state==="dyst" || (s.symptoms&&(s.symptoms.includes("dysk")||s.symptoms.includes("dyst")));
+    if(hasDysk) col="rgba(232,102,60,.16)";
+    else if(s.state==="off"||s.state==="wearoff") col="rgba(84,101,122,.14)";
+    else if(s.state==="on") col="rgba(31,169,113,.10)";
+    else if(s.state==="rising") col="rgba(92,147,214,.10)";
+    else if(s.state==="falling") col="rgba(201,138,75,.12)";
+    if(col) shading += `<rect x="${x(segStart)}" y="${padT}" width="${Math.max(0,x(segEndC)-x(segStart))}" height="${plotH}" fill="${col}"/>`;
+  }
+
+  const linePts = pts.map(p=>`${x(p.t)},${y(p.val)}`).join(" ");
+  const areaPts = `${padL},${y(0)} ${linePts} ${x(t1)},${y(0)}`;
+
+  const outputPts = overlay.filter(o=>o.output!=null).map(o=>`${x(o.t)},${y(o.output*10)}`);
+  const gaitPts = overlay.filter(o=>o.gait!=null).map(o=>`${x(o.t)},${y(o.gait*10)}`);
+
+  let medMarks="";
+  meds.forEach(m=>{
+    if(m.ts<t0||m.ts>t1) return;
+    const mx=x(m.ts);
+    medMarks += `<line x1="${mx}" y1="${padT}" x2="${mx}" y2="${padT+plotH}" stroke="#516072" stroke-width="1" stroke-dasharray="2,3" opacity=".55"/>`;
+    medMarks += `<circle cx="${mx}" cy="${padT+plotH+2}" r="3" fill="#516072"/>`;
+  });
+
+  let axisLabels="";
+  const startHour = new Date(t0).getHours();
+  for(let h=0; h<=(t1-t0)/3600000; h+=2){
+    const tt = t0 + h*3600000;
+    const lab = new Date(tt).getHours()%24;
+    axisLabels += `<text x="${x(tt)}" y="${H-8}" font-size="9" fill="var(--ink-2)" text-anchor="middle">${L(lab+"시", lab+"h")}</text>`;
+  }
+
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet" style="display:block">
+    ${shading}
+    <polygon points="${areaPts}" fill="#1FA971" opacity=".16"/>
+    <polyline points="${linePts}" fill="none" stroke="#1FA971" stroke-width="2.4"/>
+    ${outputPts.length>1? `<polyline points="${outputPts.join(" ")}" fill="none" stroke="#5C93D6" stroke-width="1.6" stroke-dasharray="4,3"/>`:""}
+    ${gaitPts.length>1? `<polyline points="${gaitPts.join(" ")}" fill="none" stroke="#E0A030" stroke-width="1.6" stroke-dasharray="1,3"/>`:""}
+    ${medMarks}
+    ${axisLabels}
+  </svg>`;
+}
+function curveEventListHtml(dayKey){
+  const days=byDay(); const evs=(days[dayKey]||[]).slice().sort((a,b)=>a.ts-b.ts);
+  if(!evs.length) return "";
+  const rows = evs.map(e=>{
+    if(e.type==="med") return `<div class="li"><div class="grow"><div class="name">💊 ${escapeHtml(e.drug)}${e.dose?` ${e.dose}mg`:""}</div><div class="meta">${hm(e.ts)}</div></div></div>`;
+    if(e.type==="state"){ const s=SMAP[e.state];
+      const riseTxt = e.riseResult? riseLabel(e.riseResult) : "";
+      const symTxt = [...(e.symptoms||[]).map(k=>symLabel(k)), e.customSymptom].filter(Boolean).join(", ");
+      const extra=[e.output!=null?`${L("출력","Output")} ${e.output}`:"",e.gait!=null?`${L("보행","Gait")} ${e.gait}`:"",e.dysk!=null?`${L("이상운동 강도","Dyskinesia intensity")} ${e.dysk}`:"",symTxt?`${L("동반증상","Symptoms")} ${symTxt}`:""].filter(Boolean).join(" · ");
+      return `<div class="li"><div class="grow"><div class="name" style="color:${s.color}">${stateName(e.state)}${riseTxt?` · ${riseTxt}`:""}</div><div class="meta">${hm(e.ts)}${extra?" · "+extra:""}</div></div></div>`; }
+    const lf=LIFE[e.kind]; return `<div class="li"><div class="grow"><div class="name">${lf.icon} ${e.kind==="meal"?(e.mealType?tagLabel(e.mealType):L("식사","Meal")):L(lf.ko,lf.en)}</div><div class="meta">${hm(e.ts)}</div></div></div>`;
+  }).join("");
+  return `<div class="section-label">${L("이 날 기록","Records for this day")}</div><div class="list-card">${rows}</div>`;
+}
+function renderCurve(){
+  populateCurveDateSelect();
+  const sel=document.getElementById("curveDate");
+  const draw=()=>{
+    const k=sel.value||todayKey();
+    document.getElementById("curveRange").textContent=fmtDateK(k);
+    document.getElementById("curveChart").innerHTML=svgCurve(k);
+    document.getElementById("curveEventList").innerHTML=curveEventListHtml(k);
+  };
+  sel.onchange=draw;
+  draw();
+}
+
+/* ---------- render: REPORT ---------- */
+function renderReport(){
+  const n=+document.getElementById("repRange").value;
+  const days=byDay(); const keys=Object.keys(days).sort().slice(-n);
+  const body=document.getElementById("reportBody");
+  if(!keys.length){ body.innerHTML=`<div class="empty"><div class="big">🩺</div>${L("기록이 쌓이면 진료용 보고서가 만들어져요.","Once records build up, a clinic-ready report appears here.")}</div>`; return; }
+  const rows=keys.map(k=>({k,s:summarize(days[k])}));
+  const avg=(f)=>{ const a=rows.map(f).filter(v=>v!=null); return a.length? Math.round(a.reduce((x,y)=>x+y,0)/a.length):null; };
+  const aLat=avg(d=>d.s.latency), aON=avg(d=>d.s.dur.on), aOFF=avg(d=>d.s.dur.off), aPart=avg(d=>d.s.dur.partial), aDy=avg(d=>d.s.dur.dysk);
+  const aSleep=avg(d=>d.s.sleepMin||null);
+  const medList = db.meds.length? db.meds.map(m=>`${escapeHtml(m.name)}${m.dose?` ${m.dose}mg`:""}${(m.sched&&m.sched.length)?` [${m.sched.join(", ")}]`:""}${m.note?` (${escapeHtml(m.note)})`:""}`).join(" · ") : L("등록된 약 없음 (설정에서 추가)","No medications registered (add in Settings)");
+  const start=fmtDateK(keys[0]), end=fmtDateK(keys[keys.length-1]);
+  let tbl=`<table><thead><tr><th>${L("날짜","Date")}</th><th>${L("첫 ON","First ON")}</th><th>${L("ON까지","To ON")}</th><th>ON</th><th>${L("불완전","Partial")}</th><th>OFF</th><th>${L("이상운동","Dyskinesia")}</th><th>${L("수면","Sleep")}</th></tr></thead><tbody>`;
+  rows.forEach(({k,s})=>{ tbl+=`<tr><td>${k.slice(5)}</td><td>${s.firstOn?hm(s.firstOn):"–"}</td><td>${s.latency!=null?s.latency+L("분","min"):"–"}</td>
+    <td>${Math.round(s.dur.on)}</td><td>${Math.round(s.dur.partial)}</td><td>${Math.round(s.dur.off)}</td><td>${Math.round(s.dur.dysk)}${s.dyskMaxInt!=null?`(${s.dyskMaxInt})`:""}</td><td>${s.sleepMin?fmtDur(s.sleepMin):"–"}</td></tr>`; });
+  tbl+=`</tbody></table><div style="font-size:11px;color:var(--ink-2);margin-top:4px">${L("이상운동 칸의 (숫자)는 최고 강도. 생활요인(수면·단백질 식사·운동)은 약효 변동과 함께 참고하세요.","The (number) in the dyskinesia column is the peak intensity. Consider lifestyle factors (sleep, high-protein meals, exercise) alongside medication response.")}</div>`;
+  const q=db.questions.map((x,i)=>`<div class="qitem"><input type="checkbox" ${x.done?"checked":""} onchange="toggleQ(${i})"><div class="grow">${escapeHtml(x.t)}</div><button class="qx no-print" onclick="rmQ(${i})">✕</button></div>`).join("");
+  body.innerHTML=`
+    <h2>${L("파킨슨 약효·운동변동 기록","Parkinson's Medication & Motor Fluctuation Log")}</h2>
+    <div class="rmeta">${L("기간","Period")}: ${start} ~ ${end} · ${L("총","Total")} ${keys.length}${L("일"," days")}</div>
+    <div class="rsec">${L("복용 약물","Medications")}</div><div style="font-size:13px">${medList}</div>
+    <div class="rsec">${L("기간 요약 (하루 평균)","Period summary (daily average)")}</div>
+    <div style="font-size:13.5px; line-height:1.7">
+      · ${L("아침 ON까지 평균","Avg time to morning ON")} <b>${aLat!=null?aLat+L("분","min"):"–"}</b><br>
+      · ${L("ON 시간 평균","Avg ON time")} <b>${aON!=null?fmtDur(aON):"–"}</b> / ${L("불완전 ON","Partial ON")} <b>${aPart!=null?fmtDur(aPart):"–"}</b><br>
+      · ${L("OFF 시간 평균","Avg OFF time")} <b>${aOFF!=null?fmtDur(aOFF):"–"}</b> · ${L("이상운동 평균","Avg dyskinesia")} <b>${aDy!=null?aDy+L("분","min"):"–"}</b><br>
+      · ${L("수면 평균","Avg sleep")} <b>${aSleep?fmtDur(aSleep):"–"}</b>
+    </div>
+    <div class="rsec">${L("날짜별 기록 (분 단위)","Day-by-day record (minutes)")}</div>${tbl}
+    <div class="rsec">${L("주치의에게 묻고 싶은 것","Questions for my doctor")}</div>${q}
+    <button class="btn ghost no-print" onclick="addQ()" style="margin-top:8px">${L("+ 질문 추가","+ Add question")}</button>
+    <div class="rsec">${L("참고","Note")}</div>
+    <div class="disclaimer">${L("이 기록은 환자가 직접 관찰한 약효 패턴 참고자료입니다. 약물 조정은 주치의 판단에 따릅니다.","This record is reference material based on the patient's own observations of medication response. Medication adjustments are at the physician's discretion.")}</div>`;
+}
+window.toggleQ=i=>{ db.questions[i].done=!db.questions[i].done; save(); };
+window.rmQ=i=>{ db.questions.splice(i,1); save(); renderReport(); };
+window.addQ=()=>{ const t=prompt(L("질문을 입력하세요","Enter your question")); if(t){ db.questions.push({t,done:false}); save(); renderReport(); } };
+
+/* ---------- render: SETTINGS ---------- */
+function renderMeds(){
+  const el=document.getElementById("medList"); el.innerHTML="";
+  if(!db.meds.length){ el.innerHTML=`<div class="li"><div class="grow"><div class="meta">${L("아직 등록된 약이 없어요. 아래에서 추가하세요.","No medications registered yet. Add one below.")}</div></div></div>`; }
+  const ordered = db.meds.map((m,i)=>({m,i})).sort((a,b)=>(b.m.fav?1:0)-(a.m.fav?1:0));
+  ordered.forEach(({m,i})=>{
+    const li=document.createElement("div"); li.className="li"; li.style.flexWrap="wrap";
+    const chips=(m.sched||[]).slice().sort().map((t,j)=>`<span class="sched-chip">${t}<button data-rm="${i}:${j}">✕</button></span>`).join("");
+    const fav=document.createElement("button"); fav.className="del"; fav.style.fontSize="18px"; fav.style.color=m.fav?"var(--accent)":"var(--ink-2)";
+    fav.innerHTML = m.fav? "★" : "☆"; fav.title=L("즐겨찾기","Favorite");
+    fav.onclick=()=>{ m.fav=!m.fav; save(); renderMeds(); };
+    li.innerHTML=`<div class="grow"><div class="name">${escapeHtml(m.name)}${m.dose?` <span class="meta">${m.dose}mg</span>`:""}</div>${m.note?`<div class="meta">${escapeHtml(m.note)}</div>`:""}
+      <div class="sched-row">${chips}<button class="sched-chip" style="background:transparent;border:1px dashed var(--line);color:var(--accent-ink);font-weight:800" data-addsched="${i}">＋ ${L("시간 예약","Add time")}</button></div></div>`;
+    li.appendChild(fav);
+    const del=document.createElement("button"); del.className="del"; del.innerHTML="✕"; del.style.fontSize="18px"; del.style.color="var(--ink-2)";
+    del.onclick=()=>{ if(confirm(L(`${m.name}을(를) 삭제할까요?`,`Delete ${m.name}?`))){ db.meds.splice(i,1); save(); renderMeds(); } };
+    li.appendChild(del); el.appendChild(li);
+  });
+  el.querySelectorAll("[data-addsched]").forEach(b=>b.onclick=()=>openSchedSheet(+b.dataset.addsched));
+  el.querySelectorAll("[data-rm]").forEach(b=>b.onclick=function(){
+    const[i,j]=this.dataset.rm.split(":").map(Number); const s=db.meds[i].sched.slice().sort(); const t=s[j];
+    db.meds[i].sched=db.meds[i].sched.filter(x=>x!==t); save(); renderMeds();
+  });
+}
+function openSchedSheet(i){
+  const m=db.meds[i];
+  const presets=["06:00","07:00","08:00","12:00","16:00","18:00","22:00"];
+  const pc=presets.map(t=>`<button class="chip" data-t="${t}">${t}</button>`).join("");
+  openSheet(`<h2>${escapeHtml(m.name)} ${L("복용 시간 예약","medication schedule")}</h2>
+    <div class="hint">${L("알림 받을 시간을 고르세요. 여러 개 추가할 수 있어요.","Choose times to be reminded. You can add multiple.")}</div>
+    <div class="field"><label>${L("자주 쓰는 시간","Common times")}</label><div class="chips" id="schedPresets">${pc}</div></div>
+    <div class="field"><label>${L("직접 입력","Custom")}</label><input type="time" id="schedTime"></div>
+    <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="schedSave">${L("추가","Add")}</button></div>`);
+  let picked=null;
+  document.getElementById("schedPresets").addEventListener("click",e=>{ const b=e.target.closest(".chip"); if(!b) return;
+    document.querySelectorAll("#schedPresets .chip").forEach(c=>c.classList.remove("sel")); b.classList.add("sel");
+    picked=b.dataset.t; document.getElementById("schedTime").value=b.dataset.t; });
+  document.getElementById("schedSave").onclick=()=>{
+    const t=document.getElementById("schedTime").value||picked;
+    if(!t){ toast(L("시간을 선택하세요","Please select a time")); return; }
+    m.sched=m.sched||[]; if(!m.sched.includes(t)) m.sched.push(t);
+    save(); closeSheet(); renderMeds(); toast(L("복용 시간 예약됨 ","Time scheduled ")+t);
+  };
+}
+
+/* ---------- sheets ---------- */
+const scrim=document.getElementById("scrim"), sheet=document.getElementById("sheet");
+function openSheet(html){ sheet.innerHTML=html; scrim.classList.add("open"); }
+function closeSheet(){ scrim.classList.remove("open"); }
+scrim.addEventListener("click",e=>{ if(e.target===scrim) closeSheet(); });
+
+function openStateSheet(key){
+  const s=SMAP[key];
+  const riseBlock = key==="rising" ? `
+    <div class="field"><label>${L("결과 (선택, 나중에 알면 다시 기록해도 돼요)","Result (optional, you can log it later)")}</label>
+      <div class="chips" id="riseChips">
+        ${RISE_RESULTS.map(r=>`<button type="button" class="chip" data-k="${r.key}">${L(r.ko,r.en)}</button>`).join("")}
+      </div></div>` : "";
+  openSheet(`
+    <h2>${stateName(key)} ${L("기록","log")}</h2>
+    <div class="hint">${L(`시각은 지금(${hm(Date.now())})으로 저장돼요. 점수·메모는 선택이에요.`,`Time will be saved as now (${hm(Date.now())}). Scores and memo are optional.`)}</div>
+    ${riseBlock}
+    <div class="field"><label>${L("출력감 (0–100, 선택)","Output (0–100, optional)")}</label>
+      <div class="slider-row"><input type="range" id="f_out" min="0" max="100" step="5" value="50" oninput="document.getElementById('o_out').textContent=this.value"><div class="v" id="o_out">50</div>
+      <button class="chip" onclick="document.getElementById('f_out').disabled=!document.getElementById('f_out').disabled; this.classList.toggle('sel'); window._skipOut=!window._skipOut" id="c_out">${L("입력 안 함","Skip")}</button></div></div>
+    <div class="field"><label>${L("보행 (0–10, 선택)","Gait (0–10, optional)")}</label>
+      <div class="slider-row"><input type="range" id="f_gait" min="0" max="10" step="1" value="6" oninput="document.getElementById('o_gait').textContent=this.value"><div class="v" id="o_gait">6</div></div></div>
+    <div class="field"><label>${L("동반 증상 (복수 선택 가능)","Accompanying symptoms (multi-select)")}</label>
+      <div class="chips" id="symChips">
+        ${SYMPTOMS.map(sy=>`<button type="button" class="chip" data-k="${sy.key}">${L(sy.ko,sy.en)}</button>`).join("")}
+      </div></div>
+    <div class="field intensity-wrap" id="dyskIntWrap" style="display:none"><label>${L("이상운동 강도 (0–10)","Dyskinesia intensity (0–10)")}</label>
+      <div class="slider-row"><input type="range" id="f_int" min="0" max="10" step="1" value="4" oninput="document.getElementById('o_int').textContent=this.value"><div class="v" id="o_int">4</div></div></div>
+    <div class="field"><label>${L("기타 증상 직접 입력 (선택)","Other symptom, custom (optional)")}</label><input id="f_symCustom" placeholder="${L("예: 발가락 뒤틀림, 소변 급박감 등","e.g. toe curling, urinary urgency")}"></div>
+    <div class="field"><label>${L("메모 (선택)","Memo (optional)")}</label><textarea id="f_memo" placeholder="${L("예: 공복, 운동 후, 단백질 식사 등","e.g. fasting, after exercise, high-protein meal")}"></textarea></div>
+    <div class="btn-row" style="margin-top:6px">
+      <button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button>
+      <button class="btn primary" id="saveState">${L("저장","Save")}</button>
+    </div>`);
+  window._skipOut=false;
+  let riseResult=null;
+  if(key==="rising"){
+    document.getElementById("riseChips").addEventListener("click",e=>{
+      const b=e.target.closest(".chip"); if(!b) return;
+      const already=b.classList.contains("sel");
+      document.querySelectorAll("#riseChips .chip").forEach(c=>c.classList.remove("sel"));
+      if(!already){ b.classList.add("sel"); riseResult=b.dataset.k; } else riseResult=null;
+    });
+  }
+  document.getElementById("symChips").addEventListener("click",e=>{
+    const b=e.target.closest(".chip"); if(!b) return;
+    b.classList.toggle("sel");
+    const dyskOn = document.querySelector('#symChips .chip[data-k="dysk"]').classList.contains("sel");
+    document.getElementById("dyskIntWrap").style.display = dyskOn? "block":"none";
+  });
+  document.getElementById("saveState").onclick=()=>{
+    const out = window._skipOut? null : +document.getElementById("f_out").value;
+    const gait = +document.getElementById("f_gait").value;
+    const symptoms = [...document.querySelectorAll("#symChips .chip.sel")].map(c=>c.dataset.k);
+    const dysk = symptoms.includes("dysk")? +document.getElementById("f_int").value : null;
+    const customSymptom = document.getElementById("f_symCustom").value.trim();
+    const memo = document.getElementById("f_memo").value.trim();
+    closeSheet(); addState(key,{output:out, gait, dysk, memo, symptoms, customSymptom, riseResult});
+  };
+}
+
+function timeFieldHtml(id, ts){
+  const d=new Date(ts||Date.now());
+  return `<div class="field"><label>${L("시각 (필요하면 수정하세요)","Time (edit if needed)")}</label><input type="time" id="${id}" value="${pad(d.getHours())}:${pad(d.getMinutes())}"></div>`;
+}
+function tsFromTimeField(id, base){
+  const v=document.getElementById(id).value; if(!v) return base;
+  const [h,m]=v.split(":").map(Number); const d=new Date(base);
+  d.setHours(h,m,0,0); return d.getTime();
+}
+function multiChipToggle(containerId){
+  document.getElementById(containerId).addEventListener("click",e=>{
+    const b=e.target.closest(".chip"); if(!b) return; b.classList.toggle("sel");
+  });
+}
+function singleChipToggle(containerId){
+  document.getElementById(containerId).addEventListener("click",e=>{
+    const b=e.target.closest(".chip"); if(!b) return;
+    document.querySelectorAll(`#${containerId} .chip`).forEach(c=>c.classList.remove("sel")); b.classList.add("sel");
+  });
+}
+function selectedChips(containerId){ return [...document.querySelectorAll(`#${containerId} .chip.sel`)].map(c=>c.dataset.t||c.textContent.trim()); }
+function selectedChip(containerId){ const b=document.querySelector(`#${containerId} .chip.sel`); return b? (b.dataset.t||b.textContent.trim()) : null; }
+
+function openLifeSheet(kind){
+  const lf=LIFE[kind]; const now=Date.now();
+
+  if(kind==="meal"){
+    const chips=MEAL_TYPES.map(t=>`<button type="button" class="chip" data-t="${t}">${tagLabel(t)}</button>`).join("");
+    const amtChips=MEAL_AMOUNTS.map(t=>`<button type="button" class="chip" data-t="${t}">${tagLabel(t)}</button>`).join("");
+    const exChips=MEAL_EXTRAS.map(t=>`<button type="button" class="chip" data-t="${t}">${tagLabel(t)}</button>`).join("");
+    openSheet(`<h2>${lf.icon} ${L("식사 기록","Meal log")}</h2><div class="hint">${L("단백질이 많거나 기름진 식사는 약효 흡수에 영향을 줄 수 있어요.","High-protein or fatty meals can affect how well medication is absorbed.")}</div>
+      ${timeFieldHtml("life_time", now)}
+      <div class="field"><label>${L("종류","Type")}</label><div class="chips" id="mealChips">${chips}</div></div>
+      <div class="field"><label>${L("식사량 (선택)","Amount (optional)")}</label><div class="chips" id="amtChips">${amtChips}</div></div>
+      <div class="field"><label>${L("추가 (복수 선택 가능)","Additional (multi-select)")}</label><div class="chips" id="mealExChips">${exChips}</div></div>
+      <div class="field"><label>${L("메모 (선택)","Memo (optional)")}</label><input id="life_memo" placeholder="${L("예: 아침 겸 약","e.g. breakfast with medication")}"></div>
+      <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="life_save" disabled>${L("저장","Save")}</button></div>`);
+    singleChipToggle("mealChips"); singleChipToggle("amtChips"); multiChipToggle("mealExChips");
+    document.getElementById("mealChips").addEventListener("click",()=>{ document.getElementById("life_save").disabled=false; });
+    document.getElementById("life_save").onclick=()=>{
+      const mt=selectedChip("mealChips"); const amount=selectedChip("amtChips"); const extras=selectedChips("mealExChips");
+      const ts=tsFromTimeField("life_time", now);
+      closeSheet(); addLife("meal",{mealType:mt, amount, extras, protein:extras.includes("단백질 많음"), ts, memo:document.getElementById("life_memo").value.trim()});
+    };
+    return;
+  }
+
+  if(kind==="sleep"){
+    const typeChips=SLEEP_TYPES.map(t=>`<button type="button" class="chip" data-t="${t.key}">${L(t.ko,t.en||t.ko)}</button>`).join("");
+    const qChips=SLEEP_QUALITY.map(t=>`<button type="button" class="chip" data-t="${t}">${tagLabel(t)}</button>`).join("");
+    openSheet(`<h2>${lf.icon} ${L("수면 기록","Sleep log")}</h2>
+      ${timeFieldHtml("life_time", now)}
+      <div class="field"><label>${L("유형","Type")}</label><div class="chips" id="sleepTypeChips">${typeChips}</div></div>
+      <div class="field"><label>${L("수면 특징 (복수 선택 가능, 선택)","Sleep characteristics (multi-select, optional)")}</label><div class="chips" id="sleepQChips">${qChips}</div></div>
+      <div class="field"><label>${L("기타 (선택)","Other (optional)")}</label><input id="life_symCustom" placeholder="${L("직접 입력","Custom")}"></div>
+      <div class="field"><label>${L("메모 (선택)","Memo (optional)")}</label><input id="life_memo"></div>
+      <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="life_save" disabled>${L("저장","Save")}</button></div>`);
+    document.getElementById("sleepTypeChips").addEventListener("click",e=>{
+      const b=e.target.closest(".chip"); if(!b) return;
+      document.querySelectorAll("#sleepTypeChips .chip").forEach(c=>c.classList.remove("sel")); b.classList.add("sel");
+      document.getElementById("life_save").disabled=false;
+    });
+    multiChipToggle("sleepQChips");
+    document.getElementById("life_save").onclick=()=>{
+      const typeBtn=document.querySelector("#sleepTypeChips .chip.sel"); const phase=typeBtn?typeBtn.dataset.t:"start";
+      const quality=selectedChips("sleepQChips"); const ts=tsFromTimeField("life_time", now);
+      closeSheet(); addLife("sleep",{phase, quality, ts, memo:[document.getElementById("life_symCustom").value.trim(), document.getElementById("life_memo").value.trim()].filter(Boolean).join(" · ")});
+    };
+    return;
+  }
+
+  if(kind==="exercise"){
+    const tChips=EXERCISE_TYPES.map(t=>`<button type="button" class="chip" data-t="${t}">${tagLabel(t)}</button>`).join("");
+    const iChips=EXERCISE_INTENSITY.map(t=>`<button type="button" class="chip" data-t="${t}">${tagLabel(t)}</button>`).join("");
+    const dChips=EXERCISE_DURATIONS.map(m=>`<button type="button" class="chip" data-t="${m}">${m}${L("분","min")}</button>`).join("");
+    openSheet(`<h2>${lf.icon} ${L("운동 기록","Exercise log")}</h2><div class="hint">${L("방금 마친 운동을 기록해요. 시각은 끝난 시간으로 저장돼요.","Log an exercise you just finished. The time saved is the end time.")}</div>
+      ${timeFieldHtml("life_time", now)}
+      <div class="field"><label>${L("종류","Type")}</label><div class="chips" id="exTypeChips">${tChips}</div></div>
+      <div class="field" id="exCustomWrap" style="display:none"><label>${L("운동 이름 직접 입력","Custom exercise name")}</label><input id="exTypeCustom" placeholder="${L("예: 요가","e.g. yoga")}"></div>
+      <div class="field"><label>${L("강도","Intensity")}</label><div class="chips" id="exIntChips">${iChips}</div></div>
+      <div class="field"><label>${L("시간","Duration")}</label><div class="chips" id="exDurChips">${dChips}<button type="button" class="chip" data-t="custom">${L("직접 입력","Custom")}</button></div></div>
+      <div class="field" id="exDurCustomWrap" style="display:none"><label>${L("운동 시간 (분)","Duration (minutes)")}</label><input type="number" id="exDurCustom" min="1" placeholder="${L("예: 45","e.g. 45")}"></div>
+      <div class="field"><label>${L("메모 (선택)","Memo (optional)")}</label><input id="life_memo"></div>
+      <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="life_save">${L("저장","Save")}</button></div>`);
+    singleChipToggle("exTypeChips"); singleChipToggle("exIntChips"); singleChipToggle("exDurChips");
+    document.getElementById("exTypeChips").addEventListener("click",()=>{
+      const sel=selectedChip("exTypeChips"); document.getElementById("exCustomWrap").style.display = sel==="기타"?"block":"none";
+    });
+    document.getElementById("exDurChips").addEventListener("click",()=>{
+      const b=document.querySelector("#exDurChips .chip.sel"); document.getElementById("exDurCustomWrap").style.display = (b&&b.dataset.t==="custom")?"block":"none";
+    });
+    document.getElementById("life_save").onclick=()=>{
+      const exType=selectedChip("exTypeChips"); const exTypeCustom=document.getElementById("exTypeCustom").value.trim();
+      const intensity=selectedChip("exIntChips");
+      const durBtn=document.querySelector("#exDurChips .chip.sel");
+      const durationMin = durBtn? (durBtn.dataset.t==="custom"? (+document.getElementById("exDurCustom").value||null) : +durBtn.dataset.t) : null;
+      const endTs=tsFromTimeField("life_time", now);
+      const startTs = durationMin? endTs-durationMin*60000 : endTs;
+      const memo=document.getElementById("life_memo").value.trim();
+      closeSheet();
+      addLife("exercise",{phase:"start", ts:startTs, exType, exTypeCustom, intensity, durationMin});
+      addLife("exercise",{phase:"end", ts:endTs, exType, exTypeCustom, intensity, durationMin, memo});
+    };
+    return;
+  }
+
+  if(kind==="bowel"){
+    const cChips=BOWEL_CONSISTENCY.map(t=>`<button type="button" class="chip" data-t="${t}">${tagLabel(t)}</button>`).join("");
+    const eChips=BOWEL_EXTRAS.map(t=>`<button type="button" class="chip" data-t="${t}">${tagLabel(t)}</button>`).join("");
+    openSheet(`<h2>${lf.icon} ${L("배변 기록","Bowel log")}</h2>
+      ${timeFieldHtml("life_time", now)}
+      <div class="field"><label>${L("굳기 (선택)","Consistency (optional)")}</label><div class="chips" id="bowelCChips">${cChips}</div></div>
+      <div class="field"><label>${L("추가 (복수 선택 가능)","Additional (multi-select)")}</label><div class="chips" id="bowelEChips">${eChips}</div></div>
+      <div class="field"><label><input type="checkbox" id="bowelFirst" style="width:auto;margin-right:6px"> ${L("오늘 첫 배변","First bowel movement today")}</label></div>
+      <div class="field"><label>${L("메모 (선택)","Memo (optional)")}</label><input id="life_memo"></div>
+      <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="life_save">${L("저장","Save")}</button></div>`);
+    singleChipToggle("bowelCChips"); multiChipToggle("bowelEChips");
+    document.getElementById("life_save").onclick=()=>{
+      const consistency=selectedChip("bowelCChips"); const extras=selectedChips("bowelEChips");
+      const firstToday=document.getElementById("bowelFirst").checked;
+      const ts=tsFromTimeField("life_time", now);
+      closeSheet(); addLife("bowel",{consistency, extras, firstToday, ts, memo:document.getElementById("life_memo").value.trim()});
+    };
+    return;
+  }
+
+  if(kind==="body"){
+    const sChips=BODY_SYMPTOMS.map(t=>`<button type="button" class="chip" data-t="${t}">${tagLabel(t)}</button>`).join("");
+    openSheet(`<h2>${lf.icon} ${L("몸 상태 기록","Body log")}</h2><div class="hint">${L('자율신경·비운동 증상을 복수 선택할 수 있어요. 기상 후 특별한 증상이 없다면 "이상 없음"을 눌러주세요.','You can select multiple autonomic/non-motor symptoms. If nothing stands out after waking, tap "No symptoms".')}</div>
+      ${timeFieldHtml("life_time", now)}
+      <div class="field"><label>${L("증상 (복수 선택 가능)","Symptoms (multi-select)")}</label><div class="chips" id="bodyChips">${sChips}</div></div>
+      <div class="field"><label>${L("직접 입력 (선택)","Custom (optional)")}</label><input id="life_symCustom" placeholder="${L("예: 두통, 이명 등","e.g. headache, tinnitus")}"></div>
+      <div class="field"><label>${L("메모 (선택)","Memo (optional)")}</label><input id="life_memo"></div>
+      <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="life_save">${L("저장","Save")}</button></div>`);
+    document.getElementById("bodyChips").addEventListener("click",e=>{
+      const b=e.target.closest(".chip"); if(!b) return;
+      if(b.dataset.t==="이상 없음"){
+        const wasSel=b.classList.contains("sel");
+        document.querySelectorAll("#bodyChips .chip").forEach(c=>c.classList.remove("sel"));
+        if(!wasSel) b.classList.add("sel");
+      } else {
+        document.querySelector('#bodyChips .chip[data-t="이상 없음"]')?.classList.remove("sel");
+        b.classList.toggle("sel");
+      }
+    });
+    document.getElementById("life_save").onclick=()=>{
+      const symptoms=selectedChips("bodyChips"); const customSymptom=document.getElementById("life_symCustom").value.trim();
+      const ts=tsFromTimeField("life_time", now);
+      closeSheet(); addLife("body",{symptoms, customSymptom, ts, memo:document.getElementById("life_memo").value.trim()});
+    };
+    return;
+  }
+}
+function openMedConfirm(med){
+  openSheet(`<h2>💊 ${escapeHtml(med.name)} ${L("복용","taken")}</h2><div class="hint">${L(`지금(${hm(Date.now())}) 복용으로 기록할까요?`,`Log as taken now (${hm(Date.now())})?`)}</div>
+    <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("나중에","Later")}</button><button class="btn primary" id="mc_ok">${L("복용함","Taken")}</button></div>`);
+  document.getElementById("mc_ok").onclick=()=>{ closeSheet(); addMed(med.name, med.dose); };
+}
+
+function openMedSheet(){
+  if(!db.meds.length){ closeSheet(); openAddMed(true); return; }
+  const order=db.meds.map((m,i)=>({m,i})).sort((a,b)=>(b.m.fav?1:0)-(a.m.fav?1:0));
+  const chips=order.map(({m,i})=>`<button class="chip" data-i="${i}">${m.fav?"★ ":""}${escapeHtml(m.name)}${m.dose?` ${m.dose}`:""}</button>`).join("");
+  const now=Date.now();
+  openSheet(`
+    <h2>${L("약 먹음","Took medication")}</h2><div class="hint">${L("여러 약을 한 번에 먹었으면 전부 선택하세요. 시간이 다르면 아래에서 고쳐주세요.","If you took several medications at once, select them all. Adjust the time below if needed.")}</div>
+    <div class="field"><label>${L("약 선택 (여러 개 가능)","Select medication(s) — multiple allowed")}</label><div class="chips" id="medChips">${chips}</div></div>
+    ${timeFieldHtml("med_time", now)}
+    <div class="field" id="med_dose_f"><label>${L("용량 조정 (mg, 선택 · 약 1개 선택 시에만)","Adjust dose (mg, optional · single selection only)")}</label><input type="number" id="med_dose" inputmode="numeric" placeholder="${L("등록 용량 사용","Use registered dose")}"></div>
+    <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="med_save" disabled>${L("저장","Save")}</button></div>`);
+  const selSet=new Set();
+  document.getElementById("medChips").addEventListener("click",e=>{
+    const b=e.target.closest(".chip"); if(!b) return;
+    const i=+b.dataset.i;
+    b.classList.toggle("sel");
+    if(selSet.has(i)) selSet.delete(i); else selSet.add(i);
+    document.getElementById("med_save").disabled = selSet.size===0;
+    document.getElementById("med_save").textContent = selSet.size>1? L(`저장 (${selSet.size}개)`,`Save (${selSet.size})`) : L("저장","Save");
+    const doseF=document.getElementById("med_dose_f");
+    if(selSet.size===1){ doseF.style.display="block"; const only=[...selSet][0]; if(db.meds[only].dose) document.getElementById("med_dose").placeholder=db.meds[only].dose+"mg"; }
+    else { doseF.style.display="none"; }
+  });
+  document.getElementById("med_save").onclick=()=>{
+    if(!selSet.size) return;
+    const ts=tsFromTimeField("med_time", now);
+    const d=document.getElementById("med_dose").value;
+    const list=[...selSet];
+    closeSheet();
+    list.forEach((i,idx)=>{
+      const m=db.meds[i];
+      const dose = (list.length===1 && d)? +d : m.dose;
+      addMed(m.name, dose, ts);
+    });
+    if(list.length>1) toast(L(`${list.length}개 약 복약 기록됨 · ${hm(ts)}`,`${list.length} medications recorded · ${hm(ts)}`));
+  };
+}
+
+function openAddMed(fromMedFlow){
+  const chips=MED_PRESETS.map(n=>`<button class="chip" onclick="document.getElementById('m_name').value='${n}'">${n}</button>`).join("");
+  openSheet(`
+    <h2>${L("약 추가","Add medication")}</h2><div class="hint">${L("자주 먹는 약을 등록해두면 복약 기록이 한 번에 끝나요.","Registering meds you take often makes logging them a single tap.")}</div>
+    <div class="field"><label>${L("약 이름","Medication name")}</label><input id="m_name" placeholder="${L("예: 마도파 HBS","e.g. Madopar HBS")}"></div>
+    <div class="field"><label>${L("자주 쓰는 약","Common medications")}</label><div class="chips">${chips}</div></div>
+    <div class="field"><label>${L("기본 용량 (mg, 선택)","Default dose (mg, optional)")}</label><input id="m_dose" type="number" inputmode="numeric" placeholder="${L("예: 100","e.g. 100")}"></div>
+    <div class="field"><label>${L("메모 (선택)","Memo (optional)")}</label><input id="m_note" placeholder="${L("예: 아침 기저용","e.g. morning baseline dose")}"></div>
+    <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="m_save">${L("추가","Add")}</button></div>`);
+  document.getElementById("m_save").onclick=()=>{
+    const name=document.getElementById("m_name").value.trim(); if(!name){ toast(L("약 이름을 입력하세요","Please enter a medication name")); return; }
+    db.meds.push({ id:uid(), name, dose:(+document.getElementById("m_dose").value)||null, note:document.getElementById("m_note").value.trim() });
+    save(); renderMeds(); closeSheet();
+    if(fromMedFlow) openMedSheet();
+  };
+}
+
+function openAddPast(){
+  const sOpts=MAIN_STATES.map(s=>`<option value="${s.key}">${stateName(s.key)}</option>`).join("");
+  const now=new Date(); const dval=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+  const medPreOpts = db.meds.map((m,i)=>`<button type="button" class="chip" data-i="${i}">${m.fav?"★ ":""}${escapeHtml(m.name)}${m.dose?` ${m.dose}mg`:""}</button>`).join("");
+  const mealOpts=MEAL_TYPES.map(t=>`<option value="${t}">${tagLabel(t)}</option>`).join("");
+  const sleepOpts=SLEEP_TYPES.map(t=>`<option value="${t.key}">${L(t.ko,t.en||t.ko)}</option>`).join("");
+  const exOpts=EXERCISE_TYPES.map(t=>`<option value="${t}">${tagLabel(t)}</option>`).join("");
+  const bowelOpts=BOWEL_CONSISTENCY.map(t=>`<option value="${t}">${tagLabel(t)}</option>`).join("");
+  openSheet(`
+    <h2>${L("지난 기록 추가","Add a past record")}</h2><div class="hint">${L("깜빡한 기록을 날짜·시각을 지정해 추가해요.","Add a record you forgot to log, with a specific date and time.")}</div>
+    <div class="field"><label>${L("날짜","Date")}</label><input type="date" id="p_date" value="${dval}"></div>
+    <div class="field"><label>${L("시각","Time")}</label><input type="time" id="p_time" value="${pad(now.getHours())}:${pad(now.getMinutes())}"></div>
+    <div class="field"><label>${L("종류","Type")}</label>
+      <select id="p_kind">
+        <option value="state">${L("상태","State")}</option>
+        <option value="med">${L("복약","Medication")}</option>
+        <option value="life_sleep">${L("생활 · 수면","Life · Sleep")}</option>
+        <option value="life_meal">${L("생활 · 식사","Life · Meal")}</option>
+        <option value="life_exercise">${L("생활 · 운동","Life · Exercise")}</option>
+        <option value="life_bowel">${L("생활 · 배변","Life · Bowel")}</option>
+        <option value="life_body">${L("생활 · 몸 상태","Life · Body")}</option>
+      </select></div>
+    <div class="field" id="p_state_f"><label>${L("상태","State")}</label><select id="p_state">${sOpts}</select></div>
+    <div class="field" id="p_med_f" style="display:none">
+      <label>${L("등록된 약에서 선택 (여러 개 가능)","Select from registered medications (multiple allowed)")}</label>
+      <div class="chips" id="p_medChips">${medPreOpts||`<span class="hint" style="margin:0">${L("등록된 약이 없어요","No medications registered")}</span>`}</div>
+      <div style="height:10px"></div>
+      <label>${L("직접 입력 (선택, 등록 안 된 약)","Custom (optional, unregistered medication)")}</label>
+      <input id="p_drug" placeholder="${L("약 이름","Medication name")}"><div style="height:8px"></div><input id="p_dose" type="number" placeholder="${L("용량 mg (선택)","Dose mg (optional)")}"></div>
+    <div class="field" id="p_sleep_f" style="display:none"><label>${L("수면 유형","Sleep type")}</label><select id="p_sleep_type">${sleepOpts}</select></div>
+    <div class="field" id="p_meal_f" style="display:none"><label>${L("식사 종류","Meal type")}</label><select id="p_meal_type">${mealOpts}</select></div>
+    <div class="field" id="p_ex_f" style="display:none"><label>${L("운동 종류","Exercise type")}</label><select id="p_ex_type">${exOpts}</select><div style="height:8px"></div><label>${L("운동 시간 (분, 선택)","Duration (minutes, optional)")}</label><input id="p_ex_dur" type="number" placeholder="${L("예: 30","e.g. 30")}"></div>
+    <div class="field" id="p_bowel_f" style="display:none"><label>${L("굳기 (선택)","Consistency (optional)")}</label><select id="p_bowel_c"><option value="">${L("선택 안 함","None")}</option>${bowelOpts}</select></div>
+    <div class="field" id="p_body_f" style="display:none"><label>${L("증상 (직접 입력, 쉼표로 구분)","Symptoms (custom, comma-separated)")}</label><input id="p_body_sym" placeholder="${L("예: 어지럼, 기립 시 어지럼","e.g. dizziness, dizziness on standing")}"></div>
+    <div class="field"><label>${L("메모 (선택)","Memo (optional)")}</label><input id="p_memo"></div>
+    <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="p_save">${L("추가","Add")}</button></div>`);
+  const fieldMap = {
+    state:"p_state_f", med:"p_med_f", life_sleep:"p_sleep_f", life_meal:"p_meal_f",
+    life_exercise:"p_ex_f", life_bowel:"p_bowel_f", life_body:"p_body_f"
+  };
+  document.getElementById("p_kind").onchange=function(){
+    Object.values(fieldMap).forEach(id=>document.getElementById(id).style.display="none");
+    document.getElementById(fieldMap[this.value]).style.display="block";
+  };
+  const pMedSel=new Set();
+  const medChipsEl=document.getElementById("p_medChips");
+  if(medChipsEl) medChipsEl.addEventListener("click",e=>{
+    const b=e.target.closest(".chip"); if(!b) return;
+    b.classList.toggle("sel");
+    const i=+b.dataset.i; if(pMedSel.has(i)) pMedSel.delete(i); else pMedSel.add(i);
+  });
+  document.getElementById("p_save").onclick=()=>{
+    const d=document.getElementById("p_date").value, t=document.getElementById("p_time").value;
+    if(!d||!t){ toast(L("날짜와 시각을 입력하세요","Please enter a date and time")); return; }
+    const ts=new Date(`${d}T${t}`).getTime(); const memo=document.getElementById("p_memo").value.trim();
+    const kind=document.getElementById("p_kind").value;
+    if(kind==="med"){
+      const customDrug=document.getElementById("p_drug").value.trim();
+      const customDose=(+document.getElementById("p_dose").value)||null;
+      if(!pMedSel.size && !customDrug){ toast(L("약을 선택하거나 이름을 입력하세요","Select a medication or enter a name")); return; }
+      pMedSel.forEach(i=>{ const m=db.meds[i]; db.events.push({id:uid(),type:"med",drug:m.name,dose:m.dose,ts,memo}); });
+      if(customDrug) db.events.push({id:uid(),type:"med",drug:customDrug,dose:customDose,ts,memo});
+      db.events.sort((a,b)=>a.ts-b.ts); save(); closeSheet(); renderAll();
+      toast(L(`복약 ${pMedSel.size+(customDrug?1:0)}건 추가됨`,`${pMedSel.size+(customDrug?1:0)} medication record(s) added`)); return;
+    }
+    if(kind==="state"){
+      db.events.push({id:uid(),type:"state",state:document.getElementById("p_state").value,ts,output:null,gait:null,dysk:null,dyst:null,memo,symptoms:[],customSymptom:"",riseResult:null});
+    } else if(kind==="life_sleep"){
+      db.events.push({id:uid(),type:"life",kind:"sleep",phase:document.getElementById("p_sleep_type").value,ts,memo,quality:[]});
+    } else if(kind==="life_meal"){
+      db.events.push({id:uid(),type:"life",kind:"meal",mealType:document.getElementById("p_meal_type").value,ts,memo,extras:[],protein:false});
+    } else if(kind==="life_exercise"){
+      const dur=(+document.getElementById("p_ex_dur").value)||null;
+      db.events.push({id:uid(),type:"life",kind:"exercise",phase:"end",exType:document.getElementById("p_ex_type").value,durationMin:dur,ts,memo});
+    } else if(kind==="life_bowel"){
+      const c=document.getElementById("p_bowel_c").value||null;
+      db.events.push({id:uid(),type:"life",kind:"bowel",consistency:c,ts,memo,extras:[]});
+    } else if(kind==="life_body"){
+      const syms=document.getElementById("p_body_sym").value.split(",").map(x=>x.trim()).filter(Boolean);
+      db.events.push({id:uid(),type:"life",kind:"body",symptoms:syms,ts,memo});
+    }
+    db.events.sort((a,b)=>a.ts-b.ts); save(); closeSheet(); renderAll(); toast(L("기록 추가됨","Record added"));
+  };
+}
+
+/* ---------- nav + misc ---------- */
+function switchTab(name){
+  document.querySelectorAll("section.tab").forEach(s=>s.classList.toggle("active",s.id==="tab-"+name));
+  document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.tab===name));
+  if(name==="log") renderLog(); if(name==="trend") renderTrend(); if(name==="curve") renderCurve(); if(name==="report") renderReport(); if(name==="set") renderMeds();
+  window.scrollTo(0,0);
+}
+document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
+document.getElementById("medBtn").onclick=openMedSheet;
+document.getElementById("addMedBtn").onclick=()=>openAddMed(false);
+document.getElementById("addPastBtn").onclick=openAddPast;
+document.getElementById("printBtn").onclick=()=>window.print();
+document.getElementById("repRange").onchange=renderReport;
+
+let toastT;
+function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),1900); }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+/* ---------- voice input (음성으로 "약 먹었습니다" 등 기록) ---------- */
+function setupVoice(){
+  const btn=document.getElementById("voiceBtn");
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ btn.onclick=()=>toast(L("이 브라우저는 음성 인식을 지원하지 않아요","This browser doesn't support voice recognition")); return; }
+  let listening=false;
+  btn.onclick=()=>{ if(listening) return;
+    const rec=new SR(); rec.lang = currentLang()==="en" ? "en-US" : "ko-KR"; rec.continuous=false; rec.interimResults=false;
+    rec.onstart=()=>{ listening=true; btn.classList.add("listening"); toast(L("듣고 있어요… 말씀해주세요","Listening… please speak")); };
+    rec.onend=()=>{ listening=false; btn.classList.remove("listening"); };
+    rec.onerror=()=>{ listening=false; btn.classList.remove("listening"); toast(L("음성을 인식하지 못했어요","Couldn't recognize speech")); };
+    rec.onresult=(ev)=>{ const text=ev.results[0][0].transcript.trim(); handleVoiceText(text); };
+    try{ rec.start(); }catch(e){}
+  };
+}
+function handleVoiceText(text){
+  const t=text.toLowerCase().replace(/\s/g,"");
+  // "약 먹었습니다" / "took medication" 계열 — 즐겨찾기 우선 약으로 자동 기록
+  if(/약.*(먹었|복용|먹음)/.test(t) || /(took|taking).*(medication|med|pill)/.test(t)){
+    if(!db.meds.length){ toast(L(`"${text}" — 등록된 약이 없어요. 설정에서 약을 먼저 추가해주세요`,`"${text}" — No medications registered. Please add one in Settings first`)); return; }
+    const fav=db.meds.find(m=>m.fav) || db.meds[0];
+    addMed(fav.name, fav.dose);
+    toast(L(`🎤 "${text}" → ${fav.name} 복약 기록됨`,`🎤 "${text}" → ${fav.name} recorded`));
+    return;
+  }
+  if(/좋아졌|좋아짐|괜찮/.test(t) || /(feel(ing)?\s?)?bett(er|a)|okay|good/.test(t)){ addState("on"); toast(L(`🎤 "${text}" → ON 기록됨`,`🎤 "${text}" → ON recorded`)); return; }
+  if(/나빠졌|나빠짐|힘들/.test(t) || /wors(e|ening)|bad|difficult/.test(t)){ addState("falling"); toast(L(`🎤 "${text}" → 하강 전환기 기록됨`,`🎤 "${text}" → Falling recorded`)); return; }
+  if(/오프|off|약효.*없/.test(t)){ addState("off"); toast(L(`🎤 "${text}" → OFF 기록됨`,`🎤 "${text}" → OFF recorded`)); return; }
+  if(/이상운동|디스키네지아|dyskinesia/.test(t)){ addState("on",{symptoms:["dysk"]}); toast(L(`🎤 "${text}" → 이상운동 기록됨`,`🎤 "${text}" → Dyskinesia recorded`)); return; }
+  toast(L(`🎤 "${text}" — 인식은 됐지만 자동 저장할 항목을 못 찾았어요`,`🎤 "${text}" — recognized, but no matching action was found`));
+}
+
+/* theme */
+function applyTheme(){ document.documentElement.setAttribute("data-theme", db.settings.theme==="dark"?"dark":"light"); }
+function toggleTheme(){ db.settings.theme = db.settings.theme==="dark"?"light":"dark"; save(); applyTheme(); }
+document.getElementById("themeBtn").onclick=toggleTheme;
+document.getElementById("darkToggle").onclick=toggleTheme;
+
+
+/* notifications */
+function renderNotifyToggle(){ document.getElementById("notifyToggle").classList.toggle("on", !!db.settings.notify); }
+document.getElementById("notifyToggle").onclick=async()=>{
+  if(db.settings.notify){ db.settings.notify=false; save(); renderNotifyToggle(); toast(L("약 알림을 껐어요","Medication alerts disabled")); }
+  else { if(await enableNotify()) renderNotifyToggle(); }
+};
+document.getElementById("icsBtn").onclick=exportICS;
+
+/* language toggle */
+function renderLangToggle(){
+  const btn=document.getElementById("langToggle");
+  btn.textContent = currentLang()==="en" ? "English" : "한국어";
+}
+document.getElementById("langToggle").onclick=()=>{
+  db.settings.lang = currentLang()==="en" ? "ko" : "en";
+  save(); applyI18nStatic(); renderLangToggle(); setHeadDate(); renderAll();
+};
+
+/* backup */
+document.getElementById("exportBtn").onclick=()=>{
+  const blob=new Blob([JSON.stringify(db,null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download=L(`약효일지_백업_${todayKey()}.json`,`medlog_backup_${todayKey()}.json`); a.click(); URL.revokeObjectURL(a.href); toast(L("백업 파일을 저장했어요","Backup file saved"));
+};
+document.getElementById("importBtn").onclick=()=>document.getElementById("importFile").click();
+document.getElementById("importFile").onchange=function(){
+  const f=this.files[0]; if(!f) return; const r=new FileReader();
+  r.onload=()=>{ try{ const d=JSON.parse(r.result); if(!d.events) throw 0;
+    if(confirm(L("현재 기록을 불러온 데이터로 덮어쓸까요?","Overwrite current records with the imported data?"))){ db=Object.assign({questions:defaultQuestions(),settings:{theme:db.settings.theme,notify:false},meds:[]},d); db.meds=(db.meds||[]).map(m=>({sched:[],...m})); db.settings=db.settings||{theme:"light"}; save(); applyTheme(); applyI18nStatic(); renderLangToggle(); renderAll(); renderNotifyToggle(); switchTab("today"); toast(L("불러왔어요","Imported")); } }
+    catch(e){ toast(L("올바른 백업 파일이 아니에요","Not a valid backup file")); } };
+  r.readAsText(f); this.value="";
+};
+document.getElementById("resetBtn").onclick=()=>{
+  if(confirm(L("모든 기록과 약 목록이 삭제됩니다. 계속할까요?","All records and medications will be deleted. Continue?"))){ localStorage.removeItem(KEY); db=load(); applyTheme(); applyI18nStatic(); renderLangToggle(); renderAll(); switchTab("today"); toast(L("초기화했어요","Reset complete")); }
+};
+
+/* ---------- boot ---------- */
+function renderAll(){ renderToday();
+  if(document.getElementById("tab-log").classList.contains("active")) renderLog();
+  if(document.getElementById("tab-trend").classList.contains("active")) renderTrend();
+  if(document.getElementById("tab-curve").classList.contains("active")) renderCurve();
+  if(document.getElementById("tab-report").classList.contains("active")) renderReport();
+  if(document.getElementById("tab-set").classList.contains("active")) renderMeds();
+}
+function setHeadDate(){ const d=new Date();
+  if(currentLang()==="en"){ document.getElementById("headDate").textContent=d.toLocaleDateString("en-US",{month:"short",day:"numeric",weekday:"short"}); return; }
+  const wd=["일","월","화","수","목","금","토"][d.getDay()];
+  document.getElementById("headDate").textContent=`${d.getMonth()+1}.${d.getDate()} (${wd})`; }
+
+applyTheme(); applyI18nStatic(); renderLangToggle(); setHeadDate(); renderAll(); renderNotifyToggle(); setupVoice();
+
+/* alarm loop: check every 30s while app is open */
+setInterval(alarmLoop, 30000); alarmLoop();
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden) alarmLoop(); });
+
+/* first-run disclaimer + 용어 튜토리얼 (1분 설명) */
+if(!db.settings.seen){
+  setTimeout(()=>openSheet(`
+    <h2>${L("약효일지에 오신 걸 환영해요","Welcome to Med Log")}</h2>
+    <div class="hint" style="margin-bottom:14px">${L("하루 동안의 ON·OFF·이상운동을 한 번의 터치로 기록하고, 진료 때 보여줄 자료로 정리해 드려요.","Log your ON, OFF, and dyskinesia states with a single tap throughout the day, and we'll organize it into material to show your doctor.")}</div>
+    <div class="disclaimer" style="margin-bottom:16px">${L("<b>이 앱은 증상·약효를 기록하는 도구예요.</b> 진단이나 처방을 대신하지 않으며, 약 조정은 반드시 주치의와 상의하세요. 기록은 이 기기에만 저장돼요.","<b>This app is a tool for recording symptoms and medication response.</b> It does not replace diagnosis or prescription — always consult your doctor before adjusting medication. Records are stored only on this device.")}</div>
+    <button class="btn primary" id="okStart">${L("다음 · 용어 알아보기","Next · Learn the terms")}</button>`),400);
+  document.addEventListener("click",function once(e){
+    if(e.target&&e.target.id==="okStart"){ closeSheet(); showTermTutorial(); document.removeEventListener("click",once); }
+  });
+}
+function showTermTutorial(){
+  openSheet(`
+    <h2>${L("1분이면 충분해요 — 용어 4가지","One minute is all it takes — 4 terms")}</h2>
+    <div class="hint" style="margin-bottom:16px">${L("파킨슨 약효 흐름을 이 4가지로 나눠서 기록해요.","We break down Parkinson's medication response into these 4 states.")}</div>
+    <div class="field"><div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:14px">
+      <span class="sw" style="background:#54657A;width:20px;height:20px;border-radius:6px;flex:0 0 auto;margin-top:2px"></span>
+      <div><b>OFF</b> — ${L("약효가 없어 움직임이 힘든 상태","No medication effect, movement is difficult")}</div></div>
+    <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:14px">
+      <span class="sw" style="background:#5C93D6;width:20px;height:20px;border-radius:6px;flex:0 0 auto;margin-top:2px"></span>
+      <div><b>${L("상승 전환기","Rising")}</b> — ${L("약을 먹고 효과가 올라오는 중. 힘은 있는데 아직 자연스럽지 않은 구간","Effect is kicking in after taking medication — strength is returning but movement isn't smooth yet")}</div></div>
+    <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:14px">
+      <span class="sw" style="background:#1FA971;width:20px;height:20px;border-radius:6px;flex:0 0 auto;margin-top:2px"></span>
+      <div><b>ON</b> — ${L("약효가 잘 들어서 편하게 움직이는 상태","Medication is working well, movement is comfortable")}</div></div>
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <span class="sw" style="background:#C98A4B;width:20px;height:20px;border-radius:6px;flex:0 0 auto;margin-top:2px"></span>
+      <div><b>${L("하강 전환기","Falling")}</b> — ${L("약효가 서서히 빠지며 다시 OFF로 향하는 구간","Effect is gradually wearing off, heading back toward OFF")}</div></div>
+    </div>
+    <div class="hint" style="margin:14px 0">${L('"출력"은 그 순간의 몸이 움직여지는 정도를 0~100으로 표현한 감각 점수예요. 정답은 없고, 형이 느끼는 대로 누르면 돼요.','"Output" is a 0–100 subjective score for how well your body is moving in that moment. There\'s no right answer — just go with how you feel.')}</div>
+    <div class="hint" style="margin-bottom:16px">${L('오늘 탭 위쪽 <b>⚡ 빠른 기록</b>은 시트 없이 한 번 눌러서 바로 저장돼요. 자세히 남기고 싶을 땐 아래 상태 버튼을 쓰면 돼요.','The <b>⚡ Quick log</b> buttons at the top of the Today tab save instantly with one tap. Use the state buttons below when you want to log more detail.')}</div>
+    <button class="btn primary" id="okStart2">${L("시작하기","Get started")}</button>`);
+  document.addEventListener("click",function once2(e){
+    if(e.target&&e.target.id==="okStart2"){ db.settings.seen=true; save(); closeSheet(); document.removeEventListener("click",once2); }
+  });
+}
+
+/* PWA */
+if("serviceWorker" in navigator){ window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{})); }
+</script>
+</body>
+</html>
