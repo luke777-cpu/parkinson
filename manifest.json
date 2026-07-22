@@ -1,26 +1,41 @@
 {
-  "name": "약효일지 · ON·OFF 기록",
+  "id": "./",
+  "name": "약효일지 · 출력·사건 기록",
   "short_name": "약효일지",
-  "description": "파킨슨 약효 변동(ON·OFF·이상운동)을 기록하고 진료용 보고서를 만드는 도구",
+  "description": "체감 출력 변화와 복약·증상 사건을 시간순으로 기록하고 진료용 보고서를 만드는 도구",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
   "background_color": "#F5F7FA",
   "theme_color": "#1FA971",
   "lang": "ko",
   "orientation": "portrait",
+  "categories": ["medical", "health", "lifestyle"],
   "icons": [
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='42' fill='%231FA971'/%3E%3Cpath d='M28 116 L60 116 L74 70 L96 134 L116 96 L130 116 L164 116' fill='none' stroke='white' stroke-width='11' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E",
+      "src": "./icon-192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%231FA971'/%3E%3Cpath d='M74 308 L160 308 L196 186 L256 358 L308 256 L346 308 L438 308' fill='none' stroke='white' stroke-width='28' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E",
+      "src": "./icon-512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

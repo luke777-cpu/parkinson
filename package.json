@@ -1,0 +1,12 @@
+{
+  "name": "yakhyo-medication-diary",
+  "version": "0.12.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/engine.test.js tests/output-engine.test.js tests/quick-event.test.js tests/clinical-event.test.js",
+    "test:output": "node --test tests/output-engine.test.js tests/quick-event.test.js",
+    "validate": "node scripts/validate-project.js",
+    "check": "npm run test && npm run validate"
+  }
+}
