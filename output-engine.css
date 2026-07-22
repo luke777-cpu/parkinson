@@ -1,0 +1,180 @@
+.omvp-load-state {
+  min-height: 180px;
+  margin: 2px 0 18px;
+  border: 2px solid var(--line);
+  border-radius: 22px;
+  background: var(--surface);
+  color: var(--ink-2);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  text-align: center;
+  font-weight: 800;
+}
+
+.omvp-card {
+  background: var(--surface);
+  border: 3px solid color-mix(in srgb, var(--accent) 38%, var(--line));
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  margin: 2px 0 18px;
+  overflow: hidden;
+}
+
+.omvp-storage-warning {margin: 14px 16px 0; padding: 12px 14px; border: 2px solid #C98A4B; border-radius: 14px; background: color-mix(in srgb, #E0A030 18%, var(--surface)); color: var(--ink); font-size: 13px; font-weight: 800; line-height: 1.5}
+
+.omvp-head {
+  padding: 16px 18px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.omvp-title {font-size: 21px; font-weight: 900; letter-spacing: -.02em}
+.omvp-badge {font-size: 12px; font-weight: 800; color: var(--accent-ink); background: color-mix(in srgb, var(--accent) 14%, transparent); border-radius: 999px; padding: 5px 9px}
+.omvp-current {text-align: center; padding: 12px 18px 6px}
+.omvp-current-label {font-size: 18px; color: var(--ink-2); font-weight: 850}
+.omvp-current-value {font-size: 82px; line-height: 1; font-weight: 950; color: var(--accent); font-variant-numeric: tabular-nums; letter-spacing: -.06em; margin: 5px 0}
+.omvp-current-stage {font-size: 17px; font-weight: 800; margin-top: 2px}
+.omvp-last {font-size: 13px; color: var(--ink-2); margin-top: 4px; min-height: 20px}
+
+.omvp-delta-row {display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px 18px 14px}
+.omvp-delta-btn {min-height: 112px; border-radius: 22px; color: #fff; font-size: 36px; font-weight: 950; box-shadow: var(--shadow); border: 2px solid transparent}
+.omvp-delta-btn.minus {background: #54657A}
+.omvp-delta-btn.plus {background: #1FA971; color: #03170F}
+.omvp-delta-btn:active {transform: scale(.96)}
+.omvp-delta-btn:focus-visible,.omvp-anchor-option:focus-visible,.omvp-inline-anchor-option:focus-visible,.omvp-small-btn:focus-visible,.omvp-quick-btn:focus-visible,.omvp-backdated-main:focus-visible {outline: 4px solid color-mix(in srgb, var(--signal) 55%, transparent); outline-offset: 2px}
+
+.omvp-anchor-panel {margin: 10px 18px 14px; padding: 16px; background: var(--surface-2); border-radius: 16px; text-align: center}
+.omvp-anchor-panel strong {font-size: 18px; display: block; margin-bottom: 5px}
+.omvp-anchor-panel p {font-size: 14px; color: var(--ink-2); margin: 0 0 12px}
+.omvp-anchor-open {width: 100%; min-height: 64px; border-radius: 15px; background: var(--accent); color: #04130C; font-size: 20px; font-weight: 900}
+.omvp-inline-anchor-grid {display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px}
+.omvp-inline-anchor-option {min-height: 62px; border-radius: 14px; background: var(--surface); border: 2px solid var(--line); font-size: 22px; font-weight: 900}
+.omvp-inline-anchor-option:active {background: color-mix(in srgb, var(--accent) 20%, var(--surface))}
+
+.omvp-actions {display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 4px 18px 16px}
+.omvp-small-btn {min-height: 48px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); font-size: 14px; font-weight: 800; padding: 8px}
+.omvp-small-btn.retrospective {background: color-mix(in srgb, #8A6BBF 18%, var(--surface)); border-color: color-mix(in srgb, #8A6BBF 55%, var(--line)); color: var(--ink)}
+.omvp-separate-note {margin: 0 18px 16px; color: var(--ink-2); font-size: 12px; line-height: 1.5}
+
+.omvp-quick-section {border-top: 1px solid var(--line); padding: 16px 18px}
+.omvp-section-heading {display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 10px}
+.omvp-section-heading strong {font-size: 17px}
+.omvp-section-heading span {font-size: 12px; color: var(--ink-2); font-weight: 700}
+.omvp-quick-grid {display: grid; grid-template-columns: 1fr 1fr; gap: 10px}
+.omvp-quick-btn {min-height: 76px; border: 2px solid var(--line); border-radius: 16px; background: var(--surface-2); color: var(--ink); padding: 10px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px}
+.omvp-quick-btn b {font-size: 18px; line-height: 1.2}
+.omvp-quick-btn small {font-size: 11px; color: var(--ink-2); font-weight: 750}
+.omvp-quick-btn.medication {grid-column: 1 / -1; background: color-mix(in srgb, #5C93D6 14%, var(--surface)); border-color: color-mix(in srgb, #5C93D6 50%, var(--line))}
+.omvp-quick-btn.duration.active {background: color-mix(in srgb, #D96AA7 22%, var(--surface)); border-color: #D96AA7; box-shadow: inset 0 0 0 2px color-mix(in srgb, #D96AA7 35%, transparent)}
+.omvp-quick-btn.duration.active small {color: var(--ink)}
+.omvp-quick-btn.warning {background: color-mix(in srgb, #E0A030 16%, var(--surface))}
+.omvp-quick-btn:active,.omvp-backdated-main:active {transform: scale(.98)}
+.omvp-backdated-main {width: 100%; min-height: 58px; margin-top: 12px; border: 2px solid color-mix(in srgb, #8A6BBF 55%, var(--line)); border-radius: 14px; background: color-mix(in srgb, #8A6BBF 16%, var(--surface)); color: var(--ink); font-size: 17px; font-weight: 900}
+
+.omvp-chart-section {border-top: 1px solid var(--line); padding: 16px 18px}
+.omvp-chart-toolbar {display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px}
+.omvp-chart-toolbar strong {font-size: 16px}
+.omvp-date {min-height: 44px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 11px; padding: 6px 10px; font: inherit; font-size: 15px}
+.omvp-chart {overflow-x: auto; background: var(--surface-2); border-radius: 14px; padding: 4px}
+.omvp-chart svg {display: block; width: 100%; min-width: 620px}
+.omvp-grid-line {stroke: var(--line); stroke-width: 1}
+.omvp-grid-vertical {opacity: .6}
+.omvp-axis-text {fill: var(--ink-2); font-size: 11px; font-weight: 700}
+.omvp-output-line {fill: none; stroke: #5C93D6; stroke-width: 4; stroke-linejoin: round; stroke-linecap: round}
+.omvp-output-point {fill: #5C93D6; stroke: var(--surface); stroke-width: 2}
+.omvp-anchor-point {fill: var(--accent); stroke-width: 3}
+.omvp-retrospective-point {fill: #8A6BBF; stroke: var(--surface); stroke-width: 3}
+.omvp-low-point {fill: #E0A030; stroke: #7A5200; stroke-width: 2.5}
+.omvp-duration-overlay line {stroke-width: 7; stroke-linecap: round; opacity: .78}
+.omvp-duration-overlay circle {stroke: var(--surface); stroke-width: 2}
+.omvp-duration-overlay.dyskinesia line,.omvp-duration-overlay.dyskinesia circle {stroke: #D96AA7; fill: #D96AA7}
+.omvp-duration-overlay.dystonia line,.omvp-duration-overlay.dystonia circle {stroke: #8A6BBF; fill: #8A6BBF}
+.omvp-medication-marker {fill: #2682C2; stroke: var(--surface); stroke-width: 2}
+.omvp-freezing-marker {fill: #50A7A1; stroke: var(--surface); stroke-width: 2}
+.omvp-near-fall-marker {fill: #E0A030; stroke: #7A5200; stroke-width: 2}
+.omvp-clinical-marker circle {stroke: var(--surface); stroke-width: 2}
+.omvp-clinical-marker text {fill: #fff; font-size: 9px; font-weight: 900; pointer-events: none}
+.omvp-clinical-marker.delayed_on circle {fill: #5C93D6}
+.omvp-clinical-marker.incomplete_on circle {fill: #C88718}
+.omvp-clinical-marker.on_failure circle {fill: #9C4051}
+.omvp-chart-legend {display: flex; flex-wrap: wrap; gap: 12px; padding: 8px 8px 4px; font-size: 11px; color: var(--ink-2)}
+.omvp-chart-legend span {display: inline-flex; align-items: center; gap: 5px}
+.omvp-legend-dot {width: 10px; height: 10px; background: #5C93D6; border-radius: 50%; display: inline-block}
+.omvp-legend-dot.anchor {background: var(--accent)}
+.omvp-legend-dot.retrospective {background: #8A6BBF; border-radius: 2px; transform: rotate(45deg); margin: 0 2px}
+.omvp-legend-dot.low {background: #E0A030}
+.omvp-legend-dot.medication {background: #2682C2; border-radius: 2px}
+.omvp-legend-dot.symptom {background: #D96AA7; border-radius: 2px}
+.omvp-legend-dot.clinical {background: #9C4051; border: 2px solid var(--surface); box-shadow: 0 0 0 1px #9C4051}
+.omvp-chart-note {font-size: 12px; color: var(--ink-2); line-height: 1.5; margin: 9px 2px 0}
+.omvp-empty {padding: 30px 15px; text-align: center; color: var(--ink-2); font-size: 14px}
+
+.omvp-recent {padding: 0 18px 18px}
+.omvp-recent h3 {font-size: 16px; margin: 0 0 8px}
+.omvp-event {display: grid; grid-template-columns: 52px 1fr auto; align-items: center; gap: 9px; min-height: 58px; border-top: 1px solid var(--line)}
+.omvp-event.retrospective {border-left: 4px solid #8A6BBF; padding-left: 8px}
+.omvp-event.quick {border-left: 4px solid #D96AA7; padding-left: 8px}
+.omvp-event.medication {border-left: 4px solid #2682C2; padding-left: 8px}
+.omvp-event.clinical {border-left: 4px solid #9C4051; padding-left: 8px}
+.omvp-event-time {font-weight: 800; font-variant-numeric: tabular-nums}
+.omvp-event-main {min-width: 0}
+.omvp-event-main strong {font-size: 16px}
+.omvp-event-meta {font-size: 12px; color: var(--ink-2)}
+.omvp-event-actions {display: flex; gap: 3px}
+.omvp-icon-btn {min-width: 42px; min-height: 42px; border-radius: 10px; background: var(--surface-2); font-size: 16px}
+
+.omvp-modal {position: fixed; inset: 0; z-index: 80; background: rgba(8,14,20,.56); display: flex; align-items: flex-end; justify-content: center; padding-top: 30px}
+.omvp-modal[hidden] {display: none}
+.omvp-dialog {width: 100%; max-width: 560px; max-height: 90vh; overflow: auto; background: var(--surface); color: var(--ink); border-radius: 24px 24px 0 0; padding: 20px 18px calc(22px + env(safe-area-inset-bottom)); box-shadow: 0 -10px 32px rgba(0,0,0,.28)}
+.omvp-dialog h3 {font-size: 22px; margin: 0 0 6px}
+.omvp-dialog p {color: var(--ink-2); margin: 0 0 16px}
+.omvp-anchor-grid {display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-bottom: 14px}
+.omvp-anchor-option {min-height: 62px; border-radius: 14px; background: var(--surface-2); border: 2px solid var(--line); font-size: 22px; font-weight: 900}
+.omvp-anchor-option:active {background: color-mix(in srgb, var(--accent) 20%, var(--surface-2))}
+.omvp-dialog-actions {display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px}
+.omvp-dialog-actions .primary {background: var(--accent); color: #04130C; border-color: transparent}
+.omvp-dialog-actions .continue {background: #E0A030; color: #211400; border-color: transparent}
+.omvp-edit-field {margin: 13px 0}
+.omvp-edit-field label {display: block; font-weight: 800; color: var(--ink-2); font-size: 13px; margin-bottom: 6px}
+.omvp-edit-field input,.omvp-edit-field select,.omvp-edit-field textarea {width: 100%; min-height: 54px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); font: inherit; padding: 10px 12px}
+.omvp-edit-field textarea {min-height: 88px; resize: vertical}
+.omvp-retrospective-date-time {display: grid; grid-template-columns: 1fr 1fr; gap: 10px}
+.omvp-conflict-actions {display: grid; gap: 9px; margin-top: 14px}
+.omvp-conflict-actions .primary {background: var(--accent); color: #04130C; border-color: transparent}
+
+.omvp-toast {position: fixed; z-index: 90; left: 50%; bottom: calc(92px + env(safe-area-inset-bottom)); transform: translateX(-50%); width: calc(100% - 28px); max-width: 520px; background: var(--ink); color: var(--bg); border-radius: 15px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; box-shadow: 0 10px 28px rgba(0,0,0,.3)}
+.omvp-toast[hidden] {display: none}
+.omvp-toast span {flex: 1; font-weight: 800; font-size: 14px}
+.omvp-toast button {color: #9AF0C8; font-weight: 900; min-height: 38px; padding: 0 8px}
+
+.omvp-management {border-top: 1px solid var(--line)}
+.omvp-management > summary {list-style: none; min-height: 58px; padding: 10px 18px; display: flex; align-items: center; position: relative; cursor: pointer; font-weight: 850; font-size: 15px}
+.omvp-management > summary::-webkit-details-marker {display: none}
+.omvp-management > summary::after {content: "＋"; position: absolute; right: 18px; font-size: 22px; color: var(--ink-2)}
+.omvp-management[open] > summary::after {content: "−"}
+.omvp-management-content {border-top: 1px solid var(--line); padding-top: 14px}
+
+.secondary-state-panel {margin: 0 0 14px; border: 1.5px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: var(--shadow); overflow: hidden}
+.secondary-state-panel > summary {list-style: none; min-height: 64px; padding: 11px 16px; display: flex; flex-direction: column; justify-content: center; position: relative; cursor: pointer; font-weight: 850}
+.secondary-state-panel > summary::-webkit-details-marker {display: none}
+.secondary-state-panel > summary::after {content: "＋"; position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 24px; color: var(--ink-2)}
+.secondary-state-panel[open] > summary::after {content: "−"}
+.secondary-state-panel > summary span {font-size: 16px; padding-right: 36px}
+.secondary-state-panel > summary small {font-size: 12px; color: var(--ink-2); font-weight: 650; margin-top: 2px}
+.secondary-state-content {border-top: 1px solid var(--line); padding: 14px}
+.secondary-state-content .now-card,.secondary-state-content .ribbon-card,.secondary-state-content .daysum-card {box-shadow: none; border: 1px solid var(--line)}
+.secondary-state-content .state-btn,.secondary-state-content .quick-btn {box-shadow: none; border-color: var(--line)}
+
+@media (max-width: 390px) {
+  .omvp-current-value {font-size: 72px}
+  .omvp-delta-btn {min-height: 102px; font-size: 32px}
+  .omvp-actions {grid-template-columns: 1fr}
+  .omvp-retrospective-date-time {grid-template-columns: 1fr}
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .omvp-delta-btn {transition: none}
+}
