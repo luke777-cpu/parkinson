@@ -1,17 +1,20 @@
 {
   "id": "./",
-  "name": "약효일지 · 출력·사건 기록",
+  "name": "약효일지 · 출력기록",
   "short_name": "약효일지",
-  "description": "체감 출력 변화와 복약·증상 사건을 시간순으로 기록하고 진료용 보고서를 만드는 도구",
+  "description": "파킨슨 환자의 하루 출력과 복약·생활·증상 이벤트를 기록하고 출력곡선과 진료용 보고서로 정리하는 도구",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["window-controls-overlay", "standalone"],
   "background_color": "#F5F7FA",
   "theme_color": "#1FA971",
   "lang": "ko",
   "orientation": "portrait",
-  "categories": ["medical", "health", "lifestyle"],
+  "categories": [
+    "medical",
+    "health",
+    "lifestyle"
+  ],
   "icons": [
     {
       "src": "./icon-192.png",
