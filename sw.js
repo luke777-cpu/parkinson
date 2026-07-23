@@ -1,4 +1,4 @@
-const CACHE = "yakhyo-v18-output";
+const CACHE = "yakhyo-v20-outputcheck";
 const APP_SHELL = [
   "./",
   "./index.html",
