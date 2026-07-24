@@ -264,6 +264,8 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
       <div class="daysum-grid" id="daysumGrid"></div>
     </div>
 
+    <div style="margin:14px 0"><button class="btn ghost no-print" id="dayMemoToggle" style="width:100%; text-align:left; font-size:13px"></button></div>
+
     <div class="today-list" id="todayList"></div>
   </section>
 
@@ -470,7 +472,7 @@ const I18N = {
     outputGraphTitle:"출력 변화 그래프", todayInterpretTitle:"오늘 해석", qoCheckBtn:"출력 기준 확인하기",
     symptomTitle:"⚡ 증상 기록 — 시작할 때 누르고, 끝나면 한 번 더", medLifeTitle:"약·생활 기록",
     outputOverlayTitle:"출력 곡선 + 생활기록 + 이벤트", overlayTapHint:"그래프를 눌러 그 시각의 출력·약효·이벤트를 확인하세요",
-    versionLabel:"약효일지 · 테스트판 0.9.13",
+    versionLabel:"약효일지 · 테스트판 0.9.14",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -520,7 +522,7 @@ const I18N = {
     outputGraphTitle:"Output trend", todayInterpretTitle:"Today's interpretation", qoCheckBtn:"Check my output baseline",
     symptomTitle:"⚡ Symptoms — tap to start, tap again to end", medLifeTitle:"Medication & life records",
     outputOverlayTitle:"Output curve + life records + events", overlayTapHint:"Tap the chart to see output, drug level, and events at that time",
-    versionLabel:"Med Log · Test build 0.9.13",
+    versionLabel:"Med Log · Test build 0.9.14",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -689,6 +691,32 @@ function showOutputCheckResult(vals, guided){
     toast(L("출력을 변경했어요","Output updated"));
   };
 }
+/* ---------- 오늘의 메모 (하루 1개, 선택적, 그래프만으로 안 담기는 맥락 남기기) ---------- */
+function openDayMemo(dayKey){
+  const existing = (db.dayMemos||{})[dayKey] || "";
+  openSheet(`
+    <h2>${L("오늘의 메모","Today's memo")} · ${fmtDateK(dayKey)}</h2>
+    <div class="hint">${L("그날의 외출, 스트레스, 수면 부족, 특별한 음식이나 컨디션 변화처럼 자유롭게 한두 줄 적어보세요.","Feel free to jot a line or two — outings, stress, poor sleep, unusual food, or anything that stood out that day.")}</div>
+    <div class="field"><textarea id="dm_text" style="min-height:80px" placeholder="${L("예: 오후에 외출, 저녁에 스트레스 많았음","e.g. went out in the afternoon, stressful evening")}">${escapeHtml(existing)}</textarea></div>
+    <div class="btn-row">
+      <button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button>
+      ${existing? `<button class="btn ghost" id="dm_delete" style="color:#D6455C">${L("삭제","Delete")}</button>` : ""}
+      <button class="btn primary" id="dm_save">${L("저장","Save")}</button>
+    </div>
+  `);
+  document.getElementById("dm_save").onclick=()=>{
+    const txt = document.getElementById("dm_text").value.trim();
+    db.dayMemos = db.dayMemos || {};
+    if(txt) db.dayMemos[dayKey] = txt; else delete db.dayMemos[dayKey];
+    save(); closeSheet(); renderAll();
+    toast(L("메모를 저장했어요","Memo saved"));
+  };
+  const delBtn = document.getElementById("dm_delete");
+  if(delBtn) delBtn.onclick=()=>{
+    delete db.dayMemos[dayKey]; save(); closeSheet(); renderAll();
+    toast(L("메모를 삭제했어요","Memo deleted"));
+  };
+}
 const LIFE = {
   sleep:    {ko:"수면",    en:"Sleep",    icon:"🌙", color:"#3F5B8B"},
   meal:     {ko:"식사",    en:"Meal",     icon:"🍚", color:"#C0863E"},
@@ -794,8 +822,8 @@ function leddFactorFor(name){
 
 let db = load();
 function load(){
-  try{ const d = JSON.parse(localStorage.getItem(KEY)); if(d&&d.events){ d.meds=(d.meds||[]).map(m=>({sched:[],...m})); d.settings=d.settings||{theme:"light"}; d.outputChecks=d.outputChecks||[]; return d; } }catch(e){}
-  return { events:[], meds:[], questions:defaultQuestions(), settings:{theme:"light",notify:false}, outputChecks:[] };
+  try{ const d = JSON.parse(localStorage.getItem(KEY)); if(d&&d.events){ d.meds=(d.meds||[]).map(m=>({sched:[],...m})); d.settings=d.settings||{theme:"light"}; d.outputChecks=d.outputChecks||[]; d.dayMemos=d.dayMemos||{}; return d; } }catch(e){}
+  return { events:[], meds:[], questions:defaultQuestions(), settings:{theme:"light",notify:false}, outputChecks:[], dayMemos:{} };
 }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){ toast(L("저장 공간이 부족합니다","Storage space is full")); } }
 function defaultQuestions(){ return (currentLang()==="en" ? [
@@ -1429,6 +1457,12 @@ function renderToday(){
   renderQuickOutput();
   renderOutputGraph();
   renderTodayInterpret(tEvents);
+  const memoBtn=document.getElementById("dayMemoToggle");
+  if(memoBtn){
+    const memoTxt=(db.dayMemos||{})[todayKey()];
+    memoBtn.textContent = memoTxt? `📝 ${L("오늘의 메모","Today's memo")}: ${memoTxt.length>28?memoTxt.slice(0,28)+"…":memoTxt}` : `+ ${L("오늘의 메모","Today's memo")}`;
+    memoBtn.onclick=()=>openDayMemo(todayKey());
+  }
   if(!todayHasStateEvent() && !window._anchorPromptShown){
     window._anchorPromptShown = true;
     openMorningAnchor();
@@ -1652,7 +1686,8 @@ function renderTrend(){
     const tot=Math.max(1, s.dur.on+s.dur.partial+s.dur.off+s.dur.dysk);
     const bar=(lab,v,col)=>`<div class="bar"><div class="lab">${lab}</div><div class="track"><div class="fill" style="width:${Math.min(100,v/tot*100)}%;background:${col}"></div></div><div class="val">${Math.round(v)}${L("분","min")}</div></div>`;
     const c=document.createElement("div"); c.className="daycard";
-    c.innerHTML=`<h3>${fmtDateK(k)}</h3>
+    const memoTxt=(db.dayMemos||{})[k];
+    c.innerHTML=`<h3>${fmtDateK(k)}${memoTxt?` <button class="qx" style="font-size:11px" data-memo-day="${k}">📝</button>`:""}</h3>
       <div class="sub">${L("첫 ON","First ON")} ${s.firstOn?hm(s.firstOn):"–"} · ${L("ON까지","To ON")} ${s.latency!=null?s.latency+L("분","min"):"–"} · ${L("최고출력","Max output")} ${s.maxOut??"–"} · ${L("이상운동","Dyskinesia")} ${s.dyskCount}${L("회","x")}</div>
       <div class="bars">
         ${bar("ON",s.dur.on,"var(--on)")}
@@ -1660,6 +1695,8 @@ function renderTrend(){
         ${bar("OFF",s.dur.off,"var(--off)")}
         ${bar(L("이상운동","Dyskinesia"),s.dur.dysk,"var(--dysk)")}
       </div>`;
+    const memoIcon=c.querySelector("[data-memo-day]");
+    if(memoIcon) memoIcon.onclick=()=>openDayMemo(k);
     cards.appendChild(c);
   });
   populateTrendOverlayDateSelect();
@@ -2134,6 +2171,7 @@ function renderReport(){
   const corrRows = corr.filter(c=>c.n>0);
   const corrHtml = corrRows.length? `<table><thead><tr><th>${L("복용 후 경과","After dose")}</th><th>${L("평균 출력","Avg output")}</th><th>${L("표본수","Samples")}</th></tr></thead><tbody>${corrRows.map(c=>`<tr><td>${c.label}</td><td>${c.avg}</td><td>${c.n}</td></tr>`).join("")}</tbody></table><div style="font-size:11px;color:var(--ink-2);margin-top:4px">${L("복용 시각 이후 기록된 출력 점수를 시간대별로 평균 낸 참고용 지표예요 (겹치는 복용 구간은 중복 반영될 수 있어요).","A reference indicator averaging output scores by elapsed time since dosing (overlapping doses may be double-counted).")}</div>` : `<div style="font-size:13px;color:var(--ink-2)">${L("출력 점수 기록이 더 쌓이면 표시돼요.","This appears once more output scores are logged.")}</div>`;
   let tbl=`<table><thead><tr><th>${L("날짜","Date")}</th><th>${L("첫 ON","First ON")}</th><th>${L("ON까지","To ON")}</th><th>ON</th><th>${L("불완전","Partial")}</th><th>OFF</th><th>${L("이상운동","Dyskinesia")}</th><th>${L("수면","Sleep")}</th></tr></thead><tbody>`;
+  const memoRows = keys.filter(k=>(db.dayMemos||{})[k]).map(k=>`<div style="margin-bottom:6px">· <b>${k.slice(5)}</b> — ${escapeHtml(db.dayMemos[k])}</div>`).join("");
   rows.forEach(({k,s})=>{ tbl+=`<tr><td>${k.slice(5)}</td><td>${s.firstOn?hm(s.firstOn):"–"}</td><td>${s.latency!=null?s.latency+L("분","min"):"–"}</td>
     <td>${Math.round(s.dur.on)}</td><td>${Math.round(s.dur.partial)}</td><td>${Math.round(s.dur.off)}</td><td>${Math.round(s.dur.dysk)}${s.dyskMaxInt!=null?`(${s.dyskMaxInt})`:""}</td><td>${s.sleepMin?fmtDur(s.sleepMin):"–"}</td></tr>`; });
   tbl+=`</tbody></table><div style="font-size:11px;color:var(--ink-2);margin-top:4px">${L("이상운동 칸의 (숫자)는 최고 강도. 생활요인(수면·단백질 식사·운동)은 약효 변동과 함께 참고하세요.","The (number) in the dyskinesia column is the peak intensity. Consider lifestyle factors (sleep, high-protein meals, exercise) alongside medication response.")}</div>`;
@@ -2160,6 +2198,7 @@ function renderReport(){
     <div class="rsec">${L("웨어링오프 발생 시간대","Wearing-off timing")}</div>${woHtml}
     <div class="rsec">${L("복용 후 시간대별 평균 출력","Avg output by time since dose")}</div>${corrHtml}
     <div class="rsec">${L("날짜별 기록 (분 단위)","Day-by-day record (minutes)")}</div>${tbl}
+    ${memoRows? `<div class="rsec">${L("일별 메모","Daily memos")}</div><div style="font-size:13.5px; line-height:1.7">${memoRows}</div>` : ""}
     <div class="rsec">${L("주치의에게 묻고 싶은 것","Questions for my doctor")}</div>${q}
     <button class="btn ghost no-print" onclick="addQ()" style="margin-top:8px">${L("+ 질문 추가","+ Add question")}</button>
     <div class="rsec">${L("참고","Note")}</div>
