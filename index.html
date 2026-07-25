@@ -173,6 +173,14 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
 .chips{display:flex; flex-wrap:wrap; gap:8px}
 .chip{padding:10px 14px; border-radius:999px; background:var(--surface-2); font-weight:700; font-size:15px; border:1.5px solid transparent}
 .chip.sel{border-color:var(--accent); background:color-mix(in srgb,var(--accent) 14%,transparent); color:var(--accent-ink)}
+/* 방향(+/=/-) 선택 — 손이 불편한 사용자를 고려해 크고 간격 넓게, +10/-10 조절 버튼과 다른 색으로 구분 */
+.trend-row{display:flex; gap:10px; margin-top:10px}
+.trend-btn{flex:1; min-height:58px; border-radius:14px; background:var(--surface-2); border:1.5px solid var(--line); font-weight:800; font-size:14px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px}
+.trend-btn .sym{font-size:20px; line-height:1}
+.trend-btn.rising{color:var(--accent-ink)} .trend-btn.rising.sel{border-color:var(--accent); background:color-mix(in srgb,var(--accent) 16%,transparent)}
+.trend-btn.stable{color:var(--ink-2)} .trend-btn.stable.sel{border-color:var(--signal); background:color-mix(in srgb,var(--signal) 16%,transparent); color:var(--ink)}
+.trend-btn.falling{color:var(--wearoff)} .trend-btn.falling.sel{border-color:var(--wearoff); background:color-mix(in srgb,var(--wearoff) 18%,transparent)}
+.trend-prompt{text-align:center; font-size:12.5px; color:var(--ink-2); margin-top:8px}
 [data-theme="dark"] .chip.sel{color:#9af0c8}
 .toast{position:fixed; left:50%; bottom:calc(92px + env(safe-area-inset-bottom)); transform:translateX(-50%); background:var(--ink); color:var(--bg); padding:11px 18px; border-radius:999px; font-weight:700; font-size:14px; z-index:60; opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; white-space:nowrap}
 .toast.show{opacity:1; transform:translateX(-50%) translateY(-4px)}
@@ -230,7 +238,13 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
         </div>
         <button class="btn ghost" id="qoPlus" style="font-size:22px; font-weight:800; width:76px; height:76px; border-radius:50%; flex:0 0 auto; transition:none">+10</button>
       </div>
-      <div style="text-align:center"><button class="btn ghost no-print" id="qoResetAnchor" style="font-size:12px" data-i18n="qoReset">오늘 기준점 다시 설정</button></div>
+      <div class="trend-prompt" data-i18n="qoTrendPrompt">지금 몸 상태의 방향은?</div>
+      <div class="trend-row" id="qoTrendRow">
+        <button type="button" class="trend-btn rising" data-trend="rising"><span class="sym">+</span><span data-i18n="trendRising">상승 중</span></button>
+        <button type="button" class="trend-btn stable" data-trend="stable"><span class="sym">=</span><span data-i18n="trendStable">유지 중</span></button>
+        <button type="button" class="trend-btn falling" data-trend="falling"><span class="sym">−</span><span data-i18n="trendFalling">하강 중</span></button>
+      </div>
+      <div style="text-align:center; margin-top:8px"><button class="btn ghost no-print" id="qoResetAnchor" style="font-size:12px" data-i18n="qoReset">오늘 기준점 다시 설정</button></div>
       <div style="text-align:center; margin-top:6px"><button class="btn ghost no-print" id="qoCheckBtn" style="font-size:12px; color:var(--accent, #5C93D6)" data-i18n="qoCheckBtn">출력 기준 확인하기</button></div>
     </div>
 
@@ -439,7 +453,7 @@ const I18N = {
     lifeTitle:"생활 기록 — 수면·식사·운동은 약효에 영향을 줘요",
     todayRecords:"오늘 기록",
     addPast:"+ 지난 기록 직접 추가",
-    recentTrend:"최근 추이 (분/일)", legendPartial:"불완전ON", legendDysk2:"이상운동",
+    recentTrend:"날짜별 출력 구간 체류시간", legendPartial:"불완전ON", legendDysk2:"이상운동",
     estCurve:"약효 추정 곡선", legendDA:"추정 도파민 작용", legendOutput:"출력 점수", legendGait:"보행 점수", legendDysk:"이상운동 구간", legendOff:"OFF 구간",
     curveDisclaimer:"이 곡선은 실측 혈중 도파민 농도가 아니라, 복약 시간·약물별 일반적 흡수 프로파일(퍼킨=급상승형, HBS=완만 지속형, 온젠티스=연장형)과 형이 직접 기록한 출력·보행·이상운동 점수를 결합해 추정한 \"기능적 약효 곡선\"입니다. 주치의 상담 시 참고 자료로만 활용하세요.",
     thisDayRecord:"이 날 기록",
@@ -470,9 +484,12 @@ const I18N = {
     glossOnVsPartial:"ON vs 불완전 ON", glossDyskVsDyst:"이상운동 vs 근긴장",
     quickOutputTitle:"지금 내 출력 기록하기", qoLabel:"현재 출력", qoReset:"오늘 기준점 다시 설정",
     outputGraphTitle:"출력 변화 그래프", todayInterpretTitle:"오늘 해석", qoCheckBtn:"출력 기준 확인하기",
+    qoTrendPrompt:"지금 몸 상태의 방향은?", trendRising:"상승 중", trendStable:"유지 중", trendFalling:"하강 중",
+    trendPickAlert:"현재 몸 상태가 상승 중인지, 유지 중인지, 하강 중인지 선택해 주세요.",
+    pastDateSaved:"기록을 추가했습니다", viewAddedRecord:"추가한 기록 보기", refState:"참고 상태",
     symptomTitle:"⚡ 증상 기록 — 시작할 때 누르고, 끝나면 한 번 더", medLifeTitle:"약·생활 기록",
     outputOverlayTitle:"출력 곡선 + 생활기록 + 이벤트", overlayTapHint:"그래프를 눌러 그 시각의 출력·약효·이벤트를 확인하세요",
-    versionLabel:"약효일지 · 테스트판 0.9.14",
+    versionLabel:"약효일지 · 테스트판 0.9.17",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -489,7 +506,7 @@ const I18N = {
     lifeTitle:"Life log — sleep, meals, and exercise affect medication response",
     todayRecords:"Today's records",
     addPast:"+ Add a past record",
-    recentTrend:"Recent trend (min/day)", legendPartial:"Partial ON", legendDysk2:"Dyskinesia",
+    recentTrend:"Time in output zones by day", legendPartial:"Partial ON", legendDysk2:"Dyskinesia",
     estCurve:"Estimated medication curve", legendDA:"Estimated dopamine action", legendOutput:"Output score", legendGait:"Gait score", legendDysk:"Dyskinesia window", legendOff:"OFF window",
     curveDisclaimer:"This curve is not a measured blood dopamine level. It's a \"functional effect curve\" estimated from your dosing times, typical absorption profiles per drug (e.g. fast-acting levodopa, slow-release HBS, extended-action COMT inhibitors), and your own output/gait/dyskinesia scores. Use it as reference material when talking with your doctor, not as a clinical measurement.",
     thisDayRecord:"Records for this day",
@@ -520,9 +537,12 @@ const I18N = {
     glossOnVsPartial:"ON vs Partial ON", glossDyskVsDyst:"Dyskinesia vs Dystonia",
     quickOutputTitle:"Log my output now", qoLabel:"Current output", qoReset:"Reset today's baseline",
     outputGraphTitle:"Output trend", todayInterpretTitle:"Today's interpretation", qoCheckBtn:"Check my output baseline",
+    qoTrendPrompt:"Which way is your body heading right now?", trendRising:"Rising", trendStable:"Stable", trendFalling:"Falling",
+    trendPickAlert:"Please choose whether your body is currently rising, stable, or falling.",
+    pastDateSaved:"Record added", viewAddedRecord:"View added record", refState:"Reference state",
     symptomTitle:"⚡ Symptoms — tap to start, tap again to end", medLifeTitle:"Medication & life records",
     outputOverlayTitle:"Output curve + life records + events", overlayTapHint:"Tap the chart to see output, drug level, and events at that time",
-    versionLabel:"Med Log · Test build 0.9.14",
+    versionLabel:"Med Log · Test build 0.9.17",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -556,6 +576,94 @@ const SMAP = Object.fromEntries(STATES.map(s=>[s.key,s]));
 const MAIN_STATES = STATES.filter(s=>s.main);
 function stateName(key){ const s=SMAP[key]; return s? L(s.ko,s.en) : key; }
 function stateHint(key){ const s=SMAP[key]; return s? L(s.hint,s.hintEn) : ""; }
+/* ---------- 방향(trend): rising/stable/falling — 출력값과 함께 저장되는 핵심 원자료.
+   화면에는 +, =, − 로 표시하되 의미를 모를 수 있으므로 한글을 항상 같이 보여준다. ---------- */
+function trendSymbol(trend){ return trend==="rising"?"+" : trend==="falling"?"−" : trend==="stable"?"=" : ""; }
+function trendLabel(trend){ return trend==="rising"?L("상승 중","Rising") : trend==="falling"?L("하강 중","Falling") : trend==="stable"?L("유지 중","Stable") : ""; }
+/* 방향이 유지(stable)일 때의 보조 상태값 — 표시용이 아니라 기존 ON/OFF 리본·요약 호환을 위한 파생값일 뿐,
+   원자료(trend)를 덮어쓰지 않는다. */
+function inferStableStateFromOutput(output){
+  if(output==null) return "partial";
+  if(output>=80) return "on";
+  if(output<=20) return "off";
+  return "partial";
+}
+/* 사용자가 선택한 방향을 최우선으로 상태를 파생한다 (자동 계산이 방향을 덮어쓰지 않음) */
+function stateFromTrend(trend, output){
+  if(trend==="rising") return "rising";
+  if(trend==="falling") return "falling";
+  if(trend==="stable") return inferStableStateFromOutput(output);
+  return inferStateFromOutput(output, lastOutputInfo()?.output);
+}
+/* 그래프 점 옆에 표시할 방향 기호 — 색상만으로 구분하지 않도록 모양도 함께 사용
+   (상승: 위쪽 세모, 하강: 아래쪽 세모, 유지: 가로선, 방향 미기록: 기호 없음) */
+function trendMarkerSvg(trend, x, y){
+  x=+x; y=+y;
+  if(trend==="rising") return `<path d="M${x-4},${y-6} L${x+4},${y-6} L${x},${y-13} Z" fill="#1FA971"/>`;
+  if(trend==="falling") return `<path d="M${x-4},${y+6} L${x+4},${y+6} L${x},${y+13} Z" fill="#C98A4B"/>`;
+  if(trend==="stable") return `<rect x="${x-5}" y="${y-9}" width="10" height="2.4" rx="1.2" fill="#5C93D6"/>`;
+  return "";
+}
+/* ---------- 출력 원자료 필터 ----------
+   현재 출력·방향, 리본, 그래프, 통계의 원자료는 오직 출력값이 있는 state 기록이다.
+   output:null인 옛 상태 기록(legacy)은 기록 목록에 '참고 상태'로만 남기고 모든 계산에서 제외한다. */
+function outputStates(events){
+  return events.filter(e=>e.type==="state" && Number.isFinite(e.output)).sort((a,b)=>a.ts-b.ts);
+}
+function isLegacyState(e){ return e.type==="state" && !Number.isFinite(e.output); }
+/* 두 출력 기록 사이 간격이 이 값(분)을 넘으면 이전 상태를 연장하지 않고 '미기록'으로 처리한다 */
+const MAX_INTERPOLATION_GAP_MINUTES = 120;
+/* 출력 구간 (진단이 아니라 시각적 참고 영역) */
+const OUTPUT_ZONES = [
+  {key:"z80", min:80, max:100, ko:"출력 80~100", en:"Output 80–100", color:"var(--on)"},
+  {key:"z50", min:50, max:79,  ko:"출력 50~79",  en:"Output 50–79",  color:"var(--signal)"},
+  {key:"z20", min:20, max:49,  ko:"출력 20~49",  en:"Output 20–49",  color:"var(--partial)"},
+  {key:"z0",  min:0,  max:19,  ko:"출력 0~19",   en:"Output 0–19",   color:"var(--off)"},
+];
+function zoneOf(output){ return OUTPUT_ZONES.find(z=>output>=z.min && output<=z.max) || OUTPUT_ZONES[3]; }
+/* 하루 출력·방향 통계 + 출력 구간별 체류시간 (분).
+   구간 체류시간 규칙: 연속한 두 출력 기록 사이 간격이 120분 이하면 그 간격 전체를
+   앞 기록의 출력 구간에 귀속한다. 120분을 넘으면 전부 미기록으로 계산한다.
+   마지막 기록도 최대 120분까지만 연장한다. 분석 시간대는 6:00~24:00(1080분)으로 고정해
+   날짜별 기록량 차이가 상태 차이로 오해되지 않게 한다. */
+function dayOutputStats(events, dayKey){
+  const outs = outputStates(events);
+  const stats = { count:outs.length, avg:null, max:null, min:null,
+    rising:0, stable:0, falling:0, firstRise:null, firstFall:null,
+    zones:{z80:0,z50:0,z20:0,z0:0}, unrecorded:0, windowMin:1080, firstTs:null, lastTs:null };
+  if(!outs.length){ stats.unrecorded = stats.windowMin; return stats; }
+  const vals = outs.map(e=>e.output);
+  stats.avg = Math.round(vals.reduce((a,b)=>a+b,0)/vals.length);
+  stats.max = Math.max(...vals); stats.min = Math.min(...vals);
+  stats.firstTs = outs[0].ts; stats.lastTs = outs[outs.length-1].ts;
+  outs.forEach(e=>{
+    if(e.trend==="rising"){ stats.rising++; if(!stats.firstRise) stats.firstRise=e.ts; }
+    else if(e.trend==="stable") stats.stable++;
+    else if(e.trend==="falling"){ stats.falling++; if(!stats.firstFall) stats.firstFall=e.ts; }
+  });
+  const [Y,Mo,Da]=dayKey.split("-").map(Number);
+  const winStart=new Date(Y,Mo-1,Da,6,0,0).getTime();
+  const winEnd=new Date(Y,Mo-1,Da,23,59,59).getTime();
+  const gapCapMs = MAX_INTERPOLATION_GAP_MINUTES*60000;
+  let recorded=0;
+  for(let i=0;i<outs.length;i++){
+    const cur=outs[i], next=outs[i+1];
+    let segStart=Math.max(cur.ts, winStart);
+    let segEnd;
+    if(next){
+      const gap = next.ts - cur.ts;
+      segEnd = gap<=gapCapMs ? next.ts : cur.ts + 0; // 120분 초과 간격은 통째로 미기록
+    } else {
+      const hardEnd = dayKey===todayKey()? Math.min(Date.now(), winEnd) : winEnd;
+      segEnd = Math.min(cur.ts + gapCapMs, hardEnd); // 마지막 기록도 최대 120분까지만 연장
+    }
+    segEnd = Math.min(segEnd, winEnd);
+    const min = Math.max(0,(segEnd-segStart)/60000);
+    if(min>0){ stats.zones[zoneOf(cur.output).key]+=min; recorded+=min; }
+  }
+  stats.unrecorded = Math.max(0, stats.windowMin - recorded);
+  return stats;
+}
 /* 상승 전환기의 결과(선택) */
 const RISE_RESULTS = [
   {key:"reached", ko:"정상 ON 도달", en:"Reached ON (normal)"},
@@ -609,7 +717,7 @@ const OUTPUT_CHECK_LEVELS = [
 function setOutputAbsolute(newOut){
   const info = lastOutputInfo();
   const prevOut = info? info.output : null;
-  const prevStateEv = db.events.filter(e=>e.type==="state").sort((a,b)=>b.ts-a.ts)[0];
+  const prevStateEv = outputStates(db.events).slice(-1)[0]; /* v0.9.17: legacy 제외 */
   const prevState = prevStateEv? prevStateEv.state : null;
   const state = inferStateFromOutput(newOut, prevOut);
   const savedEvent = addState(state, {output:newOut});
@@ -854,8 +962,9 @@ function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(
 function addState(key, extra={}){
   const ts = extra.ts || Date.now();
   const ev = { id:uid(), type:"state", state:key, ts,
-    output:extra.output??null, gait:extra.gait??null, dysk:extra.dysk??null, dyst:extra.dyst??null, memo:extra.memo||"",
-    symptoms:extra.symptoms||[], customSymptom:extra.customSymptom||"", riseResult:extra.riseResult||null };
+    output:extra.output??null, trend:extra.trend??null, gait:extra.gait??null, dysk:extra.dysk??null, dyst:extra.dyst??null, memo:extra.memo||"",
+    symptoms:extra.symptoms||[], customSymptom:extra.customSymptom||"", riseResult:extra.riseResult||null,
+    inputMethod:extra.inputMethod||"quick", retrospective:!!extra.retrospective };
   db.events.push(ev);
   db.events.sort((a,b)=>a.ts-b.ts); save(); renderAll();
   toast(`${stateName(key)} ${L("기록됨","recorded")} · ${hm(ts)}`);
@@ -976,12 +1085,23 @@ function byDay(){
   return map;
 }
 function summarize(events){
-  const states = events.filter(e=>e.type==="state");
+  /* v0.9.17: ON/OFF 지속시간·첫 ON·latency 계산도 출력값이 있는 기록만 사용한다.
+     output:null legacy state가 섞이면 "출력 30인데 참고해석 ON 5시간" 같은 모순이 생기기 때문.
+     legacy state는 기록 목록의 참고 표시로만 쓰이고, 여기서는 완전히 제외된다.
+     간격이 120분을 넘으면 이전 상태를 연장하지 않는다 (미기록). */
+  const states = outputStates(events);
   const meds = events.filter(e=>e.type==="med");
   const dur = {}; STATES.forEach(s=>dur[s.key]=0);
+  const gapCapMs = MAX_INTERPOLATION_GAP_MINUTES*60000;
   for(let i=0;i<states.length;i++){
     const cur=states[i], next=states[i+1];
-    const end = next ? next.ts : endOfDayCap(cur.ts);
+    let end;
+    if(next){
+      if(next.ts - cur.ts > gapCapMs) continue; // 120분 초과 공백 → 미기록, 시간 귀속 안 함
+      end = next.ts;
+    } else {
+      end = Math.min(cur.ts + gapCapMs, endOfDayCap(cur.ts));
+    }
     dur[cur.state]+= Math.max(0,(end-cur.ts)/60000);
   }
   const firstMed = meds.length? meds[0].ts : null;
@@ -1066,7 +1186,7 @@ function pairDuration(life,kind){
   return Math.round(total);
 }
 function wearingOffTimes(dayEvents){
-  const states=(dayEvents||[]).filter(e=>e.type==="state").sort((a,b)=>a.ts-b.ts);
+  const states=outputStates(dayEvents||[]); /* v0.9.17: legacy 제외 */
   const times=[];
   for(let i=1;i<states.length;i++){
     if(states[i-1].state==="on" && (states[i].state==="falling"||states[i].state==="off")) times.push(states[i].ts);
@@ -1182,7 +1302,7 @@ function lastOutputInfo(){
   return withOut.length? {output:withOut[0].output, ts:withOut[0].ts} : null;
 }
 function todayHasStateEvent(){
-  return (byDay()[todayKey()]||[]).some(e=>e.type==="state");
+  return outputStates(byDay()[todayKey()]||[]).length>0; /* v0.9.17: legacy만 있는 날은 아침 기준점 다시 유도 */
 }
 function openMorningAnchor(){
   openSheet(`
@@ -1245,15 +1365,29 @@ function openMorningAnchor(){
     addState("wake", {output: out});
   };
 }
-function adjustOutput(delta){
+/* ---------- 출력 + 방향 빠른 기록 ----------
+   +10/-10 은 "다음 기록에 쓸 출력값"만 미리 보여줄 뿐 저장하지 않는다.
+   실제 저장은 반드시 방향(+/=/-) 버튼을 눌러야 이뤄진다 — 방향은 부가정보가 아니라 핵심 원자료이므로
+   기록마다 매번 사용자가 직접 확인하게 한다(마지막 선택을 기본값으로 자동 선택하지 않음). */
+let _qoPendingOutput = null;
+function qoAdjust(delta){
   const info = lastOutputInfo();
   const isToday = info && dkey(new Date(info.ts))===todayKey();
   if(!isToday){ openMorningAnchor(); return; }
-  const prevStateEv = db.events.filter(e=>e.type==="state").sort((a,b)=>b.ts-a.ts)[0];
+  const base = _qoPendingOutput!=null ? _qoPendingOutput : info.output;
+  _qoPendingOutput = Math.max(0, Math.min(100, base + delta));
+  document.getElementById("qoCurrent").textContent = _qoPendingOutput;
+}
+function qoCommitTrend(trend){
+  const info = lastOutputInfo();
+  const isToday = info && dkey(new Date(info.ts))===todayKey();
+  if(!isToday){ openMorningAnchor(); return; }
+  const out = _qoPendingOutput!=null ? _qoPendingOutput : info.output;
+  const prevStateEv = outputStates(db.events).slice(-1)[0]; /* v0.9.17: legacy 제외 */
   const prevState = prevStateEv ? prevStateEv.state : null;
-  const newOut = Math.max(0, Math.min(100, info.output + delta));
-  const state = inferStateFromOutput(newOut, info.output);
-  const savedEvent = addState(state, {output:newOut});
+  const state = stateFromTrend(trend, out);
+  const savedEvent = addState(state, {output:out, trend, inputMethod:"quick"});
+  _qoPendingOutput = null;
   if(prevState==="rising" && state!=="rising"){
     openRiseResultPrompt(savedEvent);
   }
@@ -1263,7 +1397,22 @@ function renderQuickOutput(){
   card.style.display="block";
   const info=lastOutputInfo();
   const isToday = info && dkey(new Date(info.ts))===todayKey();
+  _qoPendingOutput=null;
   document.getElementById("qoCurrent").textContent = isToday ? info.output : "–";
+  document.querySelectorAll("#qoTrendRow .trend-btn").forEach(b=>b.classList.remove("sel"));
+}
+/* 음성입력: 출력값 없는 state 이벤트를 만들지 않는다.
+   오늘 출력 기준이 있으면 현재 출력값을 유지한 채 방향만 기록하고, 없으면 아침 기준점 입력을 연다. */
+function voiceTrend(trend, text){
+  const info = lastOutputInfo();
+  const isToday = info && dkey(new Date(info.ts))===todayKey();
+  if(!isToday){
+    toast(L(`🎤 "${text}" — 먼저 오늘 출력 기준점을 입력해주세요`,`🎤 "${text}" — please set today's output baseline first`));
+    openMorningAnchor();
+    return;
+  }
+  qoCommitTrend(trend);
+  toast(L(`🎤 "${text}" → 출력 ${info.output}${trendSymbol(trend)} (${trendLabel(trend)}) 기록됨`,`🎤 "${text}" → Output ${info.output}${trendSymbol(trend)} recorded`));
 }
 function renderOutputGraph(){
   const wrap=document.getElementById("outputGraphWrap"); if(!wrap) return;
@@ -1278,7 +1427,10 @@ function renderOutputGraph(){
   const xOf = ts => pad + (Math.max(dayStart.getTime(),Math.min(dayEnd.getTime(),ts))-dayStart.getTime())/span*(W-2*pad);
   const yOf = v => pad + (100-v)/100*(H-2*pad);
   const pts = tEvents.map(e=>`${xOf(e.ts).toFixed(1)},${yOf(e.output).toFixed(1)}`).join(" ");
-  const dots = tEvents.map(e=>`<circle cx="${xOf(e.ts).toFixed(1)}" cy="${yOf(e.output).toFixed(1)}" r="3.5" fill="#D6455C"/>`).join("");
+  const dots = tEvents.map(e=>{
+    const x=xOf(e.ts).toFixed(1), y=yOf(e.output).toFixed(1);
+    return `<circle cx="${x}" cy="${y}" r="3.5" fill="#D6455C"/>${trendMarkerSvg(e.trend, x, y)}`;
+  }).join("");
   const todayChecks = (db.outputChecks||[]).filter(c=>dkey(new Date(c.ts))===todayKey());
   const checkDots = todayChecks.map(c=>`<circle cx="${xOf(c.ts).toFixed(1)}" cy="${yOf(c.guidedOutput).toFixed(1)}" r="4.5" fill="none" stroke="#D6455C" stroke-width="1.6"/>`).join("");
   wrap.innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="width:100%; height:auto; display:block">
@@ -1301,7 +1453,7 @@ function stateAtTime(stateEventsSorted, ts){
 function renderTodayInterpret(tEvents){
   const card=document.getElementById("todayInterpretCard"), body=document.getElementById("todayInterpretBody");
   if(!card || !body) return;
-  const states = tEvents.filter(e=>e.type==="state");
+  const states = outputStates(tEvents); /* v0.9.17: legacy output:null 제외 */
   if(!states.length){ card.style.display="none"; return; }
   card.style.display="block";
   const s = summarize(tEvents);
@@ -1329,7 +1481,7 @@ function renderTodayInterpret(tEvents){
 }
 /* 증상-구간 반복 패턴 (진단 아님, 참고용 빈도 표시) */
 function symptomZonePattern(rangeEvents){
-  const stateEvents = rangeEvents.filter(e=>e.type==="state").sort((a,b)=>a.ts-b.ts);
+  const stateEvents = outputStates(rangeEvents); /* v0.9.17: legacy output:null 제외 */
   const symStarts = rangeEvents.filter(e=>e.type==="symptom" && e.phase==="start").sort((a,b)=>a.ts-b.ts);
   const byKey={};
   symStarts.forEach(e=>{
@@ -1415,7 +1567,7 @@ function renderDaySummary(tEvents){
   if(!tEvents.length){ card.style.display="none"; return; }
   card.style.display="block";
   const s=summarize(tEvents);
-  const states=tEvents.filter(e=>e.type==="state");
+  const states=outputStates(tEvents); /* v0.9.17: legacy 제외 */
   const outs=states.map(x=>x.output).filter(v=>v!=null);
   const offCount=states.filter(x=>x.state==="off").length;
   const item=(n,l)=>`<div class="daysum-item"><div class="dn">${n}</div><div class="dl">${l}</div></div>`;
@@ -1446,11 +1598,13 @@ function renderToday(){
     b.onclick=()=>openLifeSheet(k); lgrid.appendChild(b);
   });
   const tEvents = (byDay()[todayKey()]||[]);
-  const states = tEvents.filter(e=>e.type==="state");
-  const last = states[states.length-1];
+  /* 현재 상태 문구는 출력값이 있는 기록만 사용한다 — output:null 참고 상태가 더 늦게 있어도 무시 */
+  const outStates = outputStates(tEvents);
+  const last = outStates[outStates.length-1];
   const stateLine=document.getElementById("qoStateLine");
-  if(last){ const s=SMAP[last.state];
-    stateLine.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${s.color};margin-right:5px;vertical-align:middle"></span>${stateName(last.state)} · ${fmtDur((Date.now()-last.ts)/60000)} ${L("경과","elapsed")}`;
+  if(last){ const s=SMAP[last.state]||SMAP.partial;
+    const trendTxt = last.trend ? ` ${trendSymbol(last.trend)} (${trendLabel(last.trend)})` : "";
+    stateLine.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${s.color};margin-right:5px;vertical-align:middle"></span>${L("출력","Output")} ${last.output}${trendTxt} · ${fmtDur((Date.now()-last.ts)/60000)} ${L("경과","elapsed")}`;
   } else { stateLine.textContent = tr("tapToStart"); }
   renderRibbon(tEvents);
   renderDaySummary(tEvents);
@@ -1519,10 +1673,15 @@ function evRow(e){
   if(e.type==="state"){ const s=SMAP[e.state];
     const riseTxt = e.riseResult? riseLabel(e.riseResult) : "";
     const symTxt = [...(e.symptoms||[]).map(k=>symLabel(k)), e.customSymptom].filter(Boolean).join(", ");
-    const title = riseTxt? `${stateName(e.state)} · ${riseTxt}` : (e.state==="dysk" && e.dysk!=null ? `${stateName(e.state)} · ${L("강도","intensity")} ${e.dysk}` : stateName(e.state));
-    const extra=[e.output!=null?`${L("출력","Output")} ${e.output}`:"", e.gait!=null?`${L("보행","Gait")} ${e.gait}`:"", symTxt?`${L("동반증상","Symptoms")}: ${symTxt}`:"", e.memo].filter(Boolean).join(" · ");
+    /* 출력값이 있는 기록은 "출력 60+" 형태를 1차 표시로, output:null인 옛/참고 상태 기록은
+       구분되도록 "참고 상태: ON" 형태로 표시한다 (출력 곡선에는 영향을 주지 않는 별도 정보). */
+    const hasOut = e.output!=null;
+    const outTitle = hasOut ? `${L("출력","Output")} ${e.output}${trendSymbol(e.trend)}` : `${L("참고 상태","Reference state")}: ${stateName(e.state)}`;
+    const title = riseTxt? `${outTitle} · ${riseTxt}` : (e.state==="dysk" && e.dysk!=null ? `${outTitle} · ${L("강도","intensity")} ${e.dysk}` : outTitle);
+    const trendTxt = hasOut && e.trend ? trendLabel(e.trend) : "";
+    const extra=[trendTxt, e.gait!=null?`${L("보행","Gait")} ${e.gait}`:"", symTxt?`${L("동반증상","Symptoms")}: ${symTxt}`:"", e.memo].filter(Boolean).join(" · ");
     row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">${title}</div>${extra?`<div class="m">${escapeHtml(extra)}</div>`:""}</div>
-      <span class="pill" style="background:${s.color}">${L("상태","State")}</span>`;
+      <span class="pill" style="background:${s.color}">${hasOut?L("출력","Output"):L("상태","State")}</span>`;
   } else if(e.type==="med"){
     row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">💊 ${escapeHtml(e.drug)}${e.dose?` ${e.dose}mg`:""}</div>${e.memo?`<div class="m">${escapeHtml(e.memo)}</div>`:""}</div>
       <span class="pill" style="background:var(--ink-2)">${L("복약","Medication")}</span>`;
@@ -1559,9 +1718,61 @@ function evRow(e){
 
 /* ---------- record editing (설문 피드백: 기록 내용 수정) ---------- */
 function editEvent(e){
-  if(e.type==="state") openStateSheet(e.state, e);
+  if(e.type==="state"){
+    /* output:null인 옛 참고 상태 기록은 일반 출력 수정 화면으로 열지 않는다 —
+       실수로 출력 50 같은 새 값이 생기는 것을 막기 위해 전용 화면 사용 */
+    if(isLegacyState(e)) openLegacyStateSheet(e);
+    else openStateSheet(e.state, e);
+  }
   else if(e.type==="med") openEditMedSheet(e);
   else openAddPast(e);
+}
+/* 기존 참고 상태 기록(output:null) 전용 수정 화면.
+   기본은 날짜·시각·메모만 수정 (output:null 그대로 유지).
+   '출력 기록으로 전환'을 명시적으로 선택한 경우에만 출력·방향 입력란을 연다. */
+function openLegacyStateSheet(e){
+  openSheet(`
+    <h2>${L("참고 상태 기록 수정","Edit reference state record")}</h2>
+    <div class="hint">${L(`이 기록은 출력값 없이 저장된 옛 방식 기록이에요 (${stateName(e.state)}). 그대로 두면 출력 그래프·통계에는 포함되지 않아요.`,`This is an older reference record without an output value (${stateName(e.state)}). It stays out of output graphs and stats unless converted.`)}</div>
+    ${timeFieldHtml("ls_ts", e.ts)}
+    <div class="field"><label>${L("메모 (선택)","Memo (optional)")}</label><textarea id="ls_memo">${escapeHtml(e.memo||"")}</textarea></div>
+    <div class="field" id="ls_convertWrap" style="display:none">
+      <label>${L("당시 출력 (0–100)","Output at the time (0–100)")}</label>
+      <div class="slider-row"><input type="range" id="ls_out" min="0" max="100" step="5" value="50" oninput="document.getElementById('ls_outv').textContent=this.value"><div class="v" id="ls_outv">50</div></div>
+      <div class="hint" style="margin:8px 0 0">${L("방향","Direction")}</div>
+      <div class="trend-row" id="ls_trendRow">
+        <button type="button" class="trend-btn rising" data-trend="rising"><span class="sym">+</span><span>${L("상승 중","Rising")}</span></button>
+        <button type="button" class="trend-btn stable" data-trend="stable"><span class="sym">=</span><span>${L("유지 중","Stable")}</span></button>
+        <button type="button" class="trend-btn falling" data-trend="falling"><span class="sym">−</span><span>${L("하강 중","Falling")}</span></button>
+      </div>
+    </div>
+    <button type="button" class="btn ghost" id="ls_convertBtn" style="width:100%; margin-bottom:10px">${L("출력 기록으로 전환","Convert to an output record")}</button>
+    <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="ls_save">${L("수정 저장","Save changes")}</button></div>`);
+  let converting=false, lsTrend=null;
+  document.getElementById("ls_convertBtn").onclick=function(){
+    converting=!converting;
+    document.getElementById("ls_convertWrap").style.display=converting?"block":"none";
+    this.textContent = converting? L("전환 취소 (참고 상태로 유지)","Cancel conversion (keep as reference)") : L("출력 기록으로 전환","Convert to an output record");
+  };
+  document.getElementById("ls_trendRow").addEventListener("click", ev=>{
+    const b=ev.target.closest(".trend-btn"); if(!b) return;
+    document.querySelectorAll("#ls_trendRow .trend-btn").forEach(c=>c.classList.remove("sel"));
+    b.classList.add("sel"); lsTrend=b.dataset.trend;
+  });
+  document.getElementById("ls_save").onclick=()=>{
+    const ts=tsFromTimeField("ls_ts", e.ts);
+    const memo=document.getElementById("ls_memo").value.trim();
+    if(converting){
+      if(!lsTrend){ toast(tr("trendPickAlert")); return; }
+      const out=+document.getElementById("ls_out").value;
+      Object.assign(e, {ts, memo, output:out, trend:lsTrend, state:stateFromTrend(lsTrend,out)});
+    } else {
+      /* 단순 수정 — output:null 그대로 유지, 출력·방향을 만들지 않는다 */
+      Object.assign(e, {ts, memo});
+    }
+    closeSheet();
+    db.events.sort((a,b)=>a.ts-b.ts); save(); renderAll(); toast(L("수정했어요","Updated"));
+  };
 }
 function openEditMedSheet(e){
   openSheet(`
@@ -1630,19 +1841,30 @@ function openGlossary(){
 function renderRibbon(events){
   const rb=document.getElementById("ribbon"); const empty=document.getElementById("ribbonEmpty");
   rb.querySelectorAll(".seg,.medmark").forEach(n=>n.remove());
-  const states=events.filter(e=>e.type==="state");
+  /* 리본도 출력값이 있는 기록만 사용 — output:null 참고 상태는 구간을 만들지 않는다.
+     색은 상태명이 아니라 출력 구간 기준. 120분 초과 간격은 빈칸(미기록)으로 남긴다. */
+  const states=outputStates(events);
   const range=document.getElementById("ribbonRange");
   if(!states.length){ empty.style.display="block"; range.textContent=""; return; }
   empty.style.display="none";
   const START=6*60, END=23*60, SPAN=END-START;
   const clamp=v=>Math.max(0,Math.min(1,(v-START)/SPAN));
+  const gapCapMin = MAX_INTERPOLATION_GAP_MINUTES;
   for(let i=0;i<states.length;i++){
     const cur=states[i], next=states[i+1];
     const a=minOfDay(cur.ts);
-    const bEnd = next? minOfDay(next.ts) : (dkey(new Date(cur.ts))===todayKey()? minOfDay(Date.now()) : END);
+    let bEnd;
+    if(next){
+      const gapMin=(next.ts-cur.ts)/60000;
+      if(gapMin>gapCapMin) continue; // 간격 초과 → 이 구간은 미기록(빈칸)
+      bEnd=minOfDay(next.ts);
+    } else {
+      const nowMin = dkey(new Date(cur.ts))===todayKey()? minOfDay(Date.now()) : END;
+      bEnd=Math.min(a+gapCapMin, nowMin);
+    }
     const Lp=clamp(a), Rp=clamp(bEnd); if(Rp<=Lp) continue;
     const seg=document.createElement("div"); seg.className="seg";
-    seg.style.left=(Lp*100)+"%"; seg.style.width=((Rp-Lp)*100)+"%"; seg.style.background=SMAP[cur.state].color;
+    seg.style.left=(Lp*100)+"%"; seg.style.width=((Rp-Lp)*100)+"%"; seg.style.background=zoneOf(cur.output).color;
     rb.appendChild(seg);
   }
   events.filter(e=>e.type==="med").forEach(m=>{
@@ -1657,7 +1879,7 @@ function renderLog(){
   const days=byDay(); const keys=Object.keys(days).sort().reverse();
   if(!keys.length){ body.innerHTML=`<div class="empty"><div class="big">📋</div>${L("아직 기록이 없어요.","No records yet.")}<br>${L("'오늘' 탭에서 지금 내 출력을 기록해 시작하세요.","Record your current output in the 'Today' tab to get started.")}</div>`; return; }
   keys.forEach(k=>{
-    const card=document.createElement("div"); card.className="daycard";
+    const card=document.createElement("div"); card.className="daycard"; card.dataset.day=k;
     const h=document.createElement("h3"); h.textContent=fmtDateK(k); card.appendChild(h);
     const sub=document.createElement("div"); sub.className="sub"; sub.textContent=L(`${days[k].length}건`,`${days[k].length} records`); card.appendChild(sub);
     [...days[k]].reverse().forEach(e=>card.appendChild(evRow(e)));
@@ -1670,31 +1892,43 @@ function renderTrend(){
   const days=byDay(); const keys=Object.keys(days).sort();
   const kpi=document.getElementById("kpiGrid"); const chart=document.getElementById("trendChart"); const cards=document.getElementById("dayCards");
   if(!keys.length){ kpi.innerHTML=""; chart.innerHTML=""; cards.innerHTML=`<div class="empty"><div class="big">📈</div>${L("기록이 쌓이면 추이가 보여요.","Trends will appear once you have more records.")}</div>`; document.getElementById("trendRange").textContent=""; document.getElementById("trendOverlayChart").innerHTML=""; document.getElementById("trendOverlayLegend").innerHTML=""; return; }
-  const sums=keys.map(k=>({k, s:summarize(days[k])}));
+  /* 출력·방향 중심 요약. ON/OFF 요약은 참고 해석으로 강등. */
+  const sums=keys.map(k=>({k, s:summarize(days[k]), o:dayOutputStats(days[k], k)}));
   const recent=sums.slice(-14);
   document.getElementById("trendRange").textContent=L(`${recent.length}일`,`${recent.length} days`);
   const avg=(f)=>{ const a=recent.map(f).filter(v=>v!=null); return a.length? Math.round(a.reduce((x,y)=>x+y,0)/a.length):null; };
-  const kON=avg(d=>d.s.dur.on), kOFF=avg(d=>d.s.dur.off), kDY=avg(d=>d.s.dur.dysk), kLat=avg(d=>d.s.latency);
+  const kAvg=avg(d=>d.o.avg), kMax=avg(d=>d.o.max), kMin=avg(d=>d.o.min);
+  const kCnt=avg(d=>d.o.count||null);
   kpi.innerHTML=`
-    ${kpiCard(kON==null?"–":fmtShort(kON),L("평균 ON 시간","Avg ON time"))}
-    ${kpiCard(kLat==null?"–":kLat+`<small>${L("분","min")}</small>`,L("평균 ON까지(아침)","Avg time to ON (morning)"))}
-    ${kpiCard(kOFF==null?"–":fmtShort(kOFF),L("평균 OFF 시간","Avg OFF time"))}
-    ${kpiCard(kDY==null?"–":kDY+`<small>${L("분","min")}</small>`,L("평균 이상운동","Avg dyskinesia"))}`;
+    ${kpiCard(kAvg==null?"–":kAvg,L("평균 출력","Avg output"))}
+    ${kpiCard(kMax==null?"–":kMax,L("평균 최고 출력","Avg max output"))}
+    ${kpiCard(kMin==null?"–":kMin,L("평균 최저 출력","Avg min output"))}
+    ${kpiCard(kCnt==null?"–":kCnt+`<small>${L("회","x")}</small>`,L("일평균 기록","Avg records/day"))}`;
   chart.innerHTML=buildChart(recent);
   cards.innerHTML="";
-  [...sums].reverse().slice(0,14).forEach(({k,s})=>{
-    const tot=Math.max(1, s.dur.on+s.dur.partial+s.dur.off+s.dur.dysk);
-    const bar=(lab,v,col)=>`<div class="bar"><div class="lab">${lab}</div><div class="track"><div class="fill" style="width:${Math.min(100,v/tot*100)}%;background:${col}"></div></div><div class="val">${Math.round(v)}${L("분","min")}</div></div>`;
+  [...sums].reverse().slice(0,14).forEach(({k,s,o})=>{
     const c=document.createElement("div"); c.className="daycard";
     const memoTxt=(db.dayMemos||{})[k];
+    const bar=(lab,v,col)=>`<div class="bar"><div class="lab">${lab}</div><div class="track"><div class="fill" style="width:${Math.min(100,v/o.windowMin*100)}%;background:${col}"></div></div><div class="val">${Math.round(v)}${L("분","min")}</div></div>`;
+    /* 방향 요약: 기록 횟수 + 첫 상승·첫 하강 시각 (기록이 없으면 '기록 부족') */
+    const dirLine = o.count
+      ? `${L("상승","Rise")} ${o.rising}${L("회","x")} · ${L("유지","Hold")} ${o.stable}${L("회","x")} · ${L("하강","Fall")} ${o.falling}${L("회","x")}`
+      : L("기록 부족","Not enough records");
+    const timeLine = o.count
+      ? `${L("첫 상승","First rise")} ${o.firstRise?hm(o.firstRise):"–"} · ${L("첫 하강","First fall")} ${o.firstFall?hm(o.firstFall):"–"} · ${L("최고출력","Max")} ${o.max??"–"} · ${L("최저","Min")} ${o.min??"–"}`
+      : "";
+    /* 기존 ON/OFF 수치는 '참고 해석'으로만 한 줄 표시 (확정 판정 아님) */
+    const refLine = (s.dur.on||s.dur.off)
+      ? `<div class="sub" style="opacity:.75; margin-top:6px">${L("참고 해석","Reference")}: ON ${s.dur.on?fmtDur(s.dur.on):"–"} · OFF ${s.dur.off?fmtDur(s.dur.off):"–"}${s.latency!=null?` · ${L("ON까지","To ON")} ${s.latency}${L("분","min")}`:""}</div>`
+      : "";
     c.innerHTML=`<h3>${fmtDateK(k)}${memoTxt?` <button class="qx" style="font-size:11px" data-memo-day="${k}">📝</button>`:""}</h3>
-      <div class="sub">${L("첫 ON","First ON")} ${s.firstOn?hm(s.firstOn):"–"} · ${L("ON까지","To ON")} ${s.latency!=null?s.latency+L("분","min"):"–"} · ${L("최고출력","Max output")} ${s.maxOut??"–"} · ${L("이상운동","Dyskinesia")} ${s.dyskCount}${L("회","x")}</div>
+      <div class="sub">${L("평균 출력","Avg output")} ${o.avg??"–"} · ${dirLine}</div>
+      ${timeLine?`<div class="sub">${timeLine}</div>`:""}
       <div class="bars">
-        ${bar("ON",s.dur.on,"var(--on)")}
-        ${bar(L("불완전ON","Partial ON"),s.dur.partial,"var(--partial)")}
-        ${bar("OFF",s.dur.off,"var(--off)")}
-        ${bar(L("이상운동","Dyskinesia"),s.dur.dysk,"var(--dysk)")}
-      </div>`;
+        ${OUTPUT_ZONES.map(z=>bar(L(z.ko,z.en), o.zones[z.key], z.color)).join("")}
+        ${bar(L("미기록","Unrecorded"), o.unrecorded, "var(--line)")}
+      </div>
+      ${refLine}`;
     const memoIcon=c.querySelector("[data-memo-day]");
     if(memoIcon) memoIcon.onclick=()=>openDayMemo(k);
     cards.appendChild(c);
@@ -1744,7 +1978,10 @@ function renderOutputOverlay(dayKey){
   if(outEvents.length){
     const pts = outEvents.map(e=>`${xOf(e.ts).toFixed(1)},${yOf(e.output).toFixed(1)}`).join(" ");
     svg += `<polyline points="${pts}" fill="none" stroke="#D6455C" stroke-width="2"/>`;
-    svg += outEvents.map(e=>`<circle cx="${xOf(e.ts).toFixed(1)}" cy="${yOf(e.output).toFixed(1)}" r="3" fill="#D6455C"/>`).join("");
+    svg += outEvents.map(e=>{
+      const x=xOf(e.ts).toFixed(1), y=yOf(e.output).toFixed(1);
+      return `<circle cx="${x}" cy="${y}" r="3" fill="#D6455C"/>${trendMarkerSvg(e.trend, x, y)}`;
+    }).join("");
   } else {
     svg += `<text x="${pad}" y="${outTop+outH/2}" font-size="11" fill="var(--ink-2)">${L("이 날 출력 기록 없음","No output logged this day")}</text>`;
   }
@@ -1811,7 +2048,7 @@ function overlayDetailAt(dayKey, ts){
     drugVal = best? Math.round(best.val) : null;
   }
   const nearbyEvents = dayEvents.filter(e=>e.type!=="state" && Math.abs(e.ts-ts)<=30*60000);
-  return {ts, output: nearestOut? nearestOut.output : null, drugVal, nearbyEvents};
+  return {ts, output: nearestOut? nearestOut.output : null, trend: nearestOut? nearestOut.trend : null, drugVal, nearbyEvents};
 }
 window.showOverlayDetail=(dayKey, ts)=>{
   const info = overlayDetailAt(dayKey, ts);
@@ -1823,17 +2060,26 @@ window.showOverlayDetail=(dayKey, ts)=>{
     return "";
   }).join(", ") : L("근처 이벤트 없음","No nearby events");
   el.style.display="block";
-  el.innerHTML = `<b>${hm(ts)}</b> · ${L("출력","Output")} ${info.output??"–"}${info.drugVal!=null?` · ${L("약효 추정","Est. drug level")} ${info.drugVal}`:""}<br><span style="color:var(--ink-2)">${evTxt}</span>`;
+  const outTxt = info.output!=null ? `${info.output}${trendSymbol(info.trend)}${info.trend?` (${trendLabel(info.trend)})`:""}` : "–";
+  el.innerHTML = `<b>${hm(ts)}</b> · ${L("출력","Output")} ${outTxt}${info.drugVal!=null?` · ${L("약효 추정","Est. drug level")} ${info.drugVal}`:""}<br><span style="color:var(--ink-2)">${evTxt}</span>`;
 };
 function fmtShort(m){ const h=Math.floor(m/60),mm=Math.round(m%60); return h?`${h}<small>${L("시간","h")}</small>${mm?` ${mm}<small>${L("분","m")}</small>`:""}`:`${mm}<small>${L("분","m")}</small>`; }
 function buildChart(recent){
-  const W=Math.max(recent.length*34, 220), H=150, pad=18, base=H-24, maxV=Math.max(60, ...recent.map(d=>d.s.dur.on+d.s.dur.partial+d.s.dur.off+d.s.dur.dysk));
+  /* 날짜별 출력 구간 체류시간 누적 막대.
+     막대 전체 높이는 항상 분석 시간대(1080분) 기준으로 동일 — 기록량 차이가 상태 차이로 보이지 않게 한다.
+     미기록 시간은 옅은 회색으로 표시. */
+  const W=Math.max(recent.length*34, 220), H=150, pad=18, base=H-24;
   const bw=Math.min(24,(W-pad*2)/recent.length-6);
   let bars="";
   recent.forEach((d,i)=>{
     const x=pad+i*((W-pad*2)/recent.length)+((W-pad*2)/recent.length-bw)/2;
-    let y=base; const segs=[["on","var(--on)"],["partial","var(--partial)"],["off","var(--off)"],["dysk","var(--dysk)"]];
-    segs.forEach(([key,col])=>{ const v=d.s.dur[key]; const h=v/maxV*(base-10); if(h>0){ y-=h; bars+=`<rect x="${x}" y="${y}" width="${bw}" height="${h}" fill="${col}" rx="1.5"/>`; } });
+    const winMin=d.o.windowMin;
+    let y=base;
+    const segs=[
+      ...OUTPUT_ZONES.map(z=>[d.o.zones[z.key], z.color, 1]),
+      [d.o.unrecorded, "var(--line)", 0.55],
+    ];
+    segs.forEach(([v,col,op])=>{ const h=v/winMin*(base-10); if(h>0){ y-=h; bars+=`<rect x="${x}" y="${y}" width="${bw}" height="${h}" fill="${col}" opacity="${op}" rx="1.5"/>`; } });
     const lab=d.k.slice(5).replace("-","/");
     bars+=`<text x="${x+bw/2}" y="${base+13}" font-size="9" fill="var(--ink-2)" text-anchor="middle">${lab}</text>`;
   });
@@ -1855,7 +2101,7 @@ function computeCurve(dayEvents, dayKey){
   const dayEnd   = new Date(Y,Mo-1,Da,26,0,0).getTime();
   const step = 10*60*1000;
   const meds = dayEvents.filter(e=>e.type==="med");
-  const states = dayEvents.filter(e=>e.type==="state").sort((a,b)=>a.ts-b.ts);
+  const states = outputStates(dayEvents); /* v0.9.17: legacy 제외 */
   function extendMultiplier(t){
     let m=1;
     meds.forEach(me=>{
@@ -2274,6 +2520,14 @@ function openStateSheet(key, editingEvent){
     ${timeFieldHtml("f_ts", baseTs)}
     ${riseBlock}
     <div class="field">
+      <label>${L("방향 (선택)","Direction (optional)")}</label>
+      <div class="trend-row" id="f_trendRow" style="margin-top:0">
+        <button type="button" class="trend-btn rising${isEdit&&editingEvent.trend==="rising"?" sel":""}" data-trend="rising"><span class="sym">+</span><span>${L("상승 중","Rising")}</span></button>
+        <button type="button" class="trend-btn stable${isEdit&&editingEvent.trend==="stable"?" sel":""}" data-trend="stable"><span class="sym">=</span><span>${L("유지 중","Stable")}</span></button>
+        <button type="button" class="trend-btn falling${isEdit&&editingEvent.trend==="falling"?" sel":""}" data-trend="falling"><span class="sym">−</span><span>${L("하강 중","Falling")}</span></button>
+      </div>
+    </div>
+    <div class="field">
       <label>${L("출력감 (0–100, 선택)","Output (0–100, optional)")}</label>
       <div class="hint" style="margin:0 0 8px">${L("100 평소 · 80 대부분 가능 · 60 느려짐 · 40 둔함 · 20 거의OFF · 0 불가","100 normal · 80 mostly ok · 60 slower · 40 sluggish · 20 near OFF · 0 unable")} <button type="button" class="qx" style="font-size:11px" onclick="openGlossary()">${L("자세히","more")}</button></div>
       <div class="btn-row" style="margin-bottom:8px">
@@ -2309,6 +2563,13 @@ function openStateSheet(key, editingEvent){
     </div>`);
   window._skipOut = isEdit && editingEvent.output==null;
   let riseResult = isEdit? (editingEvent.riseResult||null) : null;
+  let editTrend = isEdit? (editingEvent.trend||null) : null;
+  document.getElementById("f_trendRow").addEventListener("click", e=>{
+    const b=e.target.closest(".trend-btn"); if(!b) return;
+    const already=b.classList.contains("sel");
+    document.querySelectorAll("#f_trendRow .trend-btn").forEach(c=>c.classList.remove("sel"));
+    if(!already){ b.classList.add("sel"); editTrend=b.dataset.trend; } else editTrend=null;
+  });
   if(key==="rising"){
     document.getElementById("riseChips").addEventListener("click",e=>{
       const b=e.target.closest(".chip"); if(!b) return;
@@ -2371,11 +2632,11 @@ function openStateSheet(key, editingEvent){
     closeSheet();
     let savedEvent;
     if(isEdit){
-      Object.assign(editingEvent, {ts, output:out, gait, dysk, memo, symptoms, customSymptom, riseResult});
+      Object.assign(editingEvent, {ts, output:out, trend:editTrend, gait, dysk, memo, symptoms, customSymptom, riseResult});
       savedEvent = editingEvent;
       db.events.sort((a,b)=>a.ts-b.ts); save(); renderAll(); toast(L("수정했어요","Updated"));
     } else {
-      savedEvent = addState(key,{ts, output:out, gait, dysk, memo, symptoms, customSymptom, riseResult});
+      savedEvent = addState(key,{ts, output:out, trend:editTrend, gait, dysk, memo, symptoms, customSymptom, riseResult});
     }
     const FACTOR_WINDOWS = {delayed:12, partial:12, failed:24};
     if(key==="rising" && FACTOR_WINDOWS[riseResult]){
@@ -2606,7 +2867,6 @@ function openAddMed(fromMedFlow){
 
 function openAddPast(editingEvent){
   const isEdit = !!editingEvent;
-  const sOpts=MAIN_STATES.map(s=>`<option value="${s.key}">${stateName(s.key)}</option>`).join("");
   const now = isEdit ? new Date(editingEvent.ts) : new Date();
   const dval=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
   const medPreOpts = db.meds.map((m,i)=>`<button type="button" class="chip" data-i="${i}">${m.fav?"★ ":""}${escapeHtml(m.name)}${m.dose?` ${m.dose}mg`:""}</button>`).join("");
@@ -2614,7 +2874,9 @@ function openAddPast(editingEvent){
   const sleepOpts=SLEEP_TYPES.map(t=>`<option value="${t.key}">${L(t.ko,t.en||t.ko)}</option>`).join("");
   const exOpts=EXERCISE_TYPES.map(t=>`<option value="${t}">${tagLabel(t)}</option>`).join("");
   const bowelOpts=BOWEL_CONSISTENCY.map(t=>`<option value="${t}">${tagLabel(t)}</option>`).join("");
-  let initKind="state";
+  /* 종류 기본값은 "출력"이다 — 예전에는 "상태"가 기본값이라 output:null 상태 기록이
+     기본적으로 만들어졌고, 이것이 지난 기록 추가의 핵심 버그였다. */
+  let initKind="state"; // 내부 값은 호환을 위해 그대로 "state"를 쓰되, 화면 라벨과 입력 필드는 "출력"으로 재구성한다.
   if(isEdit){
     if(editingEvent.type==="med") initKind="med";
     else if(editingEvent.type==="life") initKind="life_"+editingEvent.kind;
@@ -2625,7 +2887,7 @@ function openAddPast(editingEvent){
     <div class="field"><label>${L("시각","Time")}</label><input type="time" id="p_time" value="${pad(now.getHours())}:${pad(now.getMinutes())}"></div>
     <div class="field"><label>${L("종류","Type")}</label>
       <select id="p_kind" ${isEdit?"disabled":""}>
-        <option value="state">${L("상태","State")}</option>
+        <option value="state">${L("출력","Output")}</option>
         <option value="med">${L("복약","Medication")}</option>
         <option value="life_sleep">${L("생활 · 수면","Life · Sleep")}</option>
         <option value="life_meal">${L("생활 · 식사","Life · Meal")}</option>
@@ -2633,7 +2895,16 @@ function openAddPast(editingEvent){
         <option value="life_bowel">${L("생활 · 배변","Life · Bowel")}</option>
         <option value="life_body">${L("생활 · 몸 상태","Life · Body")}</option>
       </select></div>
-    <div class="field" id="p_state_f"><label>${L("상태","State")}</label><select id="p_state">${sOpts}</select></div>
+    <div class="field" id="p_state_f">
+      <label>${L("당시 출력 (0–100)","Output at the time (0–100)")}</label>
+      <div class="slider-row"><input type="range" id="p_out" min="0" max="100" step="5" value="50" oninput="document.getElementById('p_outv').textContent=this.value"><div class="v" id="p_outv">50</div></div>
+      <div class="hint" style="margin:8px 0 0">${L("방향","Direction")}</div>
+      <div class="trend-row" id="p_trendRow">
+        <button type="button" class="trend-btn rising" data-trend="rising"><span class="sym">+</span><span>${L("상승 중","Rising")}</span></button>
+        <button type="button" class="trend-btn stable" data-trend="stable"><span class="sym">=</span><span>${L("유지 중","Stable")}</span></button>
+        <button type="button" class="trend-btn falling" data-trend="falling"><span class="sym">−</span><span>${L("하강 중","Falling")}</span></button>
+      </div>
+    </div>
     <div class="field" id="p_med_f" style="display:none">
       <label id="p_medChipsLabel">${L("등록된 약에서 선택 (여러 개 가능)","Select from registered medications (multiple allowed)")}</label>
       <div class="chips" id="p_medChips">${medPreOpts||`<span class="hint" style="margin:0">${L("등록된 약이 없어요","No medications registered")}</span>`}</div>
@@ -2651,13 +2922,31 @@ function openAddPast(editingEvent){
     state:"p_state_f", med:"p_med_f", life_sleep:"p_sleep_f", life_meal:"p_meal_f",
     life_exercise:"p_ex_f", life_bowel:"p_bowel_f", life_body:"p_body_f"
   };
-  document.getElementById("p_kind").value = initKind;
-  Object.values(fieldMap).forEach(id=>document.getElementById(id).style.display="none");
-  document.getElementById(fieldMap[initKind]).style.display="block";
-  document.getElementById("p_kind").onchange=function(){
+  function updatePastRecordForm(){
     Object.values(fieldMap).forEach(id=>document.getElementById(id).style.display="none");
-    document.getElementById(fieldMap[this.value]).style.display="block";
-  };
+    document.getElementById(fieldMap[document.getElementById("p_kind").value]).style.display="block";
+  }
+  document.getElementById("p_kind").value = initKind;
+  updatePastRecordForm();
+  /* select onchange 하나에만 의존하지 않고 change 이벤트를 addEventListener로도 연결해
+     일부 모바일 환경에서 종류 전환이 반영되지 않던 문제를 방지한다. */
+  document.getElementById("p_kind").addEventListener("change", updatePastRecordForm);
+  let pTrend = isEdit? (editingEvent.trend||null) : null;
+  const pTrendRowEl = document.getElementById("p_trendRow");
+  if(pTrendRowEl){
+    if(isEdit && editingEvent.type==="state" && editingEvent.output!=null){
+      document.getElementById("p_out").value = editingEvent.output;
+      document.getElementById("p_outv").textContent = editingEvent.output;
+    }
+    if(isEdit && pTrend){
+      const b=pTrendRowEl.querySelector(`.trend-btn[data-trend="${pTrend}"]`); if(b) b.classList.add("sel");
+    }
+    pTrendRowEl.addEventListener("click", e=>{
+      const b=e.target.closest(".trend-btn"); if(!b) return;
+      pTrendRowEl.querySelectorAll(".trend-btn").forEach(c=>c.classList.remove("sel"));
+      b.classList.add("sel"); pTrend=b.dataset.trend;
+    });
+  }
   const pMedSel=new Set();
   const medChipsEl=document.getElementById("p_medChips");
   if(medChipsEl) medChipsEl.addEventListener("click",e=>{
@@ -2667,9 +2956,7 @@ function openAddPast(editingEvent){
   });
   if(isEdit){
     document.getElementById("p_memo").value = editingEvent.memo || "";
-    if(editingEvent.type==="state"){
-      document.getElementById("p_state").value = editingEvent.state;
-    } else if(editingEvent.type==="med"){
+    if(editingEvent.type==="med"){
       document.getElementById("p_medChips").style.display="none";
       document.getElementById("p_medChipsLabel").style.display="none";
       document.getElementById("p_drug").value = editingEvent.drug||"";
@@ -2692,9 +2979,12 @@ function openAddPast(editingEvent){
     if(!d||!t){ toast(L("날짜와 시각을 입력하세요","Please enter a date and time")); return; }
     const ts=new Date(`${d}T${t}`).getTime(); const memo=document.getElementById("p_memo").value.trim();
     const kind = isEdit ? initKind : document.getElementById("p_kind").value;
+    if(kind==="state" && !pTrend){ toast(tr("trendPickAlert")); return; }
     if(isEdit){
       if(kind==="state"){
-        Object.assign(editingEvent, {ts, memo, state:document.getElementById("p_state").value});
+        const out=+document.getElementById("p_out").value;
+        const derivedState = stateFromTrend(pTrend, out);
+        Object.assign(editingEvent, {ts, memo, output:out, trend:pTrend, state:derivedState});
       } else if(kind==="med"){
         const drug=document.getElementById("p_drug").value.trim();
         if(!drug){ toast(L("약 이름을 입력하세요","Please enter a medication name")); return; }
@@ -2720,13 +3010,17 @@ function openAddPast(editingEvent){
       const customDrug=document.getElementById("p_drug").value.trim();
       const customDose=(+document.getElementById("p_dose").value)||null;
       if(!pMedSel.size && !customDrug){ toast(L("약을 선택하거나 이름을 입력하세요","Select a medication or enter a name")); return; }
+      /* 복약 기록에는 output/state/trend를 절대 포함하지 않는다 — 복약은 출력값을 바꾸지 않는다. */
       pMedSel.forEach(i=>{ const m=db.meds[i]; db.events.push({id:uid(),type:"med",drug:m.name,dose:m.dose,ts,memo}); });
       if(customDrug) db.events.push({id:uid(),type:"med",drug:customDrug,dose:customDose,ts,memo});
-      db.events.sort((a,b)=>a.ts-b.ts); save(); closeSheet(); renderAll();
-      toast(L(`복약 ${pMedSel.size+(customDrug?1:0)}건 추가됨`,`${pMedSel.size+(customDrug?1:0)} medication record(s) added`)); return;
+      db.events.sort((a,b)=>a.ts-b.ts); save();
+      afterPastSave(ts, L(`복약 ${pMedSel.size+(customDrug?1:0)}건 추가됨`,`${pMedSel.size+(customDrug?1:0)} medication record(s) added`));
+      return;
     }
     if(kind==="state"){
-      db.events.push({id:uid(),type:"state",state:document.getElementById("p_state").value,ts,output:null,gait:null,dysk:null,dyst:null,memo,symptoms:[],customSymptom:"",riseResult:null});
+      const out=+document.getElementById("p_out").value;
+      const derivedState = stateFromTrend(pTrend, out);
+      db.events.push({id:uid(),type:"state",state:derivedState,ts,output:out,trend:pTrend,gait:null,dysk:null,dyst:null,memo,symptoms:[],customSymptom:"",riseResult:null,inputMethod:"backdated_manual",retrospective:true});
     } else if(kind==="life_sleep"){
       db.events.push({id:uid(),type:"life",kind:"sleep",phase:document.getElementById("p_sleep_type").value,ts,memo,quality:[]});
     } else if(kind==="life_meal"){
@@ -2741,8 +3035,21 @@ function openAddPast(editingEvent){
       const syms=document.getElementById("p_body_sym").value.split(",").map(x=>x.trim()).filter(Boolean);
       db.events.push({id:uid(),type:"life",kind:"body",symptoms:syms,ts,memo});
     }
-    db.events.sort((a,b)=>a.ts-b.ts); save(); closeSheet(); renderAll(); toast(L("기록 추가됨","Record added"));
+    db.events.sort((a,b)=>a.ts-b.ts); save();
+    afterPastSave(ts, L("기록 추가됨","Record added"));
   };
+}
+/* 저장 후 해당 날짜의 기록 목록으로 자동 이동 — "다른 날짜에 추가한 기록을 찾을 수 없다"는 문제 대응 */
+function afterPastSave(ts, msg){
+  closeSheet(); renderAll();
+  switchTab("log");
+  const dk = dkey(new Date(ts));
+  const dateTxt = fmtDateK(dk), timeTxt = hm(ts);
+  toast(`${msg} · ${dateTxt} ${timeTxt}`);
+  setTimeout(()=>{
+    const card = [...document.querySelectorAll(".daycard")].find(c=>c.dataset.day===dk);
+    if(card) card.scrollIntoView({behavior:"smooth", block:"start"});
+  }, 60);
 }
 
 /* ---------- nav + misc ---------- */
@@ -2757,8 +3064,12 @@ document.getElementById("medBtn").onclick=openMedSheet;
 document.getElementById("addMedBtn").onclick=()=>openAddMed(false);
 document.getElementById("addPastBtn").onclick=openAddPast;
 document.getElementById("glossaryBtn").onclick=openGlossary;
-document.getElementById("qoMinus").onclick=()=>adjustOutput(-10);
-document.getElementById("qoPlus").onclick=()=>adjustOutput(10);
+document.getElementById("qoMinus").onclick=()=>qoAdjust(-10);
+document.getElementById("qoPlus").onclick=()=>qoAdjust(10);
+document.getElementById("qoTrendRow").addEventListener("click", e=>{
+  const b=e.target.closest(".trend-btn"); if(!b) return;
+  qoCommitTrend(b.dataset.trend);
+});
 document.getElementById("qoResetAnchor").onclick=openMorningAnchor;
 document.getElementById("qoCheckBtn").onclick=openOutputCheck;
 document.getElementById("printBtn").onclick=()=>window.print();
@@ -2793,10 +3104,10 @@ function handleVoiceText(text){
     toast(L(`🎤 "${text}" → ${fav.name} 복약 기록됨`,`🎤 "${text}" → ${fav.name} recorded`));
     return;
   }
-  if(/좋아졌|좋아짐|괜찮/.test(t) || /(feel(ing)?\s?)?bett(er|a)|okay|good/.test(t)){ addState("on"); toast(L(`🎤 "${text}" → ON 기록됨`,`🎤 "${text}" → ON recorded`)); return; }
-  if(/나빠졌|나빠짐|힘들/.test(t) || /wors(e|ening)|bad|difficult/.test(t)){ addState("falling"); toast(L(`🎤 "${text}" → 하강 전환기 기록됨`,`🎤 "${text}" → Falling recorded`)); return; }
-  if(/오프|off|약효.*없/.test(t)){ addState("off"); toast(L(`🎤 "${text}" → OFF 기록됨`,`🎤 "${text}" → OFF recorded`)); return; }
-  if(/이상운동|디스키네지아|dyskinesia/.test(t)){ addState("on",{symptoms:["dysk"]}); toast(L(`🎤 "${text}" → 이상운동 기록됨`,`🎤 "${text}" → Dyskinesia recorded`)); return; }
+  if(/좋아졌|좋아짐|괜찮/.test(t) || /(feel(ing)?\s?)?bett(er|a)|okay|good/.test(t)){ voiceTrend("rising", text); return; }
+  if(/나빠졌|나빠짐|힘들/.test(t) || /wors(e|ening)|bad|difficult/.test(t)){ voiceTrend("falling", text); return; }
+  if(/오프|off|약효.*없/.test(t)){ voiceTrend("falling", text); return; }
+  if(/이상운동|디스키네지아|dyskinesia/.test(t)){ toggleSymptomTimer("dysk"); toast(L(`🎤 "${text}" → 이상운동 기록됨`,`🎤 "${text}" → Dyskinesia recorded`)); return; }
   toast(L(`🎤 "${text}" — 인식은 됐지만 자동 저장할 항목을 못 찾았어요`,`🎤 "${text}" — recognized, but no matching action was found`));
 }
 

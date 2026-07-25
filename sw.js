@@ -1,4 +1,4 @@
-const CACHE = "yakhyo-v21-daymemo";
+const CACHE = "yakhyo-v24-summarize";
 const APP_SHELL = [
   "./",
   "./index.html",
