@@ -196,11 +196,36 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
 .report .rsec{font-size:14px; font-weight:800; margin:18px 0 8px}
 .qitem{display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-bottom:1px solid var(--line)}
 .qitem input{margin-top:4px}
+/* ---- Patient History Summary (v0.9.19) ---- */
+#phsOverlay{display:none; position:fixed; inset:0; z-index:200; background:var(--bg); overflow:auto; padding:14px 14px 40px; -webkit-overflow-scrolling:touch}
+#phsOverlay.open{display:block}
+.phs-page{background:var(--surface,#fff); border-radius:14px; padding:18px 16px; margin:0 auto 14px; max-width:760px; box-shadow:0 2px 10px rgba(0,0,0,.06); font-size:13.5px; line-height:1.75}
+.phs-page h1{font-size:19px; margin:0 0 2px}
+.phs-page h2{font-size:15px; margin:16px 0 6px; padding-bottom:4px; border-bottom:1px solid var(--line)}
+.phs-page h2:first-of-type{margin-top:8px}
+.phs-meta{font-size:12px; color:var(--ink-2); margin-bottom:8px}
+.phs-page table{width:100%; border-collapse:collapse; font-size:12.5px; margin:6px 0}
+.phs-page th,.phs-page td{border:1px solid var(--line); padding:4px 7px; text-align:left}
+.phs-page th{background:var(--surface-2)}
+.phs-q{margin:4px 0; padding-left:2px}
+.phs-q .tag{display:inline-block; font-size:10.5px; padding:1px 6px; border-radius:8px; background:var(--surface-2); color:var(--ink-2); margin-right:6px; vertical-align:1px}
+.phs-disc{font-size:11.5px; color:var(--ink-2); border:1px dashed var(--line); border-radius:10px; padding:8px 10px; margin-top:14px}
+.phs-toolbar{max-width:760px; margin:0 auto 12px; display:flex; gap:8px; flex-wrap:wrap}
+.phs-toolbar .btn{width:auto; flex:1; min-width:100px}
+.phs-graph{margin:8px 0 2px}
+.phs-graph .cap{font-size:11.5px; color:var(--ink-2); margin:2px 0 8px}
+.phs-conf{display:inline-block; font-size:11px; padding:2px 8px; border-radius:10px; background:var(--surface-2); color:var(--ink-2); margin-left:6px}
 .qitem .qx{color:var(--ink-2); padding:2px 6px}
 @media print{
   body{background:#fff; color:#000; padding:0; font-size:12px}
   .app-head,.nav,.no-print{display:none!important}
   section.tab{display:none!important} #tab-report{display:block!important; padding:0}
+  body.phs-print section.tab{display:none!important}
+  body.phs-print #tab-report{display:none!important}
+  body.phs-print #phsOverlay{display:block!important; position:static!important; height:auto!important; overflow:visible!important; background:#fff!important; padding:0!important}
+  body.phs-print #phsOverlay .phs-toolbar{display:none!important}
+  .phs-page{page-break-after:always}
+  .phs-page:last-child{page-break-after:auto}
   .wrap{max-width:none; padding:0}
   .report{box-shadow:none; border-radius:0; padding:0}
   .report th{background:#eee!important; -webkit-print-color-adjust:exact; print-color-adjust:exact}
@@ -377,6 +402,25 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
       <button class="btn primary" id="printBtn" data-i18n="printPdf">🖨 인쇄 / PDF</button>
     </div>
     <div class="report" id="reportBody"></div>
+
+    <!-- Patient History Summary (v0.9.19) -->
+    <div class="section-label no-print" style="margin-top:18px">Patient History Summary</div>
+    <div class="list-card no-print" id="phsCard">
+      <div class="li"><div class="grow">
+        <div class="name">🩺 진료용 요약 보고서</div>
+        <div class="meta" id="phsStatusLine">설문과 기록을 결합해 진료용 요약을 만들어요. 모든 처리는 이 기기 안에서만 이뤄져요.</div>
+      </div></div>
+      <div style="padding:10px 12px 12px">
+        <div class="btn-row" style="margin-bottom:8px">
+          <button class="btn ghost" id="phsProfileBtn">1. 기본 정보</button>
+          <button class="btn ghost" id="phsStartBtn">2. 관찰 시작</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn ghost" id="phsEndBtn">3. 관찰 종료</button>
+          <button class="btn primary" id="phsGenBtn">보고서 생성</button>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- SETTINGS -->
@@ -430,8 +474,11 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
 
 <div class="alarm-banner" id="alarmBanner"><span style="font-size:22px">💊</span><div class="txt"></div><button class="take" data-i18n="takeMed">복용함</button><button class="x">✕</button></div>
 <div class="scrim" id="scrim"><div class="sheet" id="sheet"></div></div>
+<div id="phsOverlay"></div>
 <div class="toast" id="toast"></div>
 
+<script src="phs-engine.js"></script>
+<script src="phs-report.js"></script>
 <script>
 "use strict";
 /* ---------- i18n ---------- */
@@ -484,7 +531,7 @@ const I18N = {
     pastDateSaved:"기록을 추가했습니다", viewAddedRecord:"추가한 기록 보기", refState:"참고 상태",
     symptomTitle:"⚡ 증상 기록 — 시작할 때 누르고, 끝나면 한 번 더", medLifeTitle:"약·생활 기록",
     outputOverlayTitle:"출력 곡선 + 생활기록 + 이벤트", overlayTapHint:"그래프를 눌러 그 시각의 출력·약효·이벤트를 확인하세요",
-    versionLabel:"약효일지 · 테스트판 0.9.18",
+    versionLabel:"약효일지 · 테스트판 0.9.19",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -537,7 +584,7 @@ const I18N = {
     pastDateSaved:"Record added", viewAddedRecord:"View added record", refState:"Reference state",
     symptomTitle:"⚡ Symptoms — tap to start, tap again to end", medLifeTitle:"Medication & life records",
     outputOverlayTitle:"Output curve + life records + events", overlayTapHint:"Tap the chart to see output, drug level, and events at that time",
-    versionLabel:"Med Log · Test build 0.9.18",
+    versionLabel:"Med Log · Test build 0.9.19",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -607,7 +654,9 @@ function outputStates(events){
 }
 function isLegacyState(e){ return e.type==="state" && !Number.isFinite(e.output); }
 /* 두 출력 기록 사이 간격이 이 값(분)을 넘으면 이전 상태를 연장하지 않고 '미기록'으로 처리한다 */
-const MAX_INTERPOLATION_GAP_MINUTES = 120;
+/* 미기록 판단 기준: phs-engine.js의 PHS.config.maxGapMin이 유일한 정의 지점.
+   (엔진 파일이 로드되지 않는 예외 상황에서만 동일 값 180을 대체 사용) */
+const MAX_INTERPOLATION_GAP_MINUTES = (typeof PHS!=="undefined"&&PHS.config&&PHS.config.maxGapMin) ? PHS.config.maxGapMin : 180;
 /* 출력 구간 (진단이 아니라 시각적 참고 영역) */
 const OUTPUT_ZONES = [
   {key:"z80", min:80, max:100, ko:"출력 80~100", en:"Output 80–100", color:"var(--on)"},
@@ -617,9 +666,9 @@ const OUTPUT_ZONES = [
 ];
 function zoneOf(output){ return OUTPUT_ZONES.find(z=>output>=z.min && output<=z.max) || OUTPUT_ZONES[3]; }
 /* 하루 출력·방향 통계 + 출력 구간별 체류시간 (분).
-   구간 체류시간 규칙: 연속한 두 출력 기록 사이 간격이 120분 이하면 그 간격 전체를
-   앞 기록의 출력 구간에 귀속한다. 120분을 넘으면 전부 미기록으로 계산한다.
-   마지막 기록도 최대 120분까지만 연장한다. 분석 시간대는 6:00~24:00(1080분)으로 고정해
+   구간 체류시간 규칙: 연속한 두 출력 기록 사이 간격이 180분(공통 기준) 이하면 그 간격
+   전체를 앞 기록의 출력 구간에 귀속한다. 180분을 넘으면 전부 미기록으로 계산한다.
+   마지막 기록도 최대 180분까지만 연장한다. 기준값은 PHS.config.maxGapMin 한 곳에서 관리. 분석 시간대는 6:00~24:00(1080분)으로 고정해
    날짜별 기록량 차이가 상태 차이로 오해되지 않게 한다. */
 function dayOutputStats(events, dayKey){
   const outs = outputStates(events);
@@ -647,10 +696,10 @@ function dayOutputStats(events, dayKey){
     let segEnd;
     if(next){
       const gap = next.ts - cur.ts;
-      segEnd = gap<=gapCapMs ? next.ts : cur.ts + 0; // 120분 초과 간격은 통째로 미기록
+      segEnd = gap<=gapCapMs ? next.ts : cur.ts + 0; // 기준(180분) 초과 간격은 통째로 미기록
     } else {
       const hardEnd = dayKey===todayKey()? Math.min(Date.now(), winEnd) : winEnd;
-      segEnd = Math.min(cur.ts + gapCapMs, hardEnd); // 마지막 기록도 최대 120분까지만 연장
+      segEnd = Math.min(cur.ts + gapCapMs, hardEnd); // 마지막 기록도 최대 기준(180분)까지만 연장
     }
     segEnd = Math.min(segEnd, winEnd);
     const min = Math.max(0,(segEnd-segStart)/60000);
@@ -925,8 +974,10 @@ function leddFactorFor(name){
 
 let db = load();
 function load(){
-  try{ const d = JSON.parse(localStorage.getItem(KEY)); if(d&&d.events){ d.meds=(d.meds||[]).map(m=>({sched:[],...m})); d.settings=d.settings||{theme:"light"}; d.outputChecks=d.outputChecks||[]; d.dayMemos=d.dayMemos||{}; return d; } }catch(e){}
-  return { events:[], meds:[], questions:defaultQuestions(), settings:{theme:"light",notify:false}, outputChecks:[], dayMemos:{} };
+  try{ const d = JSON.parse(localStorage.getItem(KEY)); if(d&&d.events){ d.meds=(d.meds||[]).map(m=>({sched:[],...m})); d.settings=d.settings||{theme:"light"}; d.outputChecks=d.outputChecks||[]; d.dayMemos=d.dayMemos||{};
+    if(typeof PHS!=="undefined") PHS.migrate(d); /* v0.9.19: db.phs 네임스페이스 추가 (기존 키 무변경·가역적) */
+    return d; } }catch(e){}
+  return { events:[], meds:[], questions:defaultQuestions(), settings:{theme:"light",notify:false}, outputChecks:[], dayMemos:{}, phs:{v:(typeof PHS!=="undefined"?PHS.SCHEMA_VERSION:1), profile:null, observations:[]} };
 }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){ toast(L("저장 공간이 부족합니다","Storage space is full")); } }
 function defaultQuestions(){ return (currentLang()==="en" ? [
@@ -1083,7 +1134,7 @@ function summarize(events){
   /* v0.9.17: ON/OFF 지속시간·첫 ON·latency 계산도 출력값이 있는 기록만 사용한다.
      output:null legacy state가 섞이면 "출력 30인데 참고해석 ON 5시간" 같은 모순이 생기기 때문.
      legacy state는 기록 목록의 참고 표시로만 쓰이고, 여기서는 완전히 제외된다.
-     간격이 120분을 넘으면 이전 상태를 연장하지 않는다 (미기록). */
+     간격이 공통 기준(180분)을 넘으면 이전 상태를 연장하지 않는다 (미기록). */
   const states = outputStates(events);
   const meds = events.filter(e=>e.type==="med");
   const dur = {}; STATES.forEach(s=>dur[s.key]=0);
@@ -1092,7 +1143,7 @@ function summarize(events){
     const cur=states[i], next=states[i+1];
     let end;
     if(next){
-      if(next.ts - cur.ts > gapCapMs) continue; // 120분 초과 공백 → 미기록, 시간 귀속 안 함
+      if(next.ts - cur.ts > gapCapMs) continue; // 기준(180분) 초과 공백 → 미기록, 시간 귀속 안 함
       end = next.ts;
     } else {
       end = Math.min(cur.ts + gapCapMs, endOfDayCap(cur.ts));
@@ -1885,7 +1936,7 @@ function renderRibbon(events){
   const rb=document.getElementById("ribbon"); const empty=document.getElementById("ribbonEmpty");
   rb.querySelectorAll(".seg,.medmark").forEach(n=>n.remove());
   /* 리본도 출력값이 있는 기록만 사용 — output:null 참고 상태는 구간을 만들지 않는다.
-     색은 상태명이 아니라 출력 구간 기준. 120분 초과 간격은 빈칸(미기록)으로 남긴다. */
+     색은 상태명이 아니라 출력 구간 기준. 공통 기준(180분) 초과 간격은 빈칸(미기록)으로 남긴다. */
   const states=outputStates(events);
   const range=document.getElementById("ribbonRange");
   if(!states.length){ empty.style.display="block"; range.textContent=""; return; }
@@ -3338,6 +3389,330 @@ function showTermTutorial(){
 
 /* PWA */
 if("serviceWorker" in navigator){ window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{})); }
+
+/* ================= Patient History Summary UI (v0.9.19) =================
+ * 렌더러 계층: 설문 3종 → 엔진 호출 → 보고서 미리보기/인쇄/PDF/복사/JSON.
+ * 분석·문장 생성은 전부 phs-engine.js / phs-report.js가 담당한다. */
+const PHS_PROBLEMS=[
+  {k:"delayed_response",ko:"약 먹고 좋아지기까지 오래 걸림"},
+  {k:"incomplete_response",ko:"약을 먹어도 충분히 안 올라옴"},
+  {k:"no_clear_response",ko:"약을 먹어도 뚜렷이 안 좋아짐"},
+  {k:"wearing_off",ko:"다음 약 전에 먼저 가라앉음"},
+  {k:"afternoon_decline",ko:"오후에 몸이 내려감"},
+  {k:"freezing",ko:"걸을 때 발이 붙음"},
+  {k:"dyskinesia",ko:"몸이 저절로 크게 흔들림"},
+  {k:"dystonia",ko:"근육이 뒤틀리듯 당겨짐"},
+  {k:"tremor",ko:"떨림"},
+  {k:"brady",ko:"움직임이 느려짐"},
+  {k:"gait",ko:"걷기가 어려움"},
+  {k:"fall",ko:"넘어질 뻔함"},
+  {k:"pain",ko:"통증"},
+  {k:"anxiety",ko:"불안"},
+  {k:"sleep",ko:"잠을 잘 못 잠"},
+];
+const PHS_FACTORS=[
+  {k:"protein_meal",ko:"단백질 많은 식사"},{k:"late_meal",ko:"늦은 식사"},
+  {k:"poor_sleep",ko:"잠을 설침"},{k:"constipation",ko:"변비"},
+  {k:"exercise",ko:"운동"},{k:"stress",ko:"스트레스"},{k:"missed_dose",ko:"약 거름/늦게 먹음"},
+];
+const PHS_QPRESET=[
+  "약 반응이 늦어지는 이유가 궁금합니다.",
+  "복용 시간 조정이 필요한지 여쭙고 싶습니다.",
+  "오후에 나빠지는 것에 대해 여쭙고 싶습니다.",
+  "이상운동(몸이 저절로 흔들림)에 대해 여쭙고 싶습니다.",
+  "지금 기록 방법이 적절한지 확인받고 싶습니다.",
+];
+const PHS_TIMES=[{k:"early_morning",ko:"이른 아침"},{k:"morning",ko:"오전"},{k:"noon",ko:"점심 무렵"},{k:"afternoon",ko:"오후"},{k:"evening",ko:"저녁"},{k:"night",ko:"밤"}];
+function phsChips(id,items,selected){ return `<div class="chips" id="${id}">${items.map(it=>`<button type="button" class="chip${(selected||[]).includes(it.k||it)?" sel":""}" data-k="${escapeHtml(it.k||it)}">${escapeHtml(it.ko||it)}</button>`).join("")}</div>`; }
+function phsChipMulti(id){ const el=document.getElementById(id); el.addEventListener("click",e=>{const b=e.target.closest(".chip"); if(b) b.classList.toggle("sel");}); }
+function phsChipSingle(id){ const el=document.getElementById(id); el.addEventListener("click",e=>{const b=e.target.closest(".chip"); if(!b) return; const was=b.classList.contains("sel"); el.querySelectorAll(".chip").forEach(c=>c.classList.remove("sel")); if(!was) b.classList.add("sel");}); }
+function phsChipVals(id){ return [...document.querySelectorAll(`#${id} .chip.sel`)].map(b=>b.dataset.k); }
+function phsActiveObs(){ const os=(db.phs&&db.phs.observations)||[]; const last=os[os.length-1]; return (last&&!last.endDate)? last : null; }
+function phsLatestObs(){ const os=(db.phs&&db.phs.observations)||[]; return os[os.length-1]||null; }
+function phsStatus(){
+  const el=document.getElementById("phsStatusLine"); if(!el) return;
+  const act=phsActiveObs(), latest=phsLatestObs();
+  if(act) el.textContent=`관찰 진행 중 · ${act.startDate}부터 기록을 모으고 있어요. 진료 전에 "관찰 종료" 후 보고서를 만드세요.`;
+  else if(latest&&latest.endDate) el.textContent=`최근 관찰: ${latest.startDate} ~ ${latest.endDate}. 보고서를 다시 만들 수 있어요.`;
+  else el.textContent=`설문과 기록을 결합해 진료용 요약을 만들어요. 모든 처리는 이 기기 안에서만 이뤄져요.`;
+}
+/* ---- 1. 기본 정보 설문 (한 번 작성, 언제든 수정) ---- */
+function phsOpenProfile(){
+  const p=(db.phs&&db.phs.profile)||{};
+  const opt=(v,cur)=>`<option value="${v}" ${v===cur?"selected":""}>${v||"선택 안 함"}</option>`;
+  openSheet(`
+    <h2>기본 정보 (한 번만)</h2>
+    <div class="hint">보고서 머리말에 쓰여요. 모두 선택 사항이고, 언제든 다시 수정할 수 있어요.</div>
+    <div class="field"><label>연령대</label><select id="ph_age">${["","40대","50대","60대","70대","80대 이상"].map(v=>opt(v,p.ageGroup)).join("")}</select></div>
+    <div class="field"><label>성별</label><select id="ph_sex">${["","남","여"].map(v=>opt(v,p.sex)).join("")}</select></div>
+    <div class="field"><label>파킨슨 진단 후 경과 (년)</label><input id="ph_years" type="number" inputmode="numeric" placeholder="예: 14" value="${p.diagnosisYears??""}"></div>
+    <div class="field"><label>주로 불편한 쪽</label><select id="ph_side">${["","오른쪽","왼쪽","양쪽 비슷"].map(v=>opt(v,p.dominantSide)).join("")}</select></div>
+    <div class="field"><label>DBS(뇌심부자극) 수술</label><select id="ph_dbs">${["","없음","수술 받음"].map(v=>opt(v,p.dbsStatus)).join("")}</select></div>
+    <div class="field"><label>평소 주된 증상 (복수 선택)</label>${phsChips("ph_syms",PHS_PROBLEMS,p.usualMainSymptoms)}</div>
+    <div class="field"><label>나에게 출력 100은? (선택)</label><input id="ph_a100" placeholder="예: 산책과 집안일이 평소처럼 가능" value="${escapeHtml(p.anchors?.o100||"")}"></div>
+    <div class="field"><label>나에게 출력 50은? (선택)</label><input id="ph_a50" placeholder="예: 걷긴 하지만 많이 느림" value="${escapeHtml(p.anchors?.o50||"")}"></div>
+    <div class="field"><label>나에게 출력 0~20은? (선택)</label><input id="ph_a20" placeholder="예: 도움 없이는 움직이기 어려움" value="${escapeHtml(p.anchors?.o20||"")}"></div>
+    <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">취소</button><button class="btn primary" id="ph_save">저장</button></div>`);
+  phsChipMulti("ph_syms");
+  document.getElementById("ph_save").onclick=()=>{
+    db.phs.profile={
+      ageGroup:document.getElementById("ph_age").value||null,
+      sex:document.getElementById("ph_sex").value||null,
+      diagnosisYears:(+document.getElementById("ph_years").value)||null,
+      dominantSide:document.getElementById("ph_side").value||null,
+      dbsStatus:document.getElementById("ph_dbs").value||null,
+      usualMainSymptoms:phsChipVals("ph_syms"),
+      anchors:{o100:document.getElementById("ph_a100").value.trim(),
+               o50:document.getElementById("ph_a50").value.trim(),
+               o20:document.getElementById("ph_a20").value.trim()},
+    };
+    save(); closeSheet(); phsStatus(); toast("기본 정보를 저장했어요");
+  };
+}
+/* ---- 2. 관찰 시작 설문 ---- */
+function phsOpenStart(){
+  const act=phsActiveObs();
+  const sv=(act&&act.startSurvey)||{};
+  openSheet(`
+    <h2>${act? "관찰 시작 설문 수정":"관찰 시작"}</h2>
+    <div class="hint">이번 관찰기간에 확인하고 싶은 것을 알려주세요. <b>가장 큰 어려움</b>만 필수이고 나머지는 건너뛰어도 돼요.</div>
+    <div class="field"><label>요즘 어려움 (해당되는 것 모두)</label>${phsChips("ps_chief",PHS_PROBLEMS,sv.chiefProblems)}</div>
+    <div class="field"><label>그중 가장 큰 어려움 (하나만) *</label>${phsChips("ps_primary",PHS_PROBLEMS,sv.primaryProblem?[sv.primaryProblem]:[])}</div>
+    <div class="field"><label>최근에 더 나빠졌나요?</label>${phsChips("ps_worse",[{k:"yes",ko:"예"},{k:"no",ko:"아니오"}],sv.recentWorsening===true?["yes"]:(sv.recentWorsening===false?["no"]:[]))}</div>
+    <div class="field"><label>나빠진 기간</label>${phsChips("ps_wdur",[{k:"under_1m",ko:"1개월 이내"},{k:"1_to_3m",ko:"1~3개월"},{k:"over_3m",ko:"3개월 이상"}],sv.worseningDuration?[sv.worseningDuration]:[])}</div>
+    <div class="field"><label>아침 첫 약 먹고 좋아지기까지 (체감)</label>${phsChips("ps_morn",[{k:"under_30",ko:"30분 이내"},{k:"30_to_60",ko:"30~60분"},{k:"60_to_90_min",ko:"60~90분"},{k:"over_90",ko:"90분 이상/모름"}],sv.perceivedMorningResponse?[sv.perceivedMorningResponse]:[])}</div>
+    <div class="field"><label>힘든 시간대 (복수)</label>${phsChips("ps_times",PHS_TIMES,sv.difficultTimes)}</div>
+    <div class="field"><label>영향을 주는 것 같은 요인 (복수)</label>${phsChips("ps_factors",PHS_FACTORS,sv.suspectedFactors)}</div>
+    <div class="field"><label>진료 때 묻고 싶은 것 (복수)</label>${phsChips("ps_qs",PHS_QPRESET,sv.selectedPatientQuestions)}</div>
+    <div class="field"><label>관찰 시작일</label><input id="ps_date" type="date"><div class="hint" style="margin-top:2px">이미 기록해 둔 날부터 포함하려면 지난 날짜를 고르세요.</div></div>
+    <div class="field"><label>직접 묻고 싶은 질문 (선택)</label><textarea id="ps_freeq" placeholder="예: 오후 약을 더 일찍 먹는 것이 좋습니까?">${escapeHtml(sv.freeQuestion||"")}</textarea></div>
+    <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">취소</button><button class="btn primary" id="ps_save">${act? "수정 저장":"관찰 시작"}</button></div>`);
+  document.getElementById("ps_date").value=(act&&act.startDate)||todayKey();
+  phsChipMulti("ps_chief"); phsChipSingle("ps_primary"); phsChipSingle("ps_worse"); phsChipSingle("ps_wdur"); phsChipSingle("ps_morn"); phsChipMulti("ps_times"); phsChipMulti("ps_factors"); phsChipMulti("ps_qs");
+  document.getElementById("ps_save").onclick=()=>{
+    const primary=phsChipVals("ps_primary")[0]||null;
+    if(!primary){ toast("가장 큰 어려움을 하나 골라주세요"); return; }
+    const worse=phsChipVals("ps_worse")[0];
+    const survey={
+      chiefProblems:phsChipVals("ps_chief"), primaryProblem:primary,
+      recentWorsening:worse==="yes"?true:(worse==="no"?false:null),
+      worseningDuration:phsChipVals("ps_wdur")[0]||null,
+      perceivedMorningResponse:phsChipVals("ps_morn")[0]||null,
+      difficultTimes:phsChipVals("ps_times"),
+      suspectedFactors:phsChipVals("ps_factors"),
+      selectedPatientQuestions:phsChipVals("ps_qs"),
+      freeQuestion:document.getElementById("ps_freeq").value.trim(),
+    };
+    const sd=document.getElementById("ps_date").value||todayKey();
+    if(sd>todayKey()){ toast("시작일은 오늘 이전이어야 해요"); return; }
+    if(act){ act.startSurvey=survey; act.startDate=sd; }
+    else db.phs.observations.push({id:"obs_"+sd.replace(/-/g,""), startDate:sd, endDate:null, startSurvey:survey, endSurvey:null});
+    save(); closeSheet(); phsStatus(); toast(act? "설문을 수정했어요":"관찰을 시작했어요 — 평소처럼 기록만 하면 돼요");
+  };
+}
+/* ---- 3. 관찰 종료 설문 ---- */
+function phsOpenEnd(){
+  const act=phsActiveObs();
+  if(!act){ toast("진행 중인 관찰이 없어요 — 먼저 '관찰 시작'을 해주세요"); return; }
+  const sv=act.endSurvey||{};
+  openSheet(`
+    <h2>관찰 종료</h2>
+    <div class="hint">${act.startDate}부터 오늘까지의 기록으로 보고서를 만들 준비를 해요. 모두 선택 사항이에요.</div>
+    <div class="field"><label>관찰기간 동안 전반적으로</label>${phsChips("pe_overall",[{k:"better",ko:"좋아짐"},{k:"same",ko:"비슷"},{k:"worse",ko:"나빠짐"},{k:"varied",ko:"기복이 큼"}],sv.overallChange?[sv.overallChange]:[])}</div>
+    <div class="field"><label>가장 좋았던 날 (선택)</label><input id="pe_best" type="date" value="${sv.bestDay||""}"></div>
+    <div class="field"><label>가장 힘들었던 날 (선택)</label><input id="pe_worst" type="date" value="${sv.worstDay||""}"></div>
+    <div class="field"><label>특별한 일 (여행·감기·약 변경 등, 선택)</label><textarea id="pe_events">${escapeHtml(sv.specialEvents||"")}</textarea></div>
+    <div class="field"><label>스스로 느낀 점 (선택)</label><textarea id="pe_refl">${escapeHtml(sv.patientReflection||"")}</textarea></div>
+    <div class="field"><label>추가로 묻고 싶은 질문 (선택)</label><textarea id="pe_q">${escapeHtml(sv.additionalClinicianQuestion||"")}</textarea></div>
+    <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">취소</button><button class="btn primary" id="pe_save">관찰 종료</button></div>`);
+  phsChipSingle("pe_overall");
+  document.getElementById("pe_save").onclick=()=>{
+    act.endSurvey={
+      overallChange:phsChipVals("pe_overall")[0]||null,
+      bestDay:document.getElementById("pe_best").value||null,
+      worstDay:document.getElementById("pe_worst").value||null,
+      specialEvents:document.getElementById("pe_events").value.trim(),
+      patientReflection:document.getElementById("pe_refl").value.trim(),
+      additionalClinicianQuestion:document.getElementById("pe_q").value.trim(),
+    };
+    act.endDate=todayKey();
+    save(); closeSheet(); phsStatus(); toast("관찰을 종료했어요 — 이제 보고서를 만들 수 있어요");
+  };
+}
+/* ---- 보고서 생성 ---- */
+function phsGenerate(){
+  const act=phsActiveObs(), latest=phsLatestObs();
+  let obs=null, note="";
+  if(act){ obs={...act, endDate:todayKey()}; note="(관찰 진행 중 — 오늘까지의 기록으로 생성)"; }
+  else if(latest&&latest.endDate) obs=latest;
+  else {
+    /* 설문 없이도 최근 14일로 생성 가능 (설문 항목은 비워 둠) */
+    const end=todayKey(); const s=new Date(); s.setDate(s.getDate()-13);
+    obs={id:"obs_quick", startDate:dkey(s), endDate:end, startSurvey:null, endSurvey:null};
+    note="(설문 없이 최근 14일 기록으로 생성 — 설문을 작성하면 CC/HPI가 더 정확해져요)";
+  }
+  const [sy,sm,sd_]=obs.startDate.split("-").map(Number);
+  const [ey,em,ed]=obs.endDate.split("-").map(Number);
+  const startTs=new Date(sy,sm-1,sd_,0,0,0).getTime();
+  const endTs=new Date(ey,em-1,ed,23,59,59).getTime()+1000;
+  const analysis=PHS.analyze({events:db.events, startTs, endTs});
+  if(!analysis.period.totalOutputRecords){ toast("이 기간에 출력 기록이 없어요"); return; }
+  const confidence=PHS.assessConfidence(analysis, obs.startSurvey);
+  const report=PHS.buildReport({profile:db.phs.profile, startSurvey:obs.startSurvey, endSurvey:obs.endSurvey, analysis, confidence, medsList:db.meds});
+  const safety=PHS.checkReportSafety(report);
+  if(safety.length){ console.warn("PHS safety check", safety); toast("보고서 안전 검사에서 문구를 보정했어요"); }
+  phsRenderReport(report, analysis, note);
+}
+/* ---- 보고서 렌더 ---- */
+function phsQHtml(q){
+  const tag=q.type==="free"?"환자 질문":(q.type==="selected"?"선택 질문":"제안 질문");
+  return `<div class="phs-q"><span class="tag">${tag}</span>${escapeHtml(q.text)}</div>`;
+}
+function phsRenderReport(report, analysis, note){
+  const ov=document.getElementById("phsOverlay");
+  const one=report.onePageSummary, det=report.detailedReport;
+  const conf=det.confidence;
+  const CONF={high:"높음",moderate:"보통",low:"낮음"};
+  const profile=db.phs.profile||{};
+  const profLine=[profile.ageGroup,profile.sex,profile.diagnosisYears?`진단 ${profile.diagnosisYears}년`:null,profile.dominantSide?`${profile.dominantSide} 우세`:null,profile.dbsStatus].filter(Boolean).join(" · ");
+  const anchors=profile.anchors||{};
+  const anchorRows=[["100",anchors.o100],["50",anchors.o50],["0~20",anchors.o20]].filter(([k,v])=>v);
+  /* C. 그래프 리뷰: 기간 내 기록 있는 날 (최대 7일, 최근순) */
+  const dayKeysAll=[...new Set(analysis._adapted.outputEvents.map(e=>dkey(new Date(e.ts))))].sort();
+  const graphDays=dayKeysAll.slice(-7);
+  ov.innerHTML=`
+    <div class="phs-toolbar no-print">
+      <button class="btn ghost" id="phsCloseBtn">← 닫기</button>
+      <button class="btn primary" id="phsPrintBtn">🖨 인쇄 / PDF</button>
+      <button class="btn ghost" id="phsCopyBtn">텍스트 복사</button>
+      <button class="btn ghost" id="phsJsonBtn">JSON 저장</button>
+    </div>
+    <div class="phs-page">
+      <h1>Patient History Summary</h1>
+      <div class="phs-meta">관찰기간 ${report.period.start} ~ ${report.period.end} · 생성 ${new Date(report.generatedAt).toLocaleDateString("ko-KR")} ${note||""}<br>${profLine||""}</div>
+      <h2>CC (주호소)</h2><div>${escapeHtml(one.cc)}</div>
+      <h2>HPI (현병력 요약)</h2><div>${escapeHtml(one.hpi)}</div>
+      <h2>핵심 관찰 결과</h2><ul style="margin:4px 0 0 18px; padding:0">${one.keyResults.map(k=>`<li>${escapeHtml(k)}</li>`).join("")}</ul>
+      <h2>주요 일중 패턴</h2><div>${escapeHtml(one.mainDailyPattern)}</div>
+      <h2>환자 질문</h2>${one.patientQuestions.length? one.patientQuestions.map(phsQHtml).join(""):"<div class='phs-meta'>등록된 질문 없음</div>"}
+      <h2>임상 검토 포인트</h2><ul style="margin:4px 0 0 18px; padding:0">${one.clinicalReviewPoints.map(k=>`<li>${escapeHtml(k)}</li>`).join("")}</ul>
+      <div class="phs-disc">${escapeHtml(report.disclaimer)}</div>
+    </div>
+    <div class="phs-page">
+      <h1 style="font-size:16px">상세 기록 및 모니터링</h1>
+      <h2>현재 복용 약 (관찰기간 기록 기준)</h2>
+      ${det.currentMedication.length? `<ul style="margin:4px 0 0 18px; padding:0">${det.currentMedication.map(k=>`<li>${escapeHtml(k)}</li>`).join("")}</ul>`:"<div class='phs-meta'>복약 기록 없음</div>"}
+      ${anchorRows.length? `<h2>환자 정의 출력 기준</h2><table><thead><tr><th>출력</th><th>환자에게의 의미</th></tr></thead><tbody>${anchorRows.map(([k,v])=>`<tr><td>${k}</td><td>${escapeHtml(v)}</td></tr>`).join("")}</tbody></table>`:""}
+      <h2>모니터링 요약 <span class="phs-conf">신뢰도 ${CONF[conf.sectionConfidence.outputSummary]}</span></h2>
+      <table><tbody>
+        <tr><th>기록 일수</th><td>${det.monitoringSummary.recordedDays} / ${det.monitoringSummary.periodDays}일</td><th>출력 기록</th><td>${det.monitoringSummary.totalOutputRecords}회</td></tr>
+        <tr><th>출력 평균/중앙값</th><td>${det.monitoringSummary.outputAverage} / ${det.monitoringSummary.outputMedian}</td><th>범위</th><td>${det.monitoringSummary.outputMin}~${det.monitoringSummary.outputMax}</td></tr>
+        <tr><th>하루 평균 변동폭</th><td>${det.monitoringSummary.averageDailyRange??"–"}</td><th>미기록 공백</th><td>${det.monitoringSummary.unrecordedGapCount}회 · ${Math.round(det.monitoringSummary.missingMinutes/60)}시간</td></tr>
+        <tr><th>안정 시간대</th><td>${det.monitoringSummary.mostStablePeriod||"–"}</td><th>변동 시간대</th><td>${det.monitoringSummary.mostVariablePeriod||"–"}</td></tr>
+      </tbody></table>
+      ${det.monitoringSummary.timeOfDayAverages.length? `<table><thead><tr><th>시간대</th>${det.monitoringSummary.timeOfDayAverages.map(t=>`<th>${t.label.slice(0,5)}</th>`).join("")}</tr></thead><tbody><tr><th>평균 출력</th>${det.monitoringSummary.timeOfDayAverages.map(t=>`<td>${t.avg}</td>`).join("")}</tr></tbody></table>`:""}
+      <h2>약물 반응 <span class="phs-conf">신뢰도 ${CONF[conf.sectionConfidence.medicationResponse]}</span></h2>
+      <table><tbody>
+        <tr><th>오전 첫 복용 평가</th><td>${det.medicationResponse.morningFirstDose.evaluableDoses} / ${det.medicationResponse.morningFirstDose.doses}회</td><th>상승까지 중앙값</th><td>${det.medicationResponse.morningFirstDose.medianRiseMinutes??"–"}분</td></tr>
+        <tr><th>반응 지연 후보</th><td>${det.medicationResponse.morningFirstDose.delayedCandidates}회</td><th>불완전 반응 후보</th><td>${det.medicationResponse.morningFirstDose.incompleteCandidates}회</td></tr>
+        <tr><th>뚜렷한 반응 없음 후보</th><td>${det.medicationResponse.morningFirstDose.noClearResponseCandidates}회</td><th>웨어링오프 의심</th><td>${det.medicationResponse.wearingOffCandidate? `있음 (${det.medicationResponse.wearingOffDays}일 반복)`:"뚜렷하지 않음"}</td></tr>
+      </tbody></table>
+      <h2>동반 증상</h2>
+      ${det.associatedSymptoms.length? `<table><thead><tr><th>증상</th><th>횟수</th><th>발생 시 평균 출력</th><th>중앙값 지속(분)</th><th>패턴(기술적)</th></tr></thead><tbody>${det.associatedSymptoms.map(sy=>`<tr><td>${escapeHtml(sy.label)}</td><td>${sy.count}</td><td>${sy.averageOutputAtEvent??"–"}</td><td>${sy.medianDurationMinutes??"–"}</td><td>${escapeHtml(sy.relation)}</td></tr>`).join("")}</tbody></table>`:"<div class='phs-meta'>증상 기록 없음</div>"}
+      <h2>영향 가능 요인 (시간적 연관성만)</h2>
+      ${det.possibleInfluencingFactors.length? `<ul style="margin:4px 0 0 18px; padding:0">${det.possibleInfluencingFactors.map(k=>`<li>${escapeHtml(k)}</li>`).join("")}</ul>`:"<div class='phs-meta'>해당 기록 없음</div>"}
+      <h2>환자 질문</h2>${det.patientQuestions.length? det.patientQuestions.map(phsQHtml).join(""):"<div class='phs-meta'>등록된 질문 없음</div>"}
+      <h2>임상 검토 포인트</h2><ul style="margin:4px 0 0 18px; padding:0">${det.clinicalReviewPoints.map(k=>`<li>${escapeHtml(k)}</li>`).join("")}</ul>
+      <h2>자료의 한계</h2><ul style="margin:4px 0 0 18px; padding:0">${det.limitations.map(k=>`<li>${escapeHtml(k)}</li>`).join("")}</ul>
+      <div class="phs-meta" style="margin-top:8px">전체 신뢰도: ${CONF[conf.overall]} (${conf.score}/100)</div>
+      <div class="phs-disc">${escapeHtml(report.disclaimer)}</div>
+    </div>
+    <div class="phs-page">
+      <h1 style="font-size:16px">그래프 리뷰</h1>
+      <div class="phs-meta">빨간 선=출력 · 파란 선=약효 추정 · 세로 눈금=복약 · 하단 막대=증상 구간 · 회색 음영=미기록(${Math.round(MAX_INTERPOLATION_GAP_MINUTES/60)}시간 초과 공백)</div>
+      ${graphDays.map(k=>`<div class="phs-graph"><div class="cap">${fmtDateK(k)}</div>${phsDaySvg(k)}</div>`).join("") || "<div class='phs-meta'>기간 내 출력 기록 없음</div>"}
+      <div class="phs-disc">${escapeHtml(report.disclaimer)}</div>
+    </div>`;
+  ov.classList.add("open");
+  document.getElementById("phsCloseBtn").onclick=()=>ov.classList.remove("open");
+  document.getElementById("phsPrintBtn").onclick=()=>{
+    document.body.classList.add("phs-print");
+    const done=()=>{ document.body.classList.remove("phs-print"); window.removeEventListener("afterprint",done); };
+    window.addEventListener("afterprint",done);
+    window.print();
+    setTimeout(done, 2000); /* afterprint 미지원 브라우저 대비 */
+  };
+  document.getElementById("phsCopyBtn").onclick=()=>{
+    const txt=phsReportText(report);
+    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(()=>toast("보고서 텍스트를 복사했어요"),()=>toast("복사에 실패했어요"));
+    else toast("이 브라우저에서는 복사가 지원되지 않아요");
+  };
+  document.getElementById("phsJsonBtn").onclick=()=>{
+    const clean={...report}; delete clean._adapted;
+    const blob=new Blob([JSON.stringify(clean,null,2)],{type:"application/json"});
+    const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+    a.download=`PatientHistorySummary_${report.period.start}_${report.period.end}.json`; a.click(); URL.revokeObjectURL(a.href);
+    toast("보고서 JSON을 저장했어요");
+  };
+}
+function phsReportText(r){
+  const one=r.onePageSummary, det=r.detailedReport;
+  const q=l=>l.map(x=>`- [${x.type==="free"?"환자":"제안"}] ${x.text}`).join("\n");
+  return [
+    `Patient History Summary`,
+    `관찰기간 ${r.period.start} ~ ${r.period.end}`,
+    ``,`[CC] ${one.cc}`,``,`[HPI] ${one.hpi}`,
+    ``,`[핵심 관찰 결과]`, one.keyResults.map(k=>`- ${k}`).join("\n"),
+    ``,`[주요 일중 패턴] ${one.mainDailyPattern}`,
+    ``,`[환자 질문]`, q(one.patientQuestions)||"- 없음",
+    ``,`[임상 검토 포인트]`, one.clinicalReviewPoints.map(k=>`- ${k}`).join("\n"),
+    ``,`[자료의 한계]`, det.limitations.map(k=>`- ${k}`).join("\n"),
+    ``, r.disclaimer,
+  ].join("\n");
+}
+/* 하루 요약 SVG (출력선 + 약효추정 + 복약 눈금 + 증상 막대 + 미기록 음영) */
+function phsDaySvg(dayKey){
+  const dayEvents=(byDay()[dayKey]||[]).slice().sort((a,b)=>a.ts-b.ts);
+  const [Y,Mo,Da]=dayKey.split("-").map(Number);
+  const dayStart=new Date(Y,Mo-1,Da,6,0,0).getTime(), dayEnd=new Date(Y,Mo-1,Da,23,59,0).getTime();
+  const span=dayEnd-dayStart, W=700, pad=12, plotTop=6, plotH=90, symY=plotTop+plotH+10, axisY=symY+14, H=axisY+6;
+  const xOf=ts=>pad+(Math.max(dayStart,Math.min(dayEnd,ts))-dayStart)/span*(W-2*pad);
+  const yOf=v=>plotTop+(100-v)/100*plotH;
+  const outs=dayEvents.filter(e=>e.type==="state"&&e.output!=null);
+  let svg="";
+  /* 미기록 음영 (공통 기준 초과 공백 — PHS.config.maxGapMin) */
+  const gapMs=MAX_INTERPOLATION_GAP_MINUTES*60000; const pts=[dayStart,...outs.map(e=>e.ts),dayEnd].sort((a,b)=>a-b);
+  for(let i=0;i<pts.length-1;i++){ if(pts[i+1]-pts[i]>gapMs){
+    svg+=`<rect x="${xOf(pts[i]).toFixed(1)}" y="${plotTop}" width="${(xOf(pts[i+1])-xOf(pts[i])).toFixed(1)}" height="${plotH}" fill="var(--line)" opacity="0.25"/>`;
+  }}
+  for(let h=6;h<=24;h+=3){ const t=new Date(Y,Mo-1,Da,h,0,0).getTime(); const x=xOf(Math.min(t,dayEnd));
+    svg+=`<line x1="${x.toFixed(1)}" y1="${plotTop}" x2="${x.toFixed(1)}" y2="${symY+6}" stroke="var(--line)" stroke-width="0.7" opacity="0.5"/>`;
+    svg+=`<text x="${x.toFixed(1)}" y="${axisY}" font-size="9" fill="var(--ink-2)" text-anchor="${h===6?"start":(h===24?"end":"middle")}">${String(h).padStart(2,"0")}:00</text>`; }
+  if(dayEvents.some(e=>e.type==="med")){
+    const dp=computeCurve(dayEvents,dayKey).pts.filter(p=>p.t>=dayStart&&p.t<=dayEnd);
+    if(dp.length>1) svg+=`<polyline points="${dp.map(p=>`${xOf(p.t).toFixed(1)},${yOf(p.val).toFixed(1)}`).join(" ")}" fill="none" stroke="#5C93D6" stroke-width="1.6" opacity="0.7"/>`;
+  }
+  if(outs.length){
+    svg+=`<polyline points="${outs.map(e=>`${xOf(e.ts).toFixed(1)},${yOf(e.output).toFixed(1)}`).join(" ")}" fill="none" stroke="#D6455C" stroke-width="2"/>`;
+    svg+=outs.map(e=>`<circle cx="${xOf(e.ts).toFixed(1)}" cy="${yOf(e.output).toFixed(1)}" r="2.6" fill="#D6455C"/>`).join("");
+  }
+  dayEvents.filter(e=>e.type==="med").forEach(m=>{ const x=xOf(m.ts).toFixed(1);
+    svg+=`<line x1="${x}" y1="${plotTop+plotH+1}" x2="${x}" y2="${plotTop+plotH+8}" stroke="var(--ink-2)" stroke-width="2"/>`; });
+  SYMPTOM_QUICK.forEach(sq=>{
+    const evs=dayEvents.filter(e=>e.type==="symptom"&&e.key===sq.key).sort((a,b)=>a.ts-b.ts); let open=null;
+    evs.forEach(e=>{ if(e.phase==="start") open=e.ts;
+      else if(e.phase==="end"&&open!=null){ svg+=`<line x1="${xOf(open).toFixed(1)}" y1="${symY}" x2="${xOf(e.ts).toFixed(1)}" y2="${symY}" stroke="${SYMPTOM_COLOR[sq.key]}" stroke-width="4.5" stroke-linecap="round"/>`; open=null; } });
+    if(open!=null) svg+=`<line x1="${xOf(open).toFixed(1)}" y1="${symY}" x2="${xOf(dayEnd).toFixed(1)}" y2="${symY}" stroke="${SYMPTOM_COLOR[sq.key]}" stroke-width="4.5" stroke-linecap="round" opacity="0.55"/>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%; height:auto; display:block">${svg}</svg>`;
+}
+document.getElementById("phsProfileBtn").onclick=phsOpenProfile;
+document.getElementById("phsStartBtn").onclick=phsOpenStart;
+document.getElementById("phsEndBtn").onclick=phsOpenEnd;
+document.getElementById("phsGenBtn").onclick=phsGenerate;
+phsStatus();
+/* ================= /Patient History Summary UI ================= */
+
 </script>
 </body>
 </html>
