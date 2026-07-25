@@ -1,7 +1,9 @@
-const CACHE = "yakhyo-v25-ui918";
+const CACHE = "yakhyo-v26-phs919";
 const APP_SHELL = [
   "./",
   "./index.html",
+  "./phs-engine.js",
+  "./phs-report.js",
   "./manifest.json",
   "./privacy.html",
   "./icon-192.png",
