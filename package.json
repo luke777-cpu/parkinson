@@ -1,12 +1,12 @@
 {
-  "name": "yakhyo-medication-diary",
-  "version": "0.12.1",
+  "name": "yakhyo-ilji",
+  "version": "0.9.19",
   "private": true,
-  "type": "module",
+  "description": "약효일지 — 파킨슨 출력 중심 복약 일지 PWA (테스트 러너 포함)",
   "scripts": {
-    "test": "node --test tests/engine.test.js tests/output-engine.test.js tests/quick-event.test.js tests/clinical-event.test.js",
-    "test:output": "node --test tests/output-engine.test.js tests/quick-event.test.js",
-    "validate": "node scripts/validate-project.js",
-    "check": "npm run test && npm run validate"
+    "test": "node tests/phs-engine.test.js && node tests/phs-integration.test.js"
+  },
+  "devDependencies": {
+    "jsdom": "^29.1.1"
   }
 }
