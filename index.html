@@ -297,12 +297,7 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
     <div class="chart-card">
       <div class="card-title"><span data-i18n="recentTrend">최근 추이 (분/일)</span><span id="trendRange"></span></div>
       <div id="trendChart"></div>
-      <div class="legend">
-        <span><i style="background:var(--on)"></i>ON</span>
-        <span><i style="background:var(--partial)"></i><span data-i18n="legendPartial">불완전ON</span></span>
-        <span><i style="background:var(--off)"></i>OFF</span>
-        <span><i style="background:var(--dysk)"></i><span data-i18n="legendDysk2">이상운동</span></span>
-      </div>
+      <div class="legend" id="trendZoneLegend"></div>
     </div>
     <div class="chart-card" id="trendOverlayCard">
       <div class="card-title"><span data-i18n="outputOverlayTitle">출력 곡선 + 생활기록 + 이벤트</span></div>
@@ -334,7 +329,7 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
       </div>
     </div>
     <div class="disclaimer" style="margin:10px 0" data-i18n="curveDisclaimer">
-      이 곡선은 실측 혈중 도파민 농도가 아니라, 복약 시간·약물별 일반적 흡수 프로파일(퍼킨=급상승형, HBS=완만 지속형, 온젠티스=연장형)과 형이 직접 기록한 출력·보행·이상운동 점수를 결합해 추정한 "기능적 약효 곡선"입니다. 주치의 상담 시 참고 자료로만 활용하세요.
+      이 곡선은 실측 혈중 도파민 농도가 아닙니다. 복약 시간, 약물별 일반적인 흡수 특성(퍼킨=빠른 상승, HBS=완만한 지속, 온젠티스=작용 연장), 직접 기록한 출력·이상운동 점수를 바탕으로 계산한 예상 약효 변화입니다. 주치의 상담 시 참고 자료로만 활용하세요.
     </div>
     <div id="curveEventList"></div>
   </section>
@@ -455,7 +450,7 @@ const I18N = {
     addPast:"+ 지난 기록 직접 추가",
     recentTrend:"날짜별 출력 구간 체류시간", legendPartial:"불완전ON", legendDysk2:"이상운동",
     estCurve:"약효 추정 곡선", legendDA:"추정 도파민 작용", legendOutput:"출력 점수", legendGait:"보행 점수", legendDysk:"이상운동 구간", legendOff:"OFF 구간",
-    curveDisclaimer:"이 곡선은 실측 혈중 도파민 농도가 아니라, 복약 시간·약물별 일반적 흡수 프로파일(퍼킨=급상승형, HBS=완만 지속형, 온젠티스=연장형)과 형이 직접 기록한 출력·보행·이상운동 점수를 결합해 추정한 \"기능적 약효 곡선\"입니다. 주치의 상담 시 참고 자료로만 활용하세요.",
+    curveDisclaimer:"이 곡선은 실측 혈중 도파민 농도가 아닙니다. 복약 시간, 약물별 일반적인 흡수 특성(퍼킨=빠른 상승, HBS=완만한 지속, 온젠티스=작용 연장), 직접 기록한 출력·이상운동 점수를 바탕으로 계산한 예상 약효 변화입니다. 주치의 상담 시 참고 자료로만 활용하세요.",
     thisDayRecord:"이 날 기록",
     printPdf:"🖨 인쇄 / PDF",
     range7:"최근 7일", range14:"최근 14일", range30:"최근 30일",
@@ -489,7 +484,7 @@ const I18N = {
     pastDateSaved:"기록을 추가했습니다", viewAddedRecord:"추가한 기록 보기", refState:"참고 상태",
     symptomTitle:"⚡ 증상 기록 — 시작할 때 누르고, 끝나면 한 번 더", medLifeTitle:"약·생활 기록",
     outputOverlayTitle:"출력 곡선 + 생활기록 + 이벤트", overlayTapHint:"그래프를 눌러 그 시각의 출력·약효·이벤트를 확인하세요",
-    versionLabel:"약효일지 · 테스트판 0.9.17",
+    versionLabel:"약효일지 · 테스트판 0.9.18",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -542,7 +537,7 @@ const I18N = {
     pastDateSaved:"Record added", viewAddedRecord:"View added record", refState:"Reference state",
     symptomTitle:"⚡ Symptoms — tap to start, tap again to end", medLifeTitle:"Medication & life records",
     outputOverlayTitle:"Output curve + life records + events", overlayTapHint:"Tap the chart to see output, drug level, and events at that time",
-    versionLabel:"Med Log · Test build 0.9.17",
+    versionLabel:"Med Log · Test build 0.9.18",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -1155,12 +1150,14 @@ function outputStats(rangeEvents){
   return {avg, max, min, range:max-min, riseRate, fallRate, avgAUC};
 }
 function symptomOutputStats(rangeEvents){
-  const syms = rangeEvents.filter(e=>e.type==="symptom" && e.phase==="start" && e.outputAtStart!=null);
+  /* v0.9.18: 출력값이 없는 증상 시작 기록(지난 기록으로 추가한 경우 등)도 횟수에는 포함한다.
+     평균 출력은 출력값이 있는 기록만으로 계산하고, 없으면 "–"로 표시된다. */
+  const starts = rangeEvents.filter(e=>e.type==="symptom" && e.phase==="start");
   const byKey={};
-  syms.forEach(e=>{ (byKey[e.key]||(byKey[e.key]=[])).push(e.outputAtStart); });
+  starts.forEach(e=>{ const o=(byKey[e.key]||(byKey[e.key]={n:0,vals:[]})); o.n++; if(e.outputAtStart!=null) o.vals.push(e.outputAtStart); });
   return SYMPTOM_QUICK.map(sq=>{
-    const arr=byKey[sq.key]||[];
-    return {key:sq.key, label:symQuickLabel(sq.key), n:arr.length, avg: arr.length? Math.round(arr.reduce((a,b)=>a+b,0)/arr.length): null};
+    const o=byKey[sq.key]||{n:0,vals:[]};
+    return {key:sq.key, label:symQuickLabel(sq.key), n:o.n, avg: o.vals.length? Math.round(o.vals.reduce((a,b)=>a+b,0)/o.vals.length): null};
   }).filter(r=>r.n>0);
 }
 function medOutputCorrelation(rangeEvents){
@@ -1417,15 +1414,22 @@ function voiceTrend(trend, text){
 function renderOutputGraph(){
   const wrap=document.getElementById("outputGraphWrap"); if(!wrap) return;
   const card=document.getElementById("outputGraphCard");
-  const tEvents=(byDay()[todayKey()]||[]).filter(e=>e.type==="state"&&e.output!=null).sort((a,b)=>a.ts-b.ts);
+  const allToday=(byDay()[todayKey()]||[]);
+  const tEvents=allToday.filter(e=>e.type==="state"&&e.output!=null).sort((a,b)=>a.ts-b.ts);
   if(!tEvents.length){ if(card) card.style.display="none"; wrap.innerHTML=""; return; }
   if(card) card.style.display="block";
-  const W=320,H=190,pad=12;
+  /* v0.9.18: 증상 구간(이상운동증 등) 표시 줄 + 시간축 추가 */
+  const W=320,pad=12, plotTop=12, plotH=150;
+  const symEvents=allToday.filter(e=>e.type==="symptom").sort((a,b)=>a.ts-b.ts);
+  const hasSym=symEvents.length>0;
+  const symY=plotTop+plotH+12;
+  const axisY=(hasSym? symY+12 : plotTop+plotH+14);
+  const H=axisY+6;
   const dayStart=new Date(); dayStart.setHours(6,0,0,0);
   const dayEnd=new Date(); dayEnd.setHours(23,59,0,0);
   const span=dayEnd.getTime()-dayStart.getTime();
   const xOf = ts => pad + (Math.max(dayStart.getTime(),Math.min(dayEnd.getTime(),ts))-dayStart.getTime())/span*(W-2*pad);
-  const yOf = v => pad + (100-v)/100*(H-2*pad);
+  const yOf = v => plotTop + (100-v)/100*plotH;
   const pts = tEvents.map(e=>`${xOf(e.ts).toFixed(1)},${yOf(e.output).toFixed(1)}`).join(" ");
   const dots = tEvents.map(e=>{
     const x=xOf(e.ts).toFixed(1), y=yOf(e.output).toFixed(1);
@@ -1433,13 +1437,47 @@ function renderOutputGraph(){
   }).join("");
   const todayChecks = (db.outputChecks||[]).filter(c=>dkey(new Date(c.ts))===todayKey());
   const checkDots = todayChecks.map(c=>`<circle cx="${xOf(c.ts).toFixed(1)}" cy="${yOf(c.guidedOutput).toFixed(1)}" r="4.5" fill="none" stroke="#D6455C" stroke-width="1.6"/>`).join("");
+  /* 시간축: 3시간 간격 라벨 + 옅은 세로 격자선 */
+  let axis="";
+  const base=new Date(); base.setHours(0,0,0,0);
+  for(let h=6; h<=24; h+=3){
+    const t=base.getTime()+h*3600000;
+    const x=xOf(Math.min(t,dayEnd.getTime()));
+    axis += `<line x1="${x.toFixed(1)}" y1="${plotTop}" x2="${x.toFixed(1)}" y2="${(hasSym?symY+6:plotTop+plotH+4)}" stroke="var(--line)" stroke-width="0.8" opacity="0.55"/>`;
+    const anchor = h===6? "start" : (h===24? "end" : "middle");
+    axis += `<text x="${x.toFixed(1)}" y="${axisY}" font-size="8" fill="var(--ink-2)" text-anchor="${anchor}">${String(h).padStart(2,"0")}:00</text>`;
+  }
+  /* 증상 시작~종료 구간 막대 (진행중이면 현재 시각까지 옅게) */
+  let symBars="", symLegend="";
+  if(hasSym){
+    const usedKeys=new Set();
+    SYMPTOM_QUICK.forEach(sq=>{
+      const evs=symEvents.filter(e=>e.key===sq.key);
+      if(!evs.length) return;
+      usedKeys.add(sq.key);
+      let openTs=null;
+      evs.forEach(e=>{
+        if(e.phase==="start") openTs=e.ts;
+        else if(e.phase==="end" && openTs!=null){
+          symBars += `<line x1="${xOf(openTs).toFixed(1)}" y1="${symY}" x2="${xOf(e.ts).toFixed(1)}" y2="${symY}" stroke="${SYMPTOM_COLOR[sq.key]}" stroke-width="5" stroke-linecap="round"/>`;
+          openTs=null;
+        }
+      });
+      if(openTs!=null){
+        symBars += `<line x1="${xOf(openTs).toFixed(1)}" y1="${symY}" x2="${xOf(Date.now()).toFixed(1)}" y2="${symY}" stroke="${SYMPTOM_COLOR[sq.key]}" stroke-width="5" stroke-linecap="round" opacity="0.6"/>`;
+      }
+    });
+    symLegend = `<div class="legend" style="margin-top:6px">${SYMPTOM_QUICK.filter(sq=>usedKeys.has(sq.key)).map(sq=>`<span><i style="background:${SYMPTOM_COLOR[sq.key]}"></i>${L(sq.ko,sq.en)}</span>`).join("")}</div>`;
+  }
   wrap.innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="width:100%; height:auto; display:block">
+      ${axis}
       <line x1="${pad}" y1="${yOf(80).toFixed(1)}" x2="${W-pad}" y2="${yOf(80).toFixed(1)}" stroke="var(--line)" stroke-dasharray="3,3"/>
       <line x1="${pad}" y1="${yOf(20).toFixed(1)}" x2="${W-pad}" y2="${yOf(20).toFixed(1)}" stroke="var(--line)" stroke-dasharray="3,3"/>
       <polyline points="${pts}" fill="none" stroke="#D6455C" stroke-width="2.4"/>
       ${dots}
       ${checkDots}
-    </svg>`;
+      ${symBars}
+    </svg>${symLegend}`;
 }
 function zoneLabel(stateKey){
   const map = {on:L("고점(ON)","peak (ON)"), rising:L("상승기","rising phase"), falling:L("하강기","falling phase"), off:L("OFF","OFF"), wake:L("기상 직후","just after waking")};
@@ -1507,6 +1545,7 @@ const SYMPTOM_QUICK = [
   {key:"freeze", ko:"동결",       en:"Freezing",   ic:"🧊"},
   {key:"dyst",   ko:"근긴장이상", en:"Dystonia",   ic:"🔗"},
   {key:"tremor", ko:"떨림",       en:"Tremor",     ic:"〜"},
+  {key:"brady",  ko:"서동",       en:"Bradykinesia", ic:"🐢"}, /* v0.9.18: 서동(움직임 느려짐) 추가 */
   {key:"other",  ko:"기타 증상", en:"Other symptom", ic:"➕"},
 ];
 function symQuickLabel(key){ const s=SYMPTOM_QUICK.find(x=>x.key===key); return s? L(s.ko,s.en) : key; }
@@ -1690,7 +1729,7 @@ function evRow(e){
     const phaseLabel = e.phase==="start" ? L("시작","started") : L("종료","ended");
     const outVal = e.phase==="start" ? e.outputAtStart : e.outputAtEnd;
     const outTxt = outVal!=null ? ` · ${L("출력","output")} ${outVal}` : "";
-    row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">${label} ${phaseLabel}${outTxt}</div></div>
+    row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">${label} ${phaseLabel}${outTxt}</div>${e.memo?`<div class="m">${escapeHtml(e.memo)}</div>`:""}</div>
       <span class="pill" style="background:var(--dysk)">${L("증상","Symptom")}</span>`;
   } else {
     const {s, extraTxt} = lifeRowInfo(e);
@@ -1704,7 +1743,8 @@ function evRow(e){
     insight.onclick=(ev)=>{ ev.stopPropagation(); openFactorInsight(e); };
     row.appendChild(insight);
   }
-  if(e.type!=="symptom"){
+  {
+    /* v0.9.18: 증상 기록도 ✎ 수정 가능 (시각·증상 종류·시작/종료 변경, 다른 종류로 전환 포함) */
     const edit=document.createElement("button"); edit.className="edit"; edit.innerHTML="✎";
     edit.title=L("수정","Edit"); edit.onclick=()=>editEvent(e);
     row.appendChild(edit);
@@ -1725,7 +1765,7 @@ function editEvent(e){
     else openStateSheet(e.state, e);
   }
   else if(e.type==="med") openEditMedSheet(e);
-  else openAddPast(e);
+  else openAddPast(e); /* life·symptom 기록은 종류 전환이 가능한 통합 수정 화면으로 */
 }
 /* 기존 참고 상태 기록(output:null) 전용 수정 화면.
    기본은 날짜·시각·메모만 수정 (output:null 그대로 유지).
@@ -1781,7 +1821,9 @@ function openEditMedSheet(e){
     <div class="field"><label>${L("약 이름","Medication name")}</label><input id="em_drug" value="${escapeHtml(e.drug||"")}"></div>
     <div class="field"><label>${L("용량 (mg, 선택)","Dose (mg, optional)")}</label><input id="em_dose" type="number" inputmode="numeric" value="${e.dose??""}"></div>
     <div class="field"><label>${L("메모 (선택)","Memo (optional)")}</label><textarea id="em_memo">${escapeHtml(e.memo||"")}</textarea></div>
+    <div style="text-align:center; margin-bottom:6px"><button class="btn ghost" id="em_changeKind" style="font-size:12.5px; width:auto">${L("↺ 기록 종류 변경 (출력·증상 등으로 전환)","↺ Change record type (convert to output, symptom, …)")}</button></div>
     <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="em_save">${L("수정 저장","Save changes")}</button></div>`);
+  document.getElementById("em_changeKind").onclick=()=>{ closeSheet(); openAddPast(e); }; /* v0.9.18 */
   document.getElementById("em_save").onclick=()=>{
     const drug=document.getElementById("em_drug").value.trim(); if(!drug){ toast(L("약 이름을 입력하세요","Please enter a medication name")); return; }
     const ts=tsFromTimeField("em_ts", e.ts);
@@ -1828,7 +1870,8 @@ function openGlossary(){
     <div class="rsec">${tr("glossDyskVsDyst")}</div>
     <div style="font-size:13.5px; line-height:1.8">
       ${L("<b>이상운동(dyskinesia)</b> — 약효가 강할 때 나타나는 불수의적이고 크게 흔들리는 움직임","<b>Dyskinesia</b> — involuntary, large swaying movements that appear when medication effect is strong")}<br>
-      ${L("<b>근긴장(dystonia)</b> — 근육이 뻣뻣하게 굳거나 발가락 등이 뒤틀리듯 당겨지는 느낌. 주로 OFF 때나 아침에 잘 생겨요.","<b>Dystonia</b> — muscles feel stiff or twisted (e.g. toe curling). Usually happens during OFF or in the morning.")}
+      ${L("<b>근긴장(dystonia)</b> — 근육이 뻣뻣하게 굳거나 발가락 등이 뒤틀리듯 당겨지는 느낌. 주로 OFF 때나 아침에 잘 생겨요.","<b>Dystonia</b> — muscles feel stiff or twisted (e.g. toe curling). Usually happens during OFF or in the morning.")}<br>
+      ${L("<b>서동(bradykinesia)</b> — 움직임이 전반적으로 느려지고 동작을 시작하기 어려운 상태. 주로 약효가 약할 때 나타나요.","<b>Bradykinesia</b> — movements become slow overall and hard to initiate. Usually appears when medication effect is weak.")}
     </div>
     <div class="rsec">${L("출력감 점수 기준 (0–100)","Output score guide (0–100)")}</div>
     <div style="font-size:13.5px; line-height:1.8">${L("100 평소와 거의 같음 · 80 대부분 일상생활 가능 · 60 느려졌지만 활동 가능 · 40 움직임이 많이 둔함 · 20 거의 OFF에 가까움 · 0 거의 움직일 수 없음","100 nearly normal · 80 most daily activity possible · 60 slower but active · 40 movement noticeably slowed · 20 close to OFF · 0 almost unable to move")}</div>
@@ -1905,6 +1948,13 @@ function renderTrend(){
     ${kpiCard(kMin==null?"–":kMin,L("평균 최저 출력","Avg min output"))}
     ${kpiCard(kCnt==null?"–":kCnt+`<small>${L("회","x")}</small>`,L("일평균 기록","Avg records/day"))}`;
   chart.innerHTML=buildChart(recent);
+  /* v0.9.18: 범례를 실제 막대 색(출력 구간)과 항상 일치하도록 동적으로 생성.
+     예전 ON/불완전ON/OFF/이상운동 범례는 현재 그래프와 맞지 않아 파란색(출력 50~79)의 의미가 설명되지 않았다. */
+  const zoneDesc = {z80:L("높음","high"), z50:L("중간","medium"), z20:L("낮음","low"), z0:L("매우 낮음","very low")};
+  const zl=document.getElementById("trendZoneLegend");
+  if(zl) zl.innerHTML =
+    OUTPUT_ZONES.map(z=>`<span><i style="background:${z.color}"></i>${L(z.ko,z.en)} (${zoneDesc[z.key]})</span>`).join("")
+    + `<span><i style="background:var(--line);opacity:.55"></i>${L("미기록","Unrecorded")}</span>`;
   cards.innerHTML="";
   [...sums].reverse().slice(0,14).forEach(({k,s,o})=>{
     const c=document.createElement("div"); c.className="daycard";
@@ -1946,7 +1996,7 @@ function populateTrendOverlayDateSelect(){
   if(prev && keys.includes(prev)) sel.value=prev; else sel.value=keys[0]||todayKey();
   sel.onchange=()=>renderOutputOverlay(sel.value);
 }
-const SYMPTOM_COLOR = {dysk:"var(--dysk)", freeze:"var(--signal)", dyst:"var(--dyst)", tremor:"var(--wearoff)", other:"var(--wake)"};
+const SYMPTOM_COLOR = {dysk:"var(--dysk)", freeze:"var(--signal)", dyst:"var(--dyst)", tremor:"var(--wearoff)", brady:"#2F9E8F", other:"var(--wake)"};
 function renderOutputOverlay(dayKey){
   const chartEl=document.getElementById("trendOverlayChart"), legendEl=document.getElementById("trendOverlayLegend");
   if(!chartEl || !dayKey) return;
@@ -2012,9 +2062,14 @@ function renderOutputOverlay(dayKey){
       svg += `<line x1="${xOf(openTs).toFixed(1)}" y1="${symY}" x2="${endX.toFixed(1)}" y2="${symY}" stroke="${SYMPTOM_COLOR[sq.key]}" stroke-width="5" stroke-linecap="round" opacity="0.6"/>`;
     }
   });
-  svg += `<text x="${pad}" y="${axisY}" font-size="9" fill="var(--ink-2)">6시</text>`;
-  svg += `<text x="${W/2}" y="${axisY}" font-size="9" fill="var(--ink-2)" text-anchor="middle">14시</text>`;
-  svg += `<text x="${W-pad}" y="${axisY}" font-size="9" fill="var(--ink-2)" text-anchor="end">24시</text>`;
+  /* v0.9.18: 시간축을 3시간 간격으로 명확히 표시 (이벤트·출력 발생 시각을 직관적으로 확인) */
+  for(let h=6; h<=24; h+=3){
+    const t=new Date(Y,Mo-1,Da,h,0,0).getTime();
+    const x=xOf(Math.min(t,dayEnd));
+    svg += `<line x1="${x.toFixed(1)}" y1="${outTop}" x2="${x.toFixed(1)}" y2="${symY+8}" stroke="var(--line)" stroke-width="0.8" opacity="0.55"/>`;
+    const anchor = h===6? "start" : (h===24? "end" : "middle");
+    svg += `<text x="${x.toFixed(1)}" y="${axisY}" font-size="8" fill="var(--ink-2)" text-anchor="${anchor}">${String(h).padStart(2,"0")}:00</text>`;
+  }
   const slotMin=30, slotMs=slotMin*60000;
   let hitRects="";
   for(let t=dayStart; t<=dayEnd; t+=slotMs){
@@ -2407,7 +2462,7 @@ function renderReport(){
       · ${L("일 평균 출력면적(AUC)","Avg daily output AUC")} <b>${oStats.avgAUC??"–"}</b>${L("점·시간","pt·h")}
     </div>` : `<div style="font-size:13px;color:var(--ink-2)">${L("출력 점수 기록이 쌓이면 표시돼요.","This appears once output scores build up.")}</div>`;
   const symStats = symptomOutputStats(rangeEvents);
-  const symStatsHtml = symStats.length? `<table><thead><tr><th>${L("증상","Symptom")}</th><th>${L("평균 출력","Avg output")}</th><th>${L("횟수","Count")}</th></tr></thead><tbody>${symStats.map(r=>`<tr><td>${r.label}</td><td>${r.avg}</td><td>${r.n}</td></tr>`).join("")}</tbody></table>` : `<div style="font-size:13px;color:var(--ink-2)">${L("증상 기록이 쌓이면 표시돼요.","This appears once symptom records build up.")}</div>`;
+  const symStatsHtml = symStats.length? `<table><thead><tr><th>${L("증상","Symptom")}</th><th>${L("평균 출력","Avg output")}</th><th>${L("횟수","Count")}</th></tr></thead><tbody>${symStats.map(r=>`<tr><td>${r.label}</td><td>${r.avg??"–"}</td><td>${r.n}</td></tr>`).join("")}</tbody></table>` : `<div style="font-size:13px;color:var(--ink-2)">${L("증상 기록이 쌓이면 표시돼요.","This appears once symptom records build up.")}</div>`;
   const zonePatterns = symptomZonePattern(rangeEvents);
   const zonePatternHtml = zonePatterns.length? `<div style="font-size:13.5px; line-height:1.9">${zonePatterns.map(p=>`· ${p.label}: ${L(`최근 ${p.n}회 중 ${p.topN}회(${p.pct}%)가 ${p.zone}에서 발생`,`${p.topN}/${p.n} (${p.pct}%) of the last ${p.n} occurred during ${p.zone}`)}`).join("<br>")}</div>` : "";
   const rangeChecks = (db.outputChecks||[]).filter(c=>{ const k=dkey(new Date(c.ts)); return keys.includes(k); });
@@ -2557,10 +2612,12 @@ function openStateSheet(key, editingEvent){
       <div class="slider-row"><input type="range" id="f_int" min="0" max="10" step="1" value="${isEdit&&editingEvent.dysk!=null?editingEvent.dysk:4}" oninput="document.getElementById('o_int').textContent=this.value"><div class="v" id="o_int">${isEdit&&editingEvent.dysk!=null?editingEvent.dysk:4}</div></div></div>
     <div class="field"><label>${L("기타 증상 직접 입력 (선택)","Other symptom, custom (optional)")}</label><input id="f_symCustom" placeholder="${L("예: 발가락 뒤틀림, 소변 급박감 등","e.g. toe curling, urinary urgency")}" value="${escapeHtml(isEdit?(editingEvent.customSymptom||""):"")}"></div>
     <div class="field"><label>${L("메모 (선택)","Memo (optional)")}</label><textarea id="f_memo" placeholder="${L("예: 공복, 운동 후, 단백질 식사 등","e.g. fasting, after exercise, high-protein meal")}">${escapeHtml(isEdit?(editingEvent.memo||""):"")}</textarea></div>
+    ${isEdit? `<div style="text-align:center; margin-bottom:6px"><button class="btn ghost" id="f_changeKind" style="font-size:12.5px; width:auto">${L("↺ 기록 종류 변경 (복약·증상 등으로 전환)","↺ Change record type (convert to medication, symptom, …)")}</button></div>` : ""}
     <div class="btn-row" style="margin-top:6px">
       <button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button>
       <button class="btn primary" id="saveState">${isEdit? L("수정 저장","Save changes") : L("저장","Save")}</button>
     </div>`);
+  if(isEdit){ const ck=document.getElementById("f_changeKind"); if(ck) ck.onclick=()=>{ closeSheet(); openAddPast(editingEvent); }; } /* v0.9.18 */
   window._skipOut = isEdit && editingEvent.output==null;
   let riseResult = isEdit? (editingEvent.riseResult||null) : null;
   let editTrend = isEdit? (editingEvent.trend||null) : null;
@@ -2880,15 +2937,17 @@ function openAddPast(editingEvent){
   if(isEdit){
     if(editingEvent.type==="med") initKind="med";
     else if(editingEvent.type==="life") initKind="life_"+editingEvent.kind;
+    else if(editingEvent.type==="symptom") initKind="symptom"; /* v0.9.18 */
   }
   openSheet(`
-    <h2>${isEdit? L("기록 수정","Edit record") : L("지난 기록 추가","Add a past record")}</h2><div class="hint">${isEdit? L("날짜·시각과 내용을 고쳐서 저장해요.","Edit the date, time, and details, then save.") : L("깜빡한 기록을 날짜·시각을 지정해 추가해요.","Add a record you forgot to log, with a specific date and time.")}</div>
+    <h2>${isEdit? L("기록 수정","Edit record") : L("지난 기록 추가","Add a past record")}</h2><div class="hint">${isEdit? L("날짜·시각과 내용을 고쳐서 저장해요. 종류를 바꾸면 그 종류의 기록으로 전환돼요.","Edit the date, time, and details, then save. Changing the type converts this record to that type.") : L("깜빡한 기록을 날짜·시각을 지정해 추가해요.","Add a record you forgot to log, with a specific date and time.")}</div>
     <div class="field"><label>${L("날짜","Date")}</label><input type="date" id="p_date" value="${dval}"></div>
     <div class="field"><label>${L("시각","Time")}</label><input type="time" id="p_time" value="${pad(now.getHours())}:${pad(now.getMinutes())}"></div>
     <div class="field"><label>${L("종류","Type")}</label>
-      <select id="p_kind" ${isEdit?"disabled":""}>
+      <select id="p_kind">
         <option value="state">${L("출력","Output")}</option>
         <option value="med">${L("복약","Medication")}</option>
+        <option value="symptom">${L("증상 (이상운동증·서동 등)","Symptom (dyskinesia, bradykinesia, …)")}</option>
         <option value="life_sleep">${L("생활 · 수면","Life · Sleep")}</option>
         <option value="life_meal">${L("생활 · 식사","Life · Meal")}</option>
         <option value="life_exercise">${L("생활 · 운동","Life · Exercise")}</option>
@@ -2911,6 +2970,12 @@ function openAddPast(editingEvent){
       <div style="height:10px"></div>
       <label>${isEdit? L("약 이름","Medication name") : L("직접 입력 (선택, 등록 안 된 약)","Custom (optional, unregistered medication)")}</label>
       <input id="p_drug" placeholder="${L("약 이름","Medication name")}"><div style="height:8px"></div><input id="p_dose" type="number" placeholder="${L("용량 mg (선택)","Dose mg (optional)")}"></div>
+    <div class="field" id="p_sym_f" style="display:none">
+      <label>${L("증상 종류","Symptom")}</label><select id="p_sym_key">${SYMPTOM_QUICK.map(sq=>`<option value="${sq.key}">${sq.ic} ${L(sq.ko,sq.en)}</option>`).join("")}</select>
+      <div style="height:8px"></div>
+      <label>${L("구분","Phase")}</label><select id="p_sym_phase"><option value="start">${L("시작","Start")}</option><option value="end">${L("종료","End")}</option></select>
+      <div id="p_sym_customWrap" style="display:none"><div style="height:8px"></div><label>${L("증상 내용 (직접 입력)","Describe the symptom")}</label><input id="p_sym_custom" placeholder="${L("예: 어지럼","e.g. dizziness")}"></div>
+    </div>
     <div class="field" id="p_sleep_f" style="display:none"><label>${L("수면 유형","Sleep type")}</label><select id="p_sleep_type">${sleepOpts}</select></div>
     <div class="field" id="p_meal_f" style="display:none"><label>${L("식사 종류","Meal type")}</label><select id="p_meal_type">${mealOpts}</select></div>
     <div class="field" id="p_ex_f" style="display:none"><label>${L("운동 종류","Exercise type")}</label><select id="p_ex_type">${exOpts}</select><div style="height:8px"></div><label>${L("운동 시간 (분, 선택)","Duration (minutes, optional)")}</label><input id="p_ex_dur" type="number" placeholder="${L("예: 30","e.g. 30")}"></div>
@@ -2919,7 +2984,7 @@ function openAddPast(editingEvent){
     <div class="field"><label>${L("메모 (선택)","Memo (optional)")}</label><textarea id="p_memo"></textarea></div>
     <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="p_save">${isEdit? L("수정 저장","Save changes") : L("추가","Add")}</button></div>`);
   const fieldMap = {
-    state:"p_state_f", med:"p_med_f", life_sleep:"p_sleep_f", life_meal:"p_meal_f",
+    state:"p_state_f", med:"p_med_f", symptom:"p_sym_f", life_sleep:"p_sleep_f", life_meal:"p_meal_f",
     life_exercise:"p_ex_f", life_bowel:"p_bowel_f", life_body:"p_body_f"
   };
   function updatePastRecordForm(){
@@ -2931,6 +2996,16 @@ function openAddPast(editingEvent){
   /* select onchange 하나에만 의존하지 않고 change 이벤트를 addEventListener로도 연결해
      일부 모바일 환경에서 종류 전환이 반영되지 않던 문제를 방지한다. */
   document.getElementById("p_kind").addEventListener("change", updatePastRecordForm);
+  /* v0.9.18: 증상 종류가 "기타"일 때만 직접 입력란 표시 */
+  const pSymKeyEl=document.getElementById("p_sym_key");
+  function updateSymCustom(){ document.getElementById("p_sym_customWrap").style.display = pSymKeyEl.value==="other" ? "block":"none"; }
+  pSymKeyEl.addEventListener("change", updateSymCustom);
+  if(isEdit && editingEvent.type==="symptom"){
+    pSymKeyEl.value = editingEvent.key||"dysk";
+    document.getElementById("p_sym_phase").value = editingEvent.phase||"start";
+    document.getElementById("p_sym_custom").value = editingEvent.customText||"";
+  }
+  updateSymCustom();
   let pTrend = isEdit? (editingEvent.trend||null) : null;
   const pTrendRowEl = document.getElementById("p_trendRow");
   if(pTrendRowEl){
@@ -2951,14 +3026,21 @@ function openAddPast(editingEvent){
   const medChipsEl=document.getElementById("p_medChips");
   if(medChipsEl) medChipsEl.addEventListener("click",e=>{
     const b=e.target.closest(".chip"); if(!b) return;
+    const i=+b.dataset.i;
+    if(isEdit){
+      /* v0.9.18 수정 모드: 칩을 누르면 약 이름·용량이 입력란에 채워진다 (단일 선택) */
+      medChipsEl.querySelectorAll(".chip").forEach(c=>c.classList.remove("sel"));
+      b.classList.add("sel");
+      const m=db.meds[i]; if(m){ document.getElementById("p_drug").value=m.name; document.getElementById("p_dose").value=m.dose??""; }
+      return;
+    }
     b.classList.toggle("sel");
-    const i=+b.dataset.i; if(pMedSel.has(i)) pMedSel.delete(i); else pMedSel.add(i);
+    if(pMedSel.has(i)) pMedSel.delete(i); else pMedSel.add(i);
   });
   if(isEdit){
     document.getElementById("p_memo").value = editingEvent.memo || "";
+    document.getElementById("p_medChipsLabel").textContent = L("등록된 약에서 선택하면 이름이 채워져요","Tap a registered medication to fill in the name");
     if(editingEvent.type==="med"){
-      document.getElementById("p_medChips").style.display="none";
-      document.getElementById("p_medChipsLabel").style.display="none";
       document.getElementById("p_drug").value = editingEvent.drug||"";
       document.getElementById("p_dose").value = editingEvent.dose??"";
     } else if(editingEvent.type==="life"){
@@ -2978,8 +3060,46 @@ function openAddPast(editingEvent){
     const d=document.getElementById("p_date").value, t=document.getElementById("p_time").value;
     if(!d||!t){ toast(L("날짜와 시각을 입력하세요","Please enter a date and time")); return; }
     const ts=new Date(`${d}T${t}`).getTime(); const memo=document.getElementById("p_memo").value.trim();
-    const kind = isEdit ? initKind : document.getElementById("p_kind").value;
+    /* v0.9.18: 수정 모드에서도 종류 선택이 반영된다 — 종류가 바뀌면 그 종류의 새 기록으로 전환(변환) */
+    const kind = document.getElementById("p_kind").value;
     if(kind==="state" && !pTrend){ toast(tr("trendPickAlert")); return; }
+    const readSymFields=()=>{
+      const key=document.getElementById("p_sym_key").value;
+      const phase=document.getElementById("p_sym_phase").value;
+      const customText = key==="other" ? document.getElementById("p_sym_custom").value.trim() : "";
+      return {key, phase, customText};
+    };
+    if(isEdit && kind!==initKind){
+      /* 종류 변경: id·시각·메모만 유지하고 새 종류의 기록으로 재구성 */
+      let ne=null;
+      if(kind==="state"){
+        const out=+document.getElementById("p_out").value;
+        ne={id:editingEvent.id,type:"state",state:stateFromTrend(pTrend,out),ts,output:out,trend:pTrend,gait:null,dysk:null,dyst:null,memo,symptoms:[],customSymptom:"",riseResult:null,inputMethod:"edit_converted",retrospective:true};
+      } else if(kind==="med"){
+        const drug=document.getElementById("p_drug").value.trim();
+        if(!drug){ toast(L("약 이름을 입력하세요 (위 칩을 누르면 채워져요)","Enter a medication name (tap a chip above to fill it)")); return; }
+        ne={id:editingEvent.id,type:"med",drug,dose:(+document.getElementById("p_dose").value)||null,ts,memo};
+      } else if(kind==="symptom"){
+        const sf=readSymFields();
+        ne={id:editingEvent.id,type:"symptom",key:sf.key,ts,phase:sf.phase,customText:sf.customText,outputAtStart:null,outputAtEnd:null,memo};
+      } else if(kind==="life_sleep"){
+        ne={id:editingEvent.id,type:"life",kind:"sleep",phase:document.getElementById("p_sleep_type").value,ts,memo,quality:[]};
+      } else if(kind==="life_meal"){
+        ne={id:editingEvent.id,type:"life",kind:"meal",mealType:document.getElementById("p_meal_type").value,ts,memo,extras:[],protein:false};
+      } else if(kind==="life_exercise"){
+        ne={id:editingEvent.id,type:"life",kind:"exercise",phase:"end",exType:document.getElementById("p_ex_type").value,durationMin:(+document.getElementById("p_ex_dur").value)||null,ts,memo};
+      } else if(kind==="life_bowel"){
+        ne={id:editingEvent.id,type:"life",kind:"bowel",consistency:document.getElementById("p_bowel_c").value||null,ts,memo,extras:[]};
+      } else if(kind==="life_body"){
+        const syms=document.getElementById("p_body_sym").value.split(",").map(x=>x.trim()).filter(Boolean);
+        ne={id:editingEvent.id,type:"life",kind:"body",symptoms:syms,ts,memo};
+      }
+      if(!ne) return;
+      const idx=db.events.findIndex(x=>x.id===editingEvent.id);
+      if(idx>=0) db.events[idx]=ne; else db.events.push(ne);
+      db.events.sort((a,b)=>a.ts-b.ts); save(); closeSheet(); renderAll(); toast(L("종류를 바꿔서 저장했어요","Saved with the new record type"));
+      return;
+    }
     if(isEdit){
       if(kind==="state"){
         const out=+document.getElementById("p_out").value;
@@ -3002,6 +3122,8 @@ function openAddPast(editingEvent){
       } else if(kind==="life_body"){
         const syms=document.getElementById("p_body_sym").value.split(",").map(x=>x.trim()).filter(Boolean);
         Object.assign(editingEvent, {ts, memo, symptoms:syms});
+      } else if(kind==="symptom"){
+        Object.assign(editingEvent, {ts, memo, ...readSymFields()});
       }
       db.events.sort((a,b)=>a.ts-b.ts); save(); closeSheet(); renderAll(); toast(L("수정했어요","Updated"));
       return;
@@ -3021,6 +3143,10 @@ function openAddPast(editingEvent){
       const out=+document.getElementById("p_out").value;
       const derivedState = stateFromTrend(pTrend, out);
       db.events.push({id:uid(),type:"state",state:derivedState,ts,output:out,trend:pTrend,gait:null,dysk:null,dyst:null,memo,symptoms:[],customSymptom:"",riseResult:null,inputMethod:"backdated_manual",retrospective:true});
+    } else if(kind==="symptom"){
+      /* v0.9.18: 지난 증상 기록도 직접 추가 가능 */
+      const sf=readSymFields();
+      db.events.push({id:uid(),type:"symptom",key:sf.key,ts,phase:sf.phase,customText:sf.customText,outputAtStart:null,outputAtEnd:null,memo});
     } else if(kind==="life_sleep"){
       db.events.push({id:uid(),type:"life",kind:"sleep",phase:document.getElementById("p_sleep_type").value,ts,memo,quality:[]});
     } else if(kind==="life_meal"){
@@ -3202,7 +3328,7 @@ function showTermTutorial(){
       <span class="sw" style="background:#C98A4B;width:20px;height:20px;border-radius:6px;flex:0 0 auto;margin-top:2px"></span>
       <div><b>${L("하강 전환기","Falling")}</b> — ${L("약효가 서서히 빠지며 다시 OFF로 향하는 구간","Effect is gradually wearing off, heading back toward OFF")}</div></div>
     </div>
-    <div class="hint" style="margin:14px 0">${L('"출력"은 그 순간의 몸이 움직여지는 정도를 0~100으로 표현한 감각 점수예요. 정답은 없고, 형이 느끼는 대로 누르면 돼요.','"Output" is a 0–100 subjective score for how well your body is moving in that moment. There\'s no right answer — just go with how you feel.')}</div>
+    <div class="hint" style="margin:14px 0">${L('"출력"은 그 순간의 몸이 움직여지는 정도를 0~100으로 표현한 감각 점수예요. 정답은 없고, 느끼는 대로 누르면 돼요.','"Output" is a 0–100 subjective score for how well your body is moving in that moment. There\'s no right answer — just go with how you feel.')}</div>
     <div class="hint" style="margin-bottom:16px">${L('오늘 탭 위쪽 <b>⚡ 빠른 기록</b>은 시트 없이 한 번 눌러서 바로 저장돼요. 자세히 남기고 싶을 땐 아래 상태 버튼을 쓰면 돼요.','The <b>⚡ Quick log</b> buttons at the top of the Today tab save instantly with one tap. Use the state buttons below when you want to log more detail.')}</div>
     <button class="btn primary" id="okStart2">${L("시작하기","Get started")}</button>`);
   document.addEventListener("click",function once2(e){
