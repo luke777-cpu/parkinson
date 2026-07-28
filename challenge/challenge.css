@@ -62,3 +62,21 @@ td.num{text-align:right; white-space:nowrap}
   body{font-size:11pt} h1{font-size:18pt} h2{font-size:13pt} table{font-size:9.5pt}
   table,.graph,.disc,li{break-inside:avoid; page-break-inside:avoid}
 }
+
+/* ---- v2 추가 ---- */
+details.grp{border:1px solid var(--line); border-radius:10px; margin:8px 0; background:var(--surface)}
+details.grp>summary{padding:10px 12px; font-weight:800; cursor:pointer; list-style:none}
+details.grp>summary::before{content:"▸ "; color:var(--ink-2)}
+details.grp[open]>summary::before{content:"▾ "}
+details.grp>.inner{padding:0 12px 10px}
+.aerow{display:flex; align-items:center; gap:4px; margin:5px 0; flex-wrap:wrap}
+.aerow .aelabel{flex:1 1 110px; font-size:calc(13.5px*var(--fs)); font-weight:700}
+.aebtn{min-width:44px; min-height:44px; border-radius:8px; border:1px solid var(--line); background:var(--surface-2); font-weight:800; cursor:pointer}
+.aebtn.sel{background:var(--accent); border-color:var(--accent); color:#fff}
+.aebtn.warnsel{background:var(--danger); border-color:var(--danger); color:#fff}
+.nextdue{font-size:calc(22px*var(--fs)); font-weight:900; text-align:center; padding:10px 0}
+.nextdue small{display:block; font-size:calc(13px*var(--fs)); font-weight:700; color:var(--ink-2)}
+.doserow{display:grid; grid-template-columns:1.3fr .8fr .9fr auto; gap:6px; align-items:center; margin:6px 0}
+.doserow input{min-height:44px; padding:6px 8px}
+.legend{display:flex; gap:12px; flex-wrap:wrap; font-size:calc(12.5px*var(--fs)); color:var(--ink-2); margin:4px 0}
+.legend .sw{display:inline-block; width:14px; height:4px; border-radius:2px; vertical-align:middle; margin-right:4px}
