@@ -236,6 +236,21 @@ function analyzeMedicationResponse(adapted, cfg, personalPeak){
   const woDays=new Set(woEvents.map(w=>w.day));
   const recurrentHour=Object.entries(woByHour).filter(([h,c])=>c>=2).map(([h])=>+h);
   const wearingOffCandidate = woDays.size>=2 && woEvents.length>=2;
+  /* v0.9.20: 약별 대표 복용 시각 (일중 순번별 중앙값 분) */
+  const schedByName={};
+  Object.values(medsByDay).forEach(list=>{
+    list.forEach((m2,idx)=>{
+      const k=m2.name; (schedByName[k]||(schedByName[k]={dose:m2.doseMg,slots:{}}));
+      const mins=new Date(m2.ts).getHours()*60+new Date(m2.ts).getMinutes();
+      (schedByName[k].slots[idx]||(schedByName[k].slots[idx]=[])).push(mins);
+    });
+  });
+  const doseSchedule=Object.entries(schedByName).map(([name,v])=>({
+    name, doseMg:v.dose,
+    times:Object.keys(v.slots).sort((a,b)=>a-b).map(i=>{
+      const mm=median(v.slots[i]); return `${String(Math.floor(mm/60)).padStart(2,"0")}:${String(mm%60).padStart(2,"0")}`;
+    })
+  }));
   const morning=perDose.filter(r=>r.isMorningFirst);
   const morningEval=morning.filter(r=>r.evaluable && !r.confounded);
   return {
@@ -257,11 +272,16 @@ function analyzeMedicationResponse(adapted, cfg, personalPeak){
       excluded: perDose.filter(r=>!r.evaluable || r.confounded).map(r=>({doseId:r.doseId, reason:r.exclusionReason})),
     },
     wearingOff: { candidate: wearingOffCandidate, events: woEvents, recurrentHours: recurrentHour, days: woDays.size },
+    doseSchedule,
   };
 }
 
 /* ---------- 증상 분석 ---------- */
-const SYMPTOM_LABELS_KO = {dysk:"이상운동증", dyst:"근긴장이상", freeze:"보행동결", tremor:"떨림", brady:"서동", other:"기타 증상"};
+const SYMPTOM_LABELS = {
+  dysk:{ko:"이상운동증",en:"Dyskinesia"}, dyst:{ko:"근긴장이상",en:"Dystonia"},
+  freeze:{ko:"동결보행",en:"Freezing of Gait"}, tremor:{ko:"떨림",en:"Tremor"},
+  brady:{ko:"서동",en:"Bradykinesia"}, other:{ko:"기타 증상",en:"Other symptom"}};
+PHS.symptomLabel = (key,lang)=> (SYMPTOM_LABELS[key]||{})[lang==="en"?"en":"ko"] || key;
 function analyzeSymptoms(adapted, cfg){
   const outs=adapted.outputEvents, meds=adapted.medicationEvents;
   const outAt=ts=>{ const prior=outs.filter(e=>e.ts<=ts); return prior.length? prior[prior.length-1].output : null; };
@@ -289,7 +309,7 @@ function analyzeSymptoms(adapted, cfg){
       if(key==="dyst" && hours.filter(h=>h<10).length>=Math.ceil(hours.length*0.6)) relation="morning_associated";
     }
     result[key]={
-      labelKo: SYMPTOM_LABELS_KO[key]||key,
+      key, labelKo: (SYMPTOM_LABELS[key]||{}).ko||key,
       count: list.length,
       averageOutputAtEvent: outsAtEv.length? Math.round(mean(outsAtEv)) : null,
       medianDurationMinutes: median(durs),
@@ -345,31 +365,31 @@ PHS.analyze = function({events, startTs, endTs, config}){
 
 /* ---------- 신뢰도 엔진 ---------- */
 PHS.assessConfidence = function(analysis, startSurvey){
-  const reasons=[]; let score=50;
+  const reasons=[]; let score=50; const R=(code,params)=>reasons.push({code,params:params||{}});
   const p=analysis.period, o=analysis.output, mr=analysis.medicationResponse;
   const adapted=analysis._adapted;
   const perDay = p.recordedDays? analysis.period.totalOutputRecords/p.recordedDays : 0;
-  if(p.recordedDays>=5){ score+=10; reasons.push(`${p.periodDays}일 중 ${p.recordedDays}일 기록`); }
-  if(p.recordedDays<3){ score-=15; reasons.push(`기록 일수 부족 (${p.recordedDays}일)`); }
-  if(perDay>=5){ score+=10; reasons.push(`하루 평균 ${Math.round(perDay)}회 출력 입력`); }
-  if(perDay<3 && p.recordedDays>0){ score-=10; reasons.push(`하루 평균 입력 횟수 부족 (${perDay.toFixed(1)}회)`); }
+  if(p.recordedDays>=5){ score+=10; R("days_recorded",{p:p.periodDays,d:p.recordedDays}); }
+  if(p.recordedDays<3){ score-=15; R("few_days",{d:p.recordedDays}); }
+  if(perDay>=5){ score+=10; R("good_daily_rate",{n:Math.round(perDay)}); }
+  if(perDay<3 && p.recordedDays>0){ score-=10; R("low_daily_rate",{n:perDay.toFixed(1)}); }
   if(p.totalMedicationRecords>0){ score+=10; }
-  else { score-=10; reasons.push("복약 시각 기록 없음"); }
+  else { score-=10; R("no_med_times"); }
   const evalRatio = mr.totalDoses? mr.allDoses.evaluableDoses/mr.totalDoses : 0;
-  if(mr.totalDoses>0 && evalRatio>=0.5){ score+=10; reasons.push("복용 전후 출력 기록이 절반 이상의 복용에서 확보됨"); }
-  else if(mr.totalDoses>0 && evalRatio<0.3){ score-=5; reasons.push("복용 전후 출력 기록이 부족한 복용이 많음"); }
+  if(mr.totalDoses>0 && evalRatio>=0.5){ score+=10; R("good_dose_coverage"); }
+  else if(mr.totalDoses>0 && evalRatio<0.3){ score-=5; R("low_dose_coverage"); }
   /* unrecordedGaps는 이미 공통 기준(maxGapMin 초과)으로만 수집됨 */
   const gapHours=Math.round(PHS.config.maxGapMin/60);
-  if(o.unrecordedGaps.length>p.recordedDays){ score-=10; reasons.push(`${gapHours}시간 이상 미기록 공백이 잦음`); }
+  if(o.unrecordedGaps.length>p.recordedDays){ score-=10; R("frequent_gaps",{h:gapHours}); }
   const retro=adapted.outputEvents.filter(e=>e.retrospective).length;
-  if(adapted.outputEvents.length && retro/adapted.outputEvents.length>0.5){ score-=10; reasons.push("소급 입력 비율이 높음"); }
+  if(adapted.outputEvents.length && retro/adapted.outputEvents.length>0.5){ score-=10; R("high_retrospective"); }
   /* 설문-기록 일치 여부 */
   let agreement="not_assessed";
   if(startSurvey && startSurvey.perceivedMorningResponse && mr.morningFirstDose.medianRiseMinutes!=null){
     const perceivedSlow = /60|90|120|이상|slow/.test(String(startSurvey.perceivedMorningResponse));
     const observedSlow = mr.morningFirstDose.medianRiseMinutes>60;
-    if(perceivedSlow===observedSlow){ score+=5; agreement="agree"; reasons.push("설문의 체감 반응 시간과 기록 분석이 유사함"); }
-    else { score-=5; agreement="conflict"; reasons.push("설문의 체감 반응 시간과 기록 분석이 일치하지 않음"); }
+    if(perceivedSlow===observedSlow){ score+=5; agreement="agree"; R("survey_agree"); }
+    else { score-=5; agreement="conflict"; R("survey_conflict"); }
   }
   score=clamp(Math.round(score),0,100);
   const level=s=>s>=75?"high":(s>=50?"moderate":"low");
