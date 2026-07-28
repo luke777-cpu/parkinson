@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=0.5, maximum-scale=5.0, user-scalable=yes">
+<title>약효 비교 테스트</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="challenge.css">
+<meta name="theme-color" content="#2563eb">
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="toast" id="toast"></div>
+<script src="challenge-engine.js"></script>
+<script src="challenge-report.js"></script>
+<script>
+"use strict";
+/* ============================================================
+   약효 비교 테스트 — 독립 화면 (본체 약효일지와 저장소·캐시 완전 분리)
+   저장 키: medicationChallengeDbV1 (CHG.STORAGE_KEY)
+   ============================================================ */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function toast(m){ const t=$("toast"); t.textContent=m; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),2600); }
+
+/* ---------- 저장 ---------- */
+let db;
+function load(){
+  try{ const raw=localStorage.getItem(CHG.STORAGE_KEY);
+    if(raw){ const d=JSON.parse(raw); if(d && d.version===1 && Array.isArray(d.tests)) return d; } }catch(e){}
+  return CHG.emptyDb();
+}
+function save(){ try{ localStorage.setItem(CHG.STORAGE_KEY, JSON.stringify(db)); }catch(e){ toast("저장 공간이 부족합니다"); } }
+db=load();
+
+const inProgress=()=>db.tests.find(t=>t.status==="in_progress")||null;
+const completed=()=>db.tests.filter(t=>t.status==="completed");
+
+/* ---------- 공용 안내문 ---------- */
+const SAFETY_HTML=`<div class="disc">
+  · 이 기능은 약의 증량·감량·추가를 권하는 기능이 아닙니다.<br>
+  · 처방 변경은 반드시 의료진과 상의하여 진행하십시오.<br>
+  · 결과는 진단이나 치료 결정을 대신하지 않습니다.<br>
+  · 어지럼, 실신, 심한 이상운동증, 혼란, 환시 등 심한 이상이 발생하면 테스트를 중단하고 의료진과 상의하십시오.</div>`;
+
+/* ---------- 화면 라우팅 ---------- */
+function render(html){ $("app").innerHTML=html; window.scrollTo(0,0); }
+
+/* ========== 1. 첫 화면 ========== */
+function viewHome(){
+  const act=inProgress();
+  render(`
+    <h1>약효 비교 테스트</h1>
+    <div class="hint">현재 복용 중인 약과 처방 변경 후의 반응을 같은 방식으로 기록하여 비교하는 도구입니다.</div>
+    ${SAFETY_HTML}
+    ${act? `<div class="card"><b>진행 중인 테스트</b><div class="hint">${esc(act.title||act.medication.name)} · ${fmtDate(act.createdAt)}</div>
+      <div class="btn-row"><button class="btn primary" onclick="viewStages()">이어서 기록</button>
+      <button class="btn ghost" onclick="abandonTest()">중단(삭제)</button></div></div>`
+    : `<button class="btn primary" style="margin:8px 0" onclick="viewSetup()">약효 테스트 시작</button>`}
+    <div class="btn-row"><button class="btn ghost" onclick="viewList()">이전 테스트 보기</button><button class="btn ghost" onclick="viewHelp()">사용 방법</button></div>
+    <div class="btn-row"><button class="btn ghost" onclick="exportJson()">백업 내보내기</button><button class="btn ghost" onclick="$('importFile').click()">백업 불러오기</button></div>
+    <div class="btn-row"><button class="btn ghost" style="color:var(--danger)" onclick="deleteAll()">전체 데이터 삭제</button></div>
+    <input type="file" id="importFile" class="sr" accept="application/json" onchange="importJson(event)">
+  `);
+}
+function abandonTest(){
+  if(!confirm("진행 중인 테스트를 삭제할까요? 완료된 테스트는 지워지지 않습니다.")) return;
+  db.tests=db.tests.filter(t=>t.status!=="in_progress"); save(); viewHome();
+}
+
+/* ========== 2. 테스트 설정 ========== */
+function viewSetup(){
+  render(`
+    <div class="topbar no-print"><button class="btn ghost small" onclick="viewHome()">← 처음</button><h1 style="margin:0">새 테스트</h1></div>
+    <div class="card">
+      <h2>1) 테스트 종류</h2>
+      <div class="chips" id="tt_chips">${CHG.TEST_TYPES.map((t,i)=>`<button type="button" class="chip${i===0?" sel":""}" data-k="${t.code}">${t.ko}</button>`).join("")}</div>
+    </div>
+    <div class="card">
+      <h2>2) 약 입력</h2>
+      <div class="hint">약 이름과 용량은 입력한 그대로 저장됩니다.</div>
+      <div class="field"><label>약 이름 *</label><input type="text" id="md_name" placeholder="예: 퍼킨"></div>
+      <div class="field"><label>1회 용량 *</label><input type="text" id="md_dose" placeholder="예: 100mg"></div>
+      <div class="field"><label>제형 또는 메모 (선택)</label><input type="text" id="md_form" placeholder="예: 속방정"></div>
+      <div class="field"><label>복용 예정 시각</label><input type="time" id="md_time" value="${new Date().toTimeString().slice(0,5)}"></div>
+      <div class="field"><label>함께 복용한 다른 약 (선택)</label><input type="text" id="md_add" placeholder="쉼표로 구분"></div>
+      <div class="field"><label>이번 시험의 변경 내용</label><input type="text" id="md_chg" placeholder="예: 기준 시험 / 의사와 상의 후 100mg에서 150mg으로 변경"></div>
+    </div>
+    <div class="card">
+      <h2>3) 주증상 선택 (1~3개) *</h2>
+      <div class="chips" id="sy_chips">${CHG.SYMPTOMS.map(s=>`<button type="button" class="chip" data-k="${s.code}">${s.ko}</button>`).join("")}</div>
+      <div class="field" id="sy_customWrap" style="display:none"><label>기타 증상 이름</label><input type="text" id="sy_custom"></div>
+    </div>
+    ${SAFETY_HTML}
+    <button class="btn primary" onclick="startTest()">테스트 시작</button>
+  `);
+  $("tt_chips").addEventListener("click",e=>{ const b=e.target.closest(".chip"); if(!b)return;
+    $("tt_chips").querySelectorAll(".chip").forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); });
+  $("sy_chips").addEventListener("click",e=>{ const b=e.target.closest(".chip"); if(!b)return;
+    if(!b.classList.contains("sel") && $("sy_chips").querySelectorAll(".chip.sel").length>=3){ toast("주증상은 최대 3개까지입니다"); return; }
+    b.classList.toggle("sel");
+    $("sy_customWrap").style.display = $("sy_chips").querySelector('.chip.sel[data-k="custom"]')? "block":"none"; });
+}
+function startTest(){
+  const name=$("md_name").value.trim(), dose=$("md_dose").value.trim();
+  if(!name||!dose){ toast("약 이름과 용량을 입력해주세요"); return; }
+  const syms=[...$("sy_chips").querySelectorAll(".chip.sel")].map(b=>({code:b.dataset.k, customLabel:b.dataset.k==="custom"? $("sy_custom").value.trim():""}));
+  if(!syms.length){ toast("주증상을 1개 이상 선택해주세요"); return; }
+  const test=CHG.newTest({
+    testType: $("tt_chips").querySelector(".chip.sel").dataset.k,
+    title: `${name} ${dose}`,
+    medication:{ name, dose, dosageForm:$("md_form").value.trim(), scheduledTime:$("md_time").value,
+      additionalMedications:$("md_add").value.split(",").map(s=>s.trim()).filter(Boolean),
+      changeDescription:$("md_chg").value.trim() },
+    symptoms: syms
+  });
+  db.tests.push(test); save(); viewStages();
+}
+
+/* ========== 3. 측정 단계 ========== */
+function stageOf(t,code){ return (t.assessments||[]).find(a=>a.stage===code)||null; }
+function nextStage(t){ return CHG.STAGES.find(st=>!stageOf(t,st.stage))||null; }
+function doseTimeLabel(v){ /* ISO 저장분은 현지 시각으로, 구버전 "HH:MM" 문자열은 그대로 표시 */
+  if(!v) return "";
+  if(/^\d{2}:\d{2}$/.test(v)) return v;
+  const d=new Date(v); return isNaN(d)? v : `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+}
+function minutesSinceDose(t){
+  const v=t.medication.doseTakenAt; if(!v) return null;
+  let t0;
+  if(/^\d{2}:\d{2}$/.test(v)){ /* 구버전 데이터 호환: 같은 날로 가정하되 미래로 계산되면 전날로 보정(자정 넘김) */
+    const [h,m]=v.split(":").map(Number);
+    const d0=new Date(); d0.setHours(h,m,0,0); t0=d0.getTime();
+    if(t0>Date.now()) t0-=86400000;
+  } else { const d0=new Date(v); if(isNaN(d0)) return null; t0=d0.getTime(); }
+  return Math.round((Date.now()-t0)/60000);
+}
+function viewStages(){
+  const t=inProgress(); if(!t){ viewHome(); return; }
+  const cur=nextStage(t);
+  const bar=CHG.STAGES.map(st=>{
+    const done=!!stageOf(t,st.stage);
+    return `<div class="st${done?" done":(cur&&cur.stage===st.stage?" cur":"")}">${st.ko.replace("복용 ","").replace(" 후","")}</div>`;
+  }).join("");
+  if(!cur){ viewFinish(); return; }
+  const needDose = cur.stage!=="baseline" && !t.medication.doseTakenAt;
+  render(`
+    <div class="topbar no-print"><button class="btn ghost small" onclick="viewHome()">← 처음</button><h1 style="margin:0">${esc(t.title)}</h1></div>
+    <div class="stagebar">${bar}</div>
+    ${needDose? `<div class="card"><b>약을 복용하셨나요?</b><div class="hint">복용 직후 아래 버튼을 눌러 실제 복용 시각을 기록하세요. 이후 30·60·90·120분 기록의 기준이 됩니다.</div>
+      <button class="btn primary" style="margin-top:8px" onclick="markDose()">지금 복용했어요 (${new Date().toTimeString().slice(0,5)})</button>
+      <div class="btn-row"><button class="btn ghost" onclick="viewFinish()">조기 종료·최종 평가</button></div></div>`
+    : viewAssessForm(t,cur)}
+  `);
+  if(!needDose) bindAssessForm(t,cur);
+}
+function markDose(){
+  const t=inProgress(); t.medication.doseTakenAt=new Date().toISOString(); /* 자정 넘김 안전: 전체 시각 저장 */
+  save(); viewStages();
+}
+function viewAssessForm(t,cur){
+  const actual = cur.stage==="baseline"? 0 : minutesSinceDose(t);
+  return `<div class="card">
+    <h2>${cur.ko} <button class="btn ghost small no-print" style="float:right" onclick="showRubric()">기준 보기</button></h2>
+    ${cur.stage!=="baseline"? `<div class="hint">예정 ${cur.minutes}분 · 현재 복용 후 ${actual!=null?actual+"분":"-"} 경과</div>`:""}
+    ${t.symptoms.map(sy=>`
+      <div class="scorerow" data-sy="${sy.code}">
+        <div class="sylabel">${esc(CHG.symptomLabel(t,sy.code))}</div>
+        ${[0,1,2,3,4].map(v=>`<button type="button" class="scorebtn" data-v="${v}">${v}</button>`).join("")}
+      </div>`).join("")}
+    <div class="field"><label>현재 약효가 느껴집니까?</label>
+      <div class="chips" id="pe_chips">${CHG.PERCEIVED.map(p=>`<button type="button" class="chip" data-k="${p.code}">${p.ko}</button>`).join("")}</div></div>
+    <div class="field"><label>부작용</label>
+      <div class="chips" id="ae_chips">${CHG.ADVERSE.map(a=>`<button type="button" class="chip${a.code==="none"?" sel":""}" data-k="${a.code}">${a.ko}</button>`).join("")}</div>
+      <div id="ae_sev"></div><div id="ae_warn"></div></div>
+    <div class="field"><label>메모 (선택)</label><textarea id="as_note"></textarea></div>
+    <div class="btn-row"><button class="btn primary" id="as_save">저장</button></div>
+    <div class="btn-row"><button class="btn ghost" id="as_skip">이 시점 건너뛰기</button><button class="btn ghost" onclick="viewFinish()">조기 종료·최종 평가</button></div>
+  </div>`;
+}
+function showRubric(){
+  alert("증상 점수 기준\n"+CHG.SCORE_RUBRIC.map(r=>`${r.v} — ${r.ko}`).join("\n")+"\n\n점수가 낮아질수록 증상이 개선된 것으로 해석합니다.");
+}
+function bindAssessForm(t,cur){
+  document.querySelectorAll(".scorerow").forEach(row=>{
+    row.addEventListener("click",e=>{ const b=e.target.closest(".scorebtn"); if(!b)return;
+      row.querySelectorAll(".scorebtn").forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); });
+  });
+  $("pe_chips").addEventListener("click",e=>{ const b=e.target.closest(".chip"); if(!b)return;
+    $("pe_chips").querySelectorAll(".chip").forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); });
+  const sevState={};
+  $("ae_chips").addEventListener("click",e=>{ const b=e.target.closest(".chip"); if(!b)return;
+    const k=b.dataset.k;
+    if(k==="none"){ $("ae_chips").querySelectorAll(".chip").forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); }
+    else { $("ae_chips").querySelector('.chip[data-k="none"]').classList.remove("sel"); b.classList.toggle("sel"); }
+    renderSev();
+  });
+  function renderSev(){
+    const sel=[...$("ae_chips").querySelectorAll(".chip.sel")].map(b=>b.dataset.k).filter(k=>k!=="none");
+    $("ae_sev").innerHTML=sel.map(k=>`<div class="field"><label>${CHG.label("adverse",k)} 정도</label>
+      <div class="chips" data-ae="${k}">${CHG.AE_SEVERITY.map(s=>`<button type="button" class="chip${(sevState[k]||"mild")===s.code?" sel":""}" data-k="${s.code}">${s.ko}</button>`).join("")}</div></div>`).join("");
+    $("ae_sev").querySelectorAll(".chips").forEach(g=>g.addEventListener("click",e=>{
+      const b=e.target.closest(".chip"); if(!b)return;
+      g.querySelectorAll(".chip").forEach(x=>x.classList.remove("sel")); b.classList.add("sel");
+      sevState[g.dataset.ae]=b.dataset.k; warnIfSevere();
+    }));
+    warnIfSevere();
+    function warnIfSevere(){
+      $("ae_warn").innerHTML = (sel.length && [...$("ae_sev").querySelectorAll(".chip.sel")].some(b=>b.dataset.k==="severe"))
+        ? `<div class="disc warn">${CHG.SEVERE_AE_NOTE}</div>` : "";
+    }
+  }
+  $("as_save").onclick=()=>{
+    const scores={}; let missing=false;
+    document.querySelectorAll(".scorerow").forEach(row=>{
+      const sel=row.querySelector(".scorebtn.sel");
+      if(!sel){ missing=true; return; }
+      scores[row.dataset.sy]=+sel.dataset.v;
+    });
+    if(missing){ toast("모든 증상의 점수를 선택해주세요"); return; }
+    const pe=$("pe_chips").querySelector(".chip.sel");
+    const aes=[...$("ae_chips").querySelectorAll(".chip.sel")].map(b=>b.dataset.k).filter(k=>k!=="none")
+      .map(k=>({code:k, severity: ($("ae_sev").querySelector(`.chips[data-ae="${k}"] .chip.sel`)||{}).dataset?.k||"mild"}));
+    t.assessments.push({
+      stage:cur.stage, scheduledMinutes:cur.minutes,
+      actualMinutes: cur.stage==="baseline"? 0 : (minutesSinceDose(t)??cur.minutes),
+      recordedAt:new Date().toISOString(),
+      symptomScores:scores, perceivedEffect: pe? pe.dataset.k:null,
+      adverseEffects:aes, note:$("as_note").value.trim(),
+    });
+    save(); toast(`${cur.ko} 기록 저장`); viewStages();
+  };
+  $("as_skip").onclick=()=>{
+    t.assessments.push({stage:cur.stage, scheduledMinutes:cur.minutes, actualMinutes:null, recordedAt:new Date().toISOString(),
+      symptomScores:{}, perceivedEffect:null, adverseEffects:[], note:"", skipped:true});
+    save(); toast(`${cur.ko} 건너뜀`); viewStages();
+  };
+}
+
+/* ========== 4. 최종 평가 ========== */
+function viewFinish(){
+  const t=inProgress(); if(!t){ viewHome(); return; }
+  render(`
+    <div class="topbar no-print"><button class="btn ghost small" onclick="viewStages()">← 기록으로</button><h1 style="margin:0">최종 평가</h1></div>
+    <div class="card">
+      <div class="field"><label>전체 효과 *</label>
+        <div class="chips" id="fe_overall">${CHG.OVERALL.map(o=>`<button type="button" class="chip" data-k="${o.code}">${o.ko}</button>`).join("")}</div></div>
+      <div class="field"><label>부작용 종합 *</label>
+        <div class="chips" id="fe_ae">${CHG.AE_SUMMARY.map(o=>`<button type="button" class="chip" data-k="${o.code}">${o.ko}</button>`).join("")}</div></div>
+      <div class="field"><label>오늘 테스트에서 느낀 점 (선택)</label><textarea id="fe_note"></textarea></div>
+      <button class="btn primary" onclick="saveFinal()">평가 저장하고 결과 보기</button>
+    </div>${SAFETY_HTML}`);
+  ["fe_overall","fe_ae"].forEach(id=>$(id).addEventListener("click",e=>{ const b=e.target.closest(".chip"); if(!b)return;
+    $(id).querySelectorAll(".chip").forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); }));
+}
+function saveFinal(){
+  const t=inProgress();
+  const ov=$("fe_overall").querySelector(".chip.sel"), ae=$("fe_ae").querySelector(".chip.sel");
+  if(!ov||!ae){ toast("전체 효과와 부작용 종합을 선택해주세요"); return; }
+  t.finalEvaluation={overallEffect:ov.dataset.k, adverseEffectSummary:ae.dataset.k, note:$("fe_note").value.trim()};
+  t.status="completed"; save(); viewResult(t.id);
+}
+
+/* ========== 5. 결과 ========== */
+function fmtDate(iso){ const d=new Date(iso); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+function graphSvg(analyses){ /* analyses: [{label,color,stages}] */
+  const W=520,H=200,PL=34,PR=10,PT=14,PB=30;
+  const xs=CHG.STAGES.map((st,i)=>PL+(W-PL-PR)*i/(CHG.STAGES.length-1));
+  const yOf=v=>(H-PB)-(H-PT-PB)*(v/4); /* 점수 0=아래(증상 적음), 4=위 */
+  let out=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;background:#fff;border:1px solid var(--line);border-radius:10px">`;
+  for(let v=0;v<=4;v++) out+=`<line x1="${PL}" y1="${yOf(v)}" x2="${W-PR}" y2="${yOf(v)}" stroke="#eef1f6"/><text x="${PL-8}" y="${yOf(v)+4}" font-size="11" fill="#5b6675" text-anchor="end">${v}</text>`;
+  CHG.STAGES.forEach((st,i)=>out+=`<text x="${xs[i]}" y="${H-8}" font-size="11" fill="#5b6675" text-anchor="middle">${st.minutes===0?"복용 전":st.minutes+"분"}</text>`);
+  analyses.forEach(a=>{
+    const pts=a.stages.map((s,i)=> s.avgScore!=null? [xs[i],yOf(s.avgScore)] : null);
+    const seg=pts.map((p,i)=>p? `${pts[i-1]?"L":"M"}${p[0]},${p[1]}`:"").join(" ");
+    out+=`<path d="${seg}" fill="none" stroke="${a.color}" stroke-width="2.5"/>`;
+    pts.forEach(p=>{ if(p) out+=`<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="${a.color}"/>`; });
+  });
+  if(analyses.length>1) out+=analyses.map((a,i)=>`<rect x="${PL+ i*150}" y="4" width="10" height="10" fill="${a.color}"/><text x="${PL+14+i*150}" y="13" font-size="11" fill="#1c2430">${esc(a.label)}</text>`).join("");
+  return out+`</svg>`;
+}
+function viewResult(id){
+  const t=db.tests.find(x=>x.id===id); if(!t){ viewHome(); return; }
+  const a=CHG.analyzeTest(t);
+  const lines=CHG.buildResultLines(a);
+  render(`
+    <div class="topbar no-print"><button class="btn ghost small" onclick="viewList()">← 목록</button>
+      <button class="btn ghost small" onclick="printResult('${t.id}')">🖨 인쇄·PDF</button>
+      <button class="btn ghost small" onclick="copyResult('${t.id}')">텍스트 복사</button></div>
+    <div class="card">
+      <h1>약효 비교 테스트 결과</h1>
+      <div class="hint">${esc(t.title)} · ${fmtDate(t.createdAt)} · ${CHG.label("testType",t.testType)}</div>
+      <div class="hint">${esc(t.medication.name)} ${esc(t.medication.dose)}${t.medication.dosageForm?` (${esc(t.medication.dosageForm)})`:""} · 복용 예정 ${esc(t.medication.scheduledTime||"-")}${t.medication.doseTakenAt?` · 실제 복용 ${esc(doseTimeLabel(t.medication.doseTakenAt))}`:""}</div>
+      ${t.medication.changeDescription? `<div class="hint">변경 내용: ${esc(t.medication.changeDescription)}</div>`:""}
+      <div class="hint">주증상: ${t.symptoms.map(s=>esc(CHG.symptomLabel(t,s.code))).join(", ")}</div>
+      <h2>기록 요약</h2>
+      <ul style="margin:4px 0 0 18px; padding:0">${lines.map(l=>`<li>${esc(l)}</li>`).join("")}</ul>
+      <h2>그래프</h2>
+      <div class="graph">${graphSvg([{label:t.title,color:"#c0392b",stages:a.stages}])}</div>
+      <div class="hint">${CHG.GRAPH_NOTE}</div>
+      <div class="disc">${CHG.DISCLAIMER}</div>
+    </div>`);
+}
+function copyResult(id){
+  const t=db.tests.find(x=>x.id===id);
+  const txt=CHG.buildResultText(t);
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(()=>toast("결과 텍스트를 복사했어요"),()=>toast("복사 실패"));
+  else toast("이 브라우저에서는 복사가 지원되지 않아요");
+}
+function printResult(id){
+  const t=db.tests.find(x=>x.id===id);
+  if(typeof window.print!=="function"){ toast("이 환경에서는 인쇄가 지원되지 않아요"); return; }
+  const old=document.title;
+  document.title=`약효비교결과_${(t.medication.name+t.medication.dose).replace(/\s+/g,"")}_${fmtDate(t.createdAt)}`;
+  const done=()=>{ document.title=old; window.removeEventListener("afterprint",done); };
+  window.addEventListener("afterprint",done);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ window.print(); setTimeout(done,3000); }));
+}
+
+/* ========== 6. 목록·비교 ========== */
+let cmpSel=[];
+function viewList(){
+  cmpSel=[];
+  const items=db.tests.slice().reverse();
+  render(`
+    <div class="topbar no-print"><button class="btn ghost small" onclick="viewHome()">← 처음</button><h1 style="margin:0">이전 테스트</h1></div>
+    ${items.length? items.map(t=>`
+      <div class="card">
+        <b>${esc(t.title||t.medication.name)}</b> <span class="hint">${fmtDate(t.createdAt)} · ${t.status==="completed"?"완료":"진행 중"}</span>
+        <div class="hint">${CHG.label("testType",t.testType)}${t.medication.changeDescription?` · ${esc(t.medication.changeDescription)}`:""}</div>
+        <div class="btn-row">
+          ${t.status==="completed"? `<button class="btn ghost" onclick="viewResult('${t.id}')">결과 보기</button>
+          <button class="btn ghost" data-cmp="${t.id}" onclick="toggleCmp(this,'${t.id}')">비교 선택</button>`
+          : `<button class="btn ghost" onclick="viewStages()">이어서 기록</button>`}
+          <button class="btn ghost" style="color:var(--danger)" onclick="deleteTest('${t.id}')">삭제</button>
+        </div>
+      </div>`).join("")
+    : `<div class="card hint">저장된 테스트가 없습니다.</div>`}
+    <div class="card no-print"><b>두 시험 비교</b><div class="hint">완료된 테스트 2개를 "비교 선택"한 뒤 아래 버튼을 누르세요. 먼저 고른 것이 기준 시험이 됩니다.</div>
+      <button class="btn primary" style="margin-top:8px" onclick="goCompare()">선택한 두 시험 비교</button></div>
+  `);
+}
+function toggleCmp(btn,id){
+  const i=cmpSel.indexOf(id);
+  if(i>=0){ cmpSel.splice(i,1); btn.style.background=""; btn.textContent="비교 선택"; }
+  else { if(cmpSel.length>=2){ toast("비교는 2개까지만 선택할 수 있어요"); return; }
+    cmpSel.push(id); btn.style.background="var(--accent)"; btn.style.color="#fff"; btn.textContent=cmpSel.length===1?"기준 시험":"변경 후 시험"; }
+}
+function goCompare(){
+  if(cmpSel.length!==2){ toast("완료된 테스트 2개를 선택해주세요"); return; }
+  viewCompare(cmpSel[0],cmpSel[1]);
+}
+function deleteTest(id){
+  if(!confirm("이 테스트를 삭제할까요? 되돌릴 수 없습니다.")) return;
+  db.tests=db.tests.filter(t=>t.id!==id); save(); viewList();
+}
+function viewCompare(idA,idB){
+  const A=db.tests.find(t=>t.id===idA), B=db.tests.find(t=>t.id===idB);
+  if(!A||!B){ viewList(); return; }
+  const cmp=CHG.compareTests(A,B);
+  render(`
+    <div class="topbar no-print"><button class="btn ghost small" onclick="viewList()">← 목록</button>
+      <button class="btn ghost small" onclick="printCompare('${idA}','${idB}')">🖨 인쇄·PDF</button></div>
+    <div class="card">
+      <h1>기준 시험 · 변경 후 시험 비교</h1>
+      <div class="hint">기준: ${esc(A.title)} (${fmtDate(A.createdAt)}) / 변경 후: ${esc(B.title)} (${fmtDate(B.createdAt)})</div>
+      <table><thead><tr><th>항목</th><th>기준 시험</th><th>변경 후 시험</th></tr></thead>
+      <tbody>${cmp.rows.map(r=>`<tr><td>${r.ko}</td><td class="num">${esc(r.fmt(r.a))}</td><td class="num">${esc(r.fmt(r.b))}</td></tr>`).join("")}</tbody></table>
+      <h2>기록 요약</h2>
+      <ul style="margin:4px 0 0 18px; padding:0">${cmp.notes.map(n=>`<li>${esc(n)}</li>`).join("")}</ul>
+      <h2>그래프</h2>
+      <div class="graph">${graphSvg([
+        {label:"기준: "+A.title, color:"#c0392b", stages:cmp.base.stages},
+        {label:"변경 후: "+B.title, color:"#2563eb", stages:cmp.after.stages}])}</div>
+      <div class="hint">${CHG.GRAPH_NOTE}</div>
+      <div class="disc">${CHG.DISCLAIMER}</div>
+    </div>`);
+}
+function printCompare(a,b){
+  if(typeof window.print!=="function"){ toast("이 환경에서는 인쇄가 지원되지 않아요"); return; }
+  const old=document.title;
+  document.title=`약효비교결과_비교_${fmtDate(new Date().toISOString())}`;
+  const done=()=>{ document.title=old; window.removeEventListener("afterprint",done); };
+  window.addEventListener("afterprint",done);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ window.print(); setTimeout(done,3000); }));
+}
+
+/* ========== 7. 백업·도움말 ========== */
+function exportJson(){
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(db,null,2)],{type:"application/json"}));
+  a.download=`약효비교테스트_${fmtDate(new Date().toISOString())}.json`; a.click(); URL.revokeObjectURL(a.href);
+  toast("백업을 저장했어요");
+}
+function importJson(ev){
+  const f=ev.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{ try{
+    const d=JSON.parse(r.result);
+    if(!d || d.version!==1 || !Array.isArray(d.tests)) throw 0;
+    if(!confirm(`백업의 테스트 ${d.tests.length}건으로 현재 데이터를 교체할까요?`)) return;
+    db=d; save(); toast("백업을 불러왔어요"); viewHome();
+  }catch(e){ toast("약효 비교 테스트 백업 파일이 아닙니다"); } };
+  r.readAsText(f); ev.target.value="";
+}
+function deleteAll(){
+  if(!confirm("모든 테스트 데이터를 삭제할까요? 되돌릴 수 없습니다.")) return;
+  if(!confirm("정말 삭제합니다. 백업을 먼저 내보내는 것을 권장합니다. 계속할까요?")) return;
+  db=CHG.emptyDb(); save(); toast("삭제했어요"); viewHome();
+}
+function viewHelp(){
+  render(`
+    <div class="topbar no-print"><button class="btn ghost small" onclick="viewHome()">← 처음</button><h1 style="margin:0">사용 방법</h1></div>
+    <div class="card">
+      <ol style="margin:0 0 0 18px; padding:0; line-height:1.9">
+        <li>"약효 테스트 시작"에서 테스트 종류·약·주증상(1~3개)을 입력합니다.</li>
+        <li>약을 먹기 전 상태를 먼저 기록합니다(복용 전).</li>
+        <li>약을 복용한 직후 "지금 복용했어요"를 누릅니다.</li>
+        <li>30·60·90·120분에 같은 증상을 0~4점으로 기록합니다. 놓친 시점은 건너뛸 수 있고, 실제 기록 시각이 함께 저장됩니다.</li>
+        <li>기록이 끝나면 전체 효과와 부작용을 스스로 평가합니다.</li>
+        <li>용량·처방이 바뀐 뒤 같은 방법으로 다시 테스트하고, 목록에서 두 시험을 골라 비교합니다.</li>
+      </ol>
+      <div class="hint" style="margin-top:8px">점수 기준: ${CHG.SCORE_RUBRIC.map(r=>`${r.v}=${r.ko}`).join(" · ")}</div>
+    </div>
+    ${SAFETY_HTML}`);
+}
+
+/* ---------- 시작 ---------- */
+viewHome();
+if("serviceWorker" in navigator){ try{ navigator.serviceWorker.register("sw.js"); }catch(e){} }
+</script>
+</body>
+</html>
