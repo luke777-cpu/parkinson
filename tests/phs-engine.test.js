@@ -73,7 +73,8 @@ console.log("== 8. 기록 부족 ==");
 { const ev=[out(0,8,0,50), out(1,9,0,40), med(1,8,0)];
   const {a,c}=run(ev);
   ok(c.overall==="low","신뢰도 low");
-  ok(c.reasons.some(r=>r.includes("부족")),"부족 사유 명시");
+  ok(c.reasons.map(r=>PHS.reasonText(r,"ko")).some(r=>r.includes("부족")),"부족 사유 명시(ko)");
+  ok(c.reasons.map(r=>PHS.reasonText(r,"en")).some(r=>/few|Low/i.test(r)),"부족 사유 영어 변환");
   const r=PHS.buildReport({profile:null,startSurvey:null,endSurvey:null,analysis:a,confidence:c,medsList:[]});
   ok(r.detailedReport.limitations.some(l=>l.includes("신뢰도가 제한적")||l.includes("부족")),"보고서에 한계 명시"); }
 
@@ -82,13 +83,13 @@ console.log("== 9. 설문-기록 불일치 ==");
   const {a}=run(ev); // 실제 빠른 반응
   const c=PHS.assessConfidence(a,{perceivedMorningResponse:"60_to_90_min"}); // 체감은 느림
   ok(c.surveyAgreement==="conflict","불일치 감지");
-  ok(c.reasons.some(r=>r.includes("일치하지 않음")),"불일치 사유 기록"); }
+  ok(c.reasons.some(r=>r.code==="survey_conflict"),"불일치 사유 코드 기록"); }
 
 console.log("== 10. 복약 누락 (기록 없음) ==");
 { const ev=[]; for(let d=0;d<4;d++){ ev.push(out(d,8,0,40), out(d,10,0,50), out(d,13,0,45), out(d,16,0,40), out(d,19,0,35)); }
   const {a,c}=run(ev);
   ok(a.medicationResponse.totalDoses===0,"복약 0건 처리");
-  ok(c.reasons.some(r=>r.includes("복약 시각 기록 없음")),"복약 누락 감점 사유");
+  ok(c.reasons.some(r=>r.code==="no_med_times"),"복약 누락 감점 사유 코드");
   const r=PHS.buildReport({profile:null,startSurvey:null,endSurvey:null,analysis:a,confidence:c,medsList:[]});
   ok(r.detailedReport.currentMedication.length===0,"현재 약물 빈 목록"); }
 
