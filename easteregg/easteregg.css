@@ -1,0 +1,34 @@
+/* 약효일지 팔레트(화이트·연파랑·연녹 포인트) 유지 — 외부 라이브러리 없음 */
+:root{ --bg:#F5F7FA; --surface:#FFFFFF; --ink:#15212E; --ink-2:#516072; --line:#DCE3EB; --accent:#1FA971; --blue:#EAF2FF; }
+*{ box-sizing:border-box; margin:0; padding:0 }
+body{ background:linear-gradient(#F5F7FA, #EAF2FF); color:var(--ink);
+  font-family:-apple-system,"Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+  min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px 16px }
+.egg{ background:var(--surface); border:1px solid var(--line); border-radius:20px;
+  max-width:420px; width:100%; padding:28px 22px 24px; text-align:center;
+  box-shadow:0 8px 30px rgba(21,33,46,.08) }
+.badge{ display:inline-block; background:var(--blue); color:#2b5f9e; border-radius:999px;
+  font-size:12px; font-weight:800; letter-spacing:.08em; padding:5px 12px; text-transform:uppercase }
+.hiddenTitle{ font-size:15px; color:var(--ink-2); font-weight:700; margin-top:8px }
+.totoWrap{ display:block; width:min(230px,70%); margin:18px auto 10px; border:none; background:none; cursor:pointer;
+  border-radius:18px; overflow:hidden; box-shadow:0 4px 16px rgba(21,33,46,.12); line-height:0 }
+.totoWrap img{ width:100%; height:auto; display:block } /* 원본 비율 유지 */
+.totoWrap .emoji{ font-size:96px; line-height:1.4; display:block }
+.totoWrap.woof{ animation:woof .5s ease }
+@keyframes woof{ 0%{transform:scale(1)} 30%{transform:scale(1.08) rotate(-3deg)} 60%{transform:scale(.97) rotate(2deg)} 100%{transform:scale(1)} }
+.name{ font-size:22px; font-weight:900; margin-top:4px }
+.quote{ margin-top:10px; font-size:15px; line-height:1.7; color:var(--ink) }
+.rule{ height:1px; background:var(--line); margin:18px 10px }
+.motto{ font-size:13.5px; line-height:1.8; color:var(--ink-2); font-style:italic }
+.made{ font-size:14px; line-height:1.8 }
+.made .heart{ font-size:18px }
+.dev{ margin-top:10px; font-size:11.5px; color:var(--ink-2) }
+.ver{ margin-top:4px; font-size:11px; color:var(--ink-2); line-height:1.6 }
+.backBtn{ display:block; margin-top:18px; background:var(--accent); color:#fff; text-decoration:none;
+  border-radius:12px; padding:14px 0; font-size:16px; font-weight:800; min-height:48px }
+.backBtn:active{ opacity:.85 }
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#0E151D; --surface:#16202B; --ink:#E8EEF4; --ink-2:#9DB0C2; --line:#2A3745; --blue:#1E2A37 }
+  body{ background:linear-gradient(#0E151D,#141d28) }
+  .badge{ color:#9cc3ee }
+}
