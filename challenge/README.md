@@ -1,22 +1,37 @@
-# 약효 비교 테스트 (독립 프로토타입)
+# 약효 비교 테스트 v2 (Medication Challenge v2)
 
-처방 변경 전후의 약효와 부작용을 같은 방식으로 기록하여 비교하는 단독 실행 도구.
-WORK_ORDER_MEDICATION_RESPONSE_CHALLENGE_v1 기반. **약효일지 본체와 완전 분리**되어 있다.
+약효일지 본체와 완전히 분리된 독립형 약효 비교 도구.
+내 복용약을 등록하고, 기준 시험과 처방 변경 후 시험을 같은 방식으로 기록해
+예상 약효곡선과 실제 증상 변화를 비교한다.
 
-- 실행: `https://luke777-cpu.github.io/parkinson/challenge/`
-- 저장: localStorage `medicationChallengeDbV1` (본체 키와 다름 — 데이터가 섞이지 않음)
-- 캐시: 서비스워커 `medication-challenge-v1` (본체 yakhyo-* 캐시와 분리)
-- 파일: index.html(화면) · challenge-engine.js(계산) · challenge-report.js(문장·인쇄 텍스트) · challenge.css · manifest.json · sw.js · tests/
+## 파일 구성
+- `index.html` — 전체 화면(약 관리 / 시험 마법사 / 시점 기록 / 결과 / 비교 / 백업)
+- `challenge-engine.js` — 데이터 구조·분석·비교·안전검사·v1 마이그레이션 (순수 계산)
+- `challenge-sim.js` — 예상곡선 모듈 (본체 SIM 로직의 독립 사본, 본체 무수정)
+- `challenge-timer.js` — 30·60·90·120분 타이머·알림 (네이티브 교체 가능하도록 분리)
+- `challenge-report.js` — 허용 해석 문장·보고서 텍스트
+- `challenge.css`, `manifest.json`, `sw.js`, `icon-192.png`, `icon-512.png` — PWA (캐시 `medication-challenge-v2`)
+- `tests/challenge.test.js` — 자동 테스트 79건
 
-## 흐름
-시작 → 테스트 종류·약·주증상(1~3) 입력 → 복용 전 기록 → "지금 복용했어요" → 30·60·90·120분 기록(건너뛰기 가능, 실제 시각 병행 저장) → 최종 평가 → 결과·그래프 → 두 시험 비교.
+## 저장 키 (본체와 완전 분리)
+- `medicationChallengeDbV2` — 시험 기록
+- `medicationChallengeMedicationListV2` — 내 복용약 목록
+- `medicationChallengeDbV1` — v1 원본 (마이그레이션 후에도 보존)
+- `medicationChallengeDbV1Backup` — 마이그레이션 시 자동 백업 사본
 
-## 안전 원칙
-증량·감량·추가 권고 없음 / 진단·레보도파 반응 판정·치료 성패 판정 없음 / 모든 주요 화면·결과에 면책 문구 / 심한 부작용 선택 시 중단 안내.
-자동 분석은 평균·차이·최솟값 등 단순 계산만 수행하며, 엔진에 금지 표현 자체 점검(CHG.checkSafety)이 포함되어 있다.
-
-## 제외 (첫 버전)
-LEDD 계산 · 혈중농도 시뮬레이션 · AI 해석 · 의약품 자동 검색 · 본체 자동 연동 · 클라우드/계정.
+## v1 → v2 마이그레이션
+첫 실행 시 v1 데이터를 감지하면 백업 사본을 만든 뒤 자동 변환한다.
+v1 증상은 운동 증상으로 분류되고, 부작용 심각도(가벼움/중간/심함)는 1/2/4점으로,
+체감(모르겠다/조금/분명함)은 0/1/3점으로 옮겨진다. 원본 v1 키는 삭제하지 않는다.
 
 ## 테스트
-저장소 루트에서: `node challenge/tests/challenge.test.js` (엔진 단위 + jsdom 통합 37건)
+```bash
+cd challenge
+npm install
+npm test
+```
+
+## 안전 원칙
+- 약물 변경 권고·진단·레보도파 반응 판정·ON/OFF 확정을 하지 않는다 (`checkSafety()`로 자동 검사).
+- 예상곡선은 상대적 작용시간 모델이며 혈중농도·개인 반응 예측이 아니다.
+- 실제 약 변경 시험은 의료진과 상의한 처방만 기록하도록 안내한다.
