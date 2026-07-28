@@ -164,6 +164,44 @@ const backup=w.eval("JSON.stringify(db)");
 const re=JSON.parse(backup);
 ok(re.events.length===w.eval("db.events.length") && re.phs.profile.diagnosisYears===14,"백업 JSON에 phs 포함, 이벤트 무결");
 
+console.log("== v0.9.20 안정화·영문화 ==");
+{ const src=fs.readFileSync(path.join(ROOT,'index.html'),'utf-8');
+  ok(/user-scalable=yes/.test(src) && /maximum-scale=5\.0/.test(src) && !/user-scalable=no/.test(src), "viewport 확대 허용(user-scalable=yes, max 5.0)");
+  ok(/@page\{\s*size:A4;\s*margin:12mm\s*\}/.test(src), "A4 12mm @page 인쇄 규격");
+  ok(/break-inside:avoid/.test(src) && /page-break-inside:avoid/.test(src), "표·그래프 페이지 잘림 방지 CSS");
+  const pv=fs.readFileSync(path.join(ROOT,'privacy.html'),'utf-8');
+  ok(/user-scalable=yes/.test(pv), "privacy.html viewport 확대 허용"); }
+/* 글씨 크기: 저장·적용 */
+w.eval(`db.settings.fontScale=1.3; save(); applyFontScale();`);
+ok(JSON.parse(w.localStorage.getItem(KEY)).settings.fontScale===1.3, "글씨 크기 설정 저장(1.3)");
+ok(d.documentElement.style.getPropertyValue("--app-font-scale").trim()==="1.3", "CSS 변수 --app-font-scale 적용");
+w.eval(`db.settings.fontScale=1; save(); applyFontScale();`);
+/* 출력 점수 가이드 */
+w.eval("openOutputGuide()");
+{ const tt=d.querySelector(".sheet").textContent;
+  ok(tt.includes("90~100")&&tt.includes("개인 기준"), "출력 점수 기준 안내 + 면책 문구");
+  w.eval("closeSheet()"); }
+/* 주증상 최대 3개 구조 */
+w.eval(`db.primarySymptoms=[{id:"psym_tremor",type:"tremor",label:"떨림",active:true,createdAt:new Date().toISOString()}]; save();`);
+ok(JSON.parse(w.localStorage.getItem(KEY)).primarySymptoms.length===1, "primarySymptoms 저장 구조 동작");
+/* 영문 보고서 전수 검사 */
+w.eval(`db.settings.lang="en"; save();`);
+d.getElementById("phsGenBtn").click();
+{ const ov=d.getElementById("phsOverlay");
+  const rep=w.eval("JSON.stringify(window.__phsLastReport||null)");
+  let txt=ov.textContent;
+  /* 사용자 입력 원문(약 이름·자유 질문)은 보존 대상 → 검사에서 제외 */
+  const allow=["퍼킨","오후 약을 더 일찍","저녁마다 발가락"];
+  allow.forEach(a=>{ txt=txt.split(a).join(""); });
+  const hangul=(txt.match(/[가-힣]+/g)||[]);
+  ok(hangul.length===0, "영문 보고서에 한국어 고정 문구 없음 ("+hangul.slice(0,5).join(",")+")");
+  ok(ov.textContent.includes("Patient History Summary") && ov.textContent.includes("Points for Clinical Review"), "영문 섹션 제목 정상");
+  ok(!/has Delayed ON|diagnosed/i.test(ov.textContent), "영문 금지 표현 없음");
+  d.getElementById("phsCloseBtn").click(); }
+w.eval(`db.settings.lang="ko"; save();`);
+/* 언어 전환 후 데이터 유지 */
+ok(w.eval("db.events.length>0 && db.phs && db.phs.v===1 && db.meds.length>0"), "언어 전환 후 기존 데이터 유지");
+
 console.log("== window errors ==");
 ok(errs.length===0,"콘솔/윈도우 에러 0건 ("+errs.join("; ")+")");
 
