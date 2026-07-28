@@ -28,6 +28,23 @@ PHS.terminologyKo = {
   anxiety: {plain:"불안", candidate:"불안"},
   sleep: {plain:"잠을 잘 못 잠", candidate:"수면 문제"},
 };
+PHS.terminologyEn = {
+  delayed_response: {plain:"it takes a long time to feel better after taking medication", candidate:"possible delayed medication response"},
+  incomplete_response: {plain:"medication does not bring me up to my usual best", candidate:"possible incomplete response"},
+  no_clear_response: {plain:"no clear improvement after taking medication", candidate:"possible dose without a clear response (No ON Response / Dose Failure)"},
+  wearing_off: {plain:"I decline before the next dose is due", candidate:"possible wearing-off pattern"},
+  afternoon_decline: {plain:"my condition goes down in the afternoon", candidate:"afternoon output decline"},
+  freezing: {plain:"my feet feel stuck when walking", candidate:"Freezing of Gait"},
+  dyskinesia: {plain:"involuntary large movements", candidate:"Dyskinesia"},
+  dystonia: {plain:"muscles pull and twist", candidate:"Dystonia"},
+  tremor: {plain:"tremor", candidate:"Tremor"},
+  brady: {plain:"slowness of movement", candidate:"Bradykinesia"},
+  gait: {plain:"difficulty walking", candidate:"Gait difficulty"},
+  fall: {plain:"near-falls or falls", candidate:"Fall risk"},
+  pain: {plain:"pain", candidate:"Pain"},
+  anxiety: {plain:"anxiety", candidate:"Anxiety"},
+  sleep: {plain:"poor sleep", candidate:"Sleep problems"},
+};
 const RELATION_KO = {
   high_output_associated:"출력이 높은 시기와 시간적 연관성이 관찰됨",
   low_output_associated:"출력이 낮은 시기와 시간적 연관성이 관찰됨",
@@ -37,7 +54,54 @@ const RELATION_KO = {
   mixed:"일정한 패턴이 확인되지 않음",
   insufficient_data:"기록이 적어 패턴 평가가 어려움",
 };
+const RELATION_EN = {
+  high_output_associated:"temporal association with high-output periods observed",
+  low_output_associated:"temporal association with low-output periods observed",
+  rising_phase_associated:"temporal association with rising output observed",
+  falling_phase_associated:"temporal association with falling output observed",
+  morning_associated:"temporal association with morning hours observed",
+  mixed:"no consistent pattern identified",
+  insufficient_data:"not enough records to assess a pattern",
+};
 const CONF_KO = {high:"높음", moderate:"보통", low:"낮음"};
+const CONF_EN = {high:"High", moderate:"Moderate", low:"Low"};
+PHS.relationText = (code,lang)=> (lang==="en"?RELATION_EN:RELATION_KO)[code]||code;
+PHS.confText = (level,lang)=> (lang==="en"?CONF_EN:CONF_KO)[level]||level;
+
+/* ---------- 신뢰도 사유 코드 → 문장 (언어별) ---------- */
+const REASON_TEXTS = {
+  ko: {
+    days_recorded: p=>`${p.p}일 중 ${p.d}일 기록`,
+    few_days: p=>`기록 일수 부족 (${p.d}일)`,
+    good_daily_rate: p=>`하루 평균 ${p.n}회 출력 입력`,
+    low_daily_rate: p=>`하루 평균 입력 횟수 부족 (${p.n}회)`,
+    no_med_times: ()=>"복약 시각 기록 없음",
+    good_dose_coverage: ()=>"복용 전후 출력 기록이 절반 이상의 복용에서 확보됨",
+    low_dose_coverage: ()=>"복용 전후 출력 기록이 부족한 복용이 많음",
+    frequent_gaps: p=>`${p.h}시간 이상 미기록 공백이 잦음`,
+    high_retrospective: ()=>"소급 입력 비율이 높음",
+    survey_agree: ()=>"설문의 체감 반응 시간과 기록 분석이 유사함",
+    survey_conflict: ()=>"설문의 체감 반응 시간과 기록 분석이 일치하지 않음",
+  },
+  en: {
+    days_recorded: p=>`Records on ${p.d} of ${p.p} days`,
+    few_days: p=>`Too few recorded days (${p.d})`,
+    good_daily_rate: p=>`About ${p.n} output entries per day`,
+    low_daily_rate: p=>`Low daily entry rate (${p.n} per day)`,
+    no_med_times: ()=>"No medication times recorded",
+    good_dose_coverage: ()=>"Pre- and post-dose output available for at least half of doses",
+    low_dose_coverage: ()=>"Many doses lack pre- and post-dose output records",
+    frequent_gaps: p=>`Frequent unrecorded gaps longer than ${p.h} hours`,
+    high_retrospective: ()=>"High proportion of retrospective entries",
+    survey_conflict: ()=>"Survey-reported response time does not match the recorded analysis",
+    survey_agree: ()=>"Survey-reported response time is similar to the recorded analysis",
+  }
+};
+PHS.reasonText = (reason,lang)=>{
+  if(typeof reason==="string") return reason; /* 구버전 호환 */
+  const t=(REASON_TEXTS[lang==="en"?"en":"ko"]||{})[reason.code];
+  return t? t(reason.params||{}) : reason.code;
+};
 
 /* ---------- 한국어 문장 템플릿 (결정론적) ---------- */
 PHS.templatesKo = {
@@ -70,11 +134,55 @@ PHS.templatesKo = {
   lowRecordLimitation: ({days}) => `기록 일수가 ${days}일로 적어 해석의 신뢰도가 제한적입니다.`,
   confidenceLine: ({level,score}) => `기록 데이터 신뢰도: ${CONF_KO[level]||level} (${score}/100).`,
   reviewNeeded: () => `상기 소견은 기록 기반 후보 관찰이며, 최종 판단을 위해 담당 의료진의 검토가 필요합니다.`,
-  currentMedLine: ({name,dose,perDay}) => `${name}${dose?` ${dose}mg`:""}${perDay?` — 관찰기간 일평균 ${perDay}회 복용 기록`:""}`,
+  currentMedLine: ({name,dose,perDay,times}) => `${name}${dose?` ${dose}mg`:""}${times&&times.length?` — 대체로 ${times.join(", ")} 복용`:""}${perDay?` (일평균 ${perDay}회 기록)`:""}`,
+  declineHours: ({hours}) => `출력이 다시 내려가기 시작하는 시각은 주로 ${hours.map(h=>`${h}시경`).join(", ")}으로 기록되었습니다.`,
   disclaimer: () => `본 Patient History Summary는 환자가 입력한 설문, 출력 기록, 약 복용 및 증상 기록을 바탕으로 자동 생성되었습니다. 본 보고서는 진단이나 약물 조정 지시를 제공하지 않으며, 최종 임상 판단은 담당 의료진이 시행해야 합니다.`,
 };
-/* 향후 영어 템플릿 자리 (구조 동일) */
-PHS.templatesEn = null;
+PHS.templatesEn = {
+  diagnosisHistory: ({years}) => years!=null? `Patient approximately ${years} years since Parkinson's disease diagnosis.` : `Patient under follow-up for Parkinson's disease.`,
+  observationPurpose: () => `Output-centered records (0–100) were kept to assess daytime functional fluctuation and irregular medication response.`,
+  patientComplaint: ({text}) => `The patient reports "${text}" as the main difficulty.`,
+  outputRange: ({min,max,avg}) => `During the observation period, output ranged from ${min} to ${max} with an average of ${avg}.`,
+  dailyRange: ({range}) => `An average within-day fluctuation of ${range} points was recorded.`,
+  timePattern: ({stable,variable}) => {
+    const parts=[];
+    if(stable) parts.push(`output was relatively stable during ${stable}`);
+    if(variable) parts.push(`fluctuation was greatest during ${variable}`);
+    return parts.length? parts.join(", and ").replace(/^o/,"O")+"." : "";
+  },
+  delayedCandidate: ({count,minutes}) => `After the first morning dose, the median time to a meaningful output rise was ${minutes} minutes; the recorded pattern may suggest a delayed medication response on ${count} occasion(s).`,
+  medianRiseOnly: ({minutes}) => `After the first morning dose, the median time to a meaningful output rise was ${minutes} minutes.`,
+  incompleteCandidate: ({count}) => `On ${count} occasion(s), output rose after dosing but did not reach the usual expected level (possible incomplete response).`,
+  noClearCandidate: ({count}) => `On ${count} occasion(s), no meaningful output rise was recorded despite adequate observation (possible No ON Response / Dose Failure).`,
+  wearingOffCandidate: ({days}) => `A repeated decline in output before the next scheduled dose was recorded across ${days} day(s), suggesting a possible wearing-off pattern.`,
+  declineHours: ({hours}) => `Output most often began to decline again around ${hours.map(h=>`${h}:00`).join(", ")}.`,
+  symptomLine: ({label,count,avgOut,relation,dur}) => {
+    let s=`${label} recorded ${count} time(s)`;
+    if(avgOut!=null) s+=` (average output at onset ${avgOut}`;
+    if(dur!=null) s+= avgOut!=null? `, median duration ${dur} min)` : ` (median duration ${dur} min)`;
+    else if(avgOut!=null) s+=`)`;
+    if(relation) s+=` — ${relation}`;
+    return s+".";
+  },
+  lifestyleLine: ({label,n}) => `${label} was recorded ${n} time(s)/day(s); a temporal association with output change can be reviewed, but causation cannot be established.`,
+  missingDataLimitation: () => `Some periods lack records, limiting accurate assessment of dwell time and medication response.`,
+  lowRecordLimitation: ({days}) => `Only ${days} recorded day(s); interpretation reliability is limited.`,
+  confidenceLine: ({level,score}) => `Recorded-data confidence: ${CONF_EN[level]||level} (${score}/100).`,
+  reviewNeeded: () => `These are record-based candidate observations; final judgment requires review by the treating clinician.`,
+  currentMedLine: ({name,dose,perDay,times}) => `${name}${dose?` ${dose}mg`:""}${times&&times.length?` — usually taken at ${times.join(", ")}`:""}${perDay?` (avg ${perDay} record(s)/day)`:""}`,
+  disclaimer: () => `This Patient History Summary was generated automatically from the user's surveys, output records, medication and symptom logs. It is based on information entered by the user and is intended to support communication with healthcare professionals. It is not a medical diagnosis and does not provide medication adjustment instructions; final clinical judgment must be made by the treating clinician.`,
+};
+
+/* ---------- 영어 안전 필터 ---------- */
+PHS.SAFETY_RULES_EN = [
+  {re:/\bhas\s+Delayed\s*ON\b/gi, to:"has records that may suggest a delayed medication response"},
+  {re:/\bis\s+Delayed\s*ON\b/gi, to:"may suggest a delayed medication response"},
+  {re:/\bhas\s+ON\s*failure\b/gi, to:"has doses without a clear recorded response"},
+  {re:/\bdiagnos(ed|is)\b/gi, to:"record-based observation"},
+  {re:/\bmust\s+(increase|decrease|change)\b[^.]*/gi, to:"requires review by the treating clinician"},
+  {re:/\bis\s+caused\s+by\b/gi, to:"shows a temporal association (causation cannot be established) with"},
+];
+PHS.PROHIBITED_PATTERNS_EN = [/\bhas Delayed ON\b/i, /\bhas ON failure\b/i, /\bdiagnosed\b/i, /\bmust (increase|decrease)\b/i, /\bis caused by\b/i];
 
 /* ---------- 안전 필터 (금지 표현 → 허용 표현) ---------- */
 PHS.SAFETY_RULES = [
@@ -91,6 +199,7 @@ PHS.safetyFilterText = function(text){
   if(typeof text!=="string") return text;
   let out=text;
   PHS.SAFETY_RULES.forEach(r=>{ out=out.replace(r.re, r.to); });
+  (PHS.SAFETY_RULES_EN||[]).forEach(r=>{ out=out.replace(r.re, r.to); });
   return out;
 };
 PHS.applySafetyFilter = function(node){
@@ -106,7 +215,7 @@ PHS.PROHIBITED_PATTERNS = [/delayed\s*ON입니다/i, /ON\s*failure입니다/i, /
 PHS.checkReportSafety = function(reportJson){
   const bad=[];
   (function walk(n,path){
-    if(typeof n==="string"){ PHS.PROHIBITED_PATTERNS.forEach(p=>{ if(p.test(n)) bad.push({path, pattern:String(p), text:n}); }); }
+    if(typeof n==="string"){ PHS.PROHIBITED_PATTERNS.concat(PHS.PROHIBITED_PATTERNS_EN||[]).forEach(p=>{ if(p.test(n)) bad.push({path, pattern:String(p), text:n}); }); }
     else if(Array.isArray(n)) n.forEach((v,i)=>walk(v,`${path}[${i}]`));
     else if(n&&typeof n==="object") Object.entries(n).forEach(([k,v])=>walk(v,`${path}.${k}`));
   })(reportJson,"report");
@@ -114,27 +223,31 @@ PHS.checkReportSafety = function(reportJson){
 };
 
 /* ---------- 문제 코드 → 한국어 라벨 ---------- */
-PHS.problemLabelKo = function(code){
-  const t=PHS.terminologyKo[code];
+PHS.problemLabel = function(code,lang){
+  const t=(lang==="en"? PHS.terminologyEn : PHS.terminologyKo)[code];
   return t? t.candidate : code;
 };
+PHS.problemLabelKo = code=>PHS.problemLabel(code,"ko"); /* 구버전 호환 */
 
 /* ---------- CC 생성 (§10: primary + 최대 2개 secondary) ---------- */
-function buildCC(startSurvey){
-  if(!startSurvey) return "출력 변동 및 약물 반응 평가";
+function buildCC(startSurvey,lang){
+  const fallback = lang==="en"? "Assessment of output fluctuation and medication response" : "출력 변동 및 약물 반응 평가";
+  if(!startSurvey) return fallback;
   const primary=startSurvey.primaryProblem||null;
   const secondary=(startSurvey.chiefProblems||[]).filter(c=>c!==primary).slice(0,2);
-  const parts=[primary, ...secondary].filter(Boolean).map(PHS.problemLabelKo);
-  return parts.length? parts.join(", ") : "출력 변동 및 약물 반응 평가";
+  const parts=[primary, ...secondary].filter(Boolean).map(c=>PHS.problemLabel(c,lang));
+  return parts.length? parts.join(", ") : fallback;
 }
 
 /* ---------- HPI 생성 (§11 고정 순서) ---------- */
-function buildHPI({profile, startSurvey, analysis, confidence}, T){
+function buildHPI({profile, startSurvey, analysis, confidence, lang}, T){
   const s=[];
   s.push(T.diagnosisHistory({years:profile&&profile.diagnosisYears!=null? profile.diagnosisYears : null})); //1 진단 경과
   s.push(T.observationPurpose()); //2 관찰 목적
-  if(startSurvey&&startSurvey.primaryProblem) //3 환자 보고 주호소
-    s.push(T.patientComplaint({text:(PHS.terminologyKo[startSurvey.primaryProblem]||{}).plain||startSurvey.primaryProblem}));
+  if(startSurvey&&startSurvey.primaryProblem){ //3 환자 보고 주호소
+    const term=(lang==="en"? PHS.terminologyEn : PHS.terminologyKo)[startSurvey.primaryProblem];
+    s.push(T.patientComplaint({text:(term&&term.plain)||startSurvey.primaryProblem}));
+  }
   const o=analysis.output;
   if(o.average!=null){ //4 출력 범위·평균
     s.push(T.outputRange({min:o.minimum,max:o.maximum,avg:o.average}));
@@ -149,12 +262,16 @@ function buildHPI({profile, startSurvey, analysis, confidence}, T){
   }
   if(m.incompleteCandidates>0) s.push(T.incompleteCandidate({count:m.incompleteCandidates}));
   if(m.noClearResponseCandidates>0) s.push(T.noClearCandidate({count:m.noClearResponseCandidates}));
-  if(analysis.medicationResponse.wearingOff.candidate) s.push(T.wearingOffCandidate({days:analysis.medicationResponse.wearingOff.days}));
+  if(analysis.medicationResponse.wearingOff.candidate){
+    s.push(T.wearingOffCandidate({days:analysis.medicationResponse.wearingOff.days}));
+    const rh=analysis.medicationResponse.wearingOff.recurrentHours; //6b 다시 나빠지는 시각 (v0.9.20)
+    if(rh&&rh.length) s.push(T.declineHours({hours:rh}));
+  }
   Object.values(analysis.symptoms).forEach(sy=>{ //7 동반 증상
-    if(sy.count>=2) s.push(T.symptomLine({label:sy.labelKo,count:sy.count,avgOut:sy.averageOutputAtEvent,relation:RELATION_KO[sy.relation],dur:sy.medianDurationMinutes}));
+    if(sy.count>=2) s.push(T.symptomLine({label:PHS.symptomLabel(sy.key,lang),count:sy.count,avgOut:sy.averageOutputAtEvent,relation:PHS.relationText(sy.relation,lang),dur:sy.medianDurationMinutes}));
   });
   analysis.lifestyle.associations.slice(0,2).forEach(a=>{ //8 생활 연관성
-    s.push(T.lifestyleLine({label:a.labelKo,n:a.supportingEvents}));
+    s.push(T.lifestyleLine({label:lifestyleLabel(a,lang),n:a.supportingEvents}));
   });
   //9 자료 한계
   if(analysis.output.missingMinutes>0) s.push(T.missingDataLimitation());
@@ -162,70 +279,87 @@ function buildHPI({profile, startSurvey, analysis, confidence}, T){
   return s.filter(Boolean).join(" ");
 }
 
+const LIFESTYLE_LABELS={high_protein_meal:{ko:"단백질 많은 식사",en:"High-protein meals"},late_meal:{ko:"늦은 시간 식사",en:"Late meals"},poor_sleep:{ko:"수면의 질 저하",en:"Poor sleep quality"},constipation:{ko:"변비 의심 배변",en:"Possible constipation"}};
+function lifestyleLabel(a,lang){ const l=LIFESTYLE_LABELS[a.factor]; return l? l[lang==="en"?"en":"ko"] : a.labelKo; }
+
 /* ---------- 임상 검토 포인트 ---------- */
-function buildReviewPoints(analysis, startSurvey){
-  const pts=[];
+function buildReviewPoints(analysis, startSurvey, lang){
+  const pts=[]; const en=lang==="en";
   const m=analysis.medicationResponse.morningFirstDose;
-  if(m.delayedCandidates>0) pts.push(`오전 첫 복용 후 반응 지연 후보 ${m.delayedCandidates}회 — 담당 의료진의 검토가 필요합니다.`);
-  if(m.incompleteCandidates>0) pts.push(`불완전한 출력 회복이 의심되는 기록 ${m.incompleteCandidates}회 — 담당 의료진의 검토가 필요합니다.`);
-  if(m.noClearResponseCandidates>0) pts.push(`뚜렷한 반응이 확인되지 않은 후보 ${m.noClearResponseCandidates}회 — 담당 의료진의 검토가 필요합니다.`);
-  if(analysis.medicationResponse.wearingOff.candidate) pts.push(`다음 복용 전 출력 하강의 반복 기록 — 웨어링오프 의심 패턴에 대한 검토가 필요합니다.`);
+  const needs=en?" — review by the treating clinician is needed.":" — 담당 의료진의 검토가 필요합니다.";
+  if(m.delayedCandidates>0) pts.push((en?`Possible delayed response after the first morning dose, ${m.delayedCandidates} time(s)`:`오전 첫 복용 후 반응 지연 후보 ${m.delayedCandidates}회`)+needs);
+  if(m.incompleteCandidates>0) pts.push((en?`Records suggesting incomplete output recovery, ${m.incompleteCandidates} time(s)`:`불완전한 출력 회복이 의심되는 기록 ${m.incompleteCandidates}회`)+needs);
+  if(m.noClearResponseCandidates>0) pts.push((en?`Doses without a clear recorded response (possible No ON Response), ${m.noClearResponseCandidates} time(s)`:`뚜렷한 반응이 확인되지 않은 후보 ${m.noClearResponseCandidates}회`)+needs);
+  if(analysis.medicationResponse.wearingOff.candidate) pts.push(en?`Repeated pre-dose output decline — review of a possible wearing-off pattern is needed.`:`다음 복용 전 출력 하강의 반복 기록 — 웨어링오프 의심 패턴에 대한 검토가 필요합니다.`);
   Object.values(analysis.symptoms).forEach(sy=>{
     if(sy.count>=2 && (sy.relation==="high_output_associated"||sy.relation==="low_output_associated"))
-      pts.push(`${sy.labelKo}의 ${RELATION_KO[sy.relation]} — 인과관계는 확정할 수 없으며 검토가 필요합니다.`);
+      pts.push(en? `${PHS.symptomLabel(sy.key,lang)}: ${PHS.relationText(sy.relation,lang)} — causation cannot be established; review is needed.`
+                 : `${PHS.symptomLabel(sy.key,lang)}의 ${PHS.relationText(sy.relation,lang)} — 인과관계는 확정할 수 없으며 검토가 필요합니다.`);
   });
-  if(!pts.length) pts.push("기록상 뚜렷한 반복 패턴 후보는 확인되지 않았습니다. 담당 의료진의 종합 검토가 필요합니다.");
+  if(!pts.length) pts.push(en?"No clear repeated pattern candidates were identified in the records. Comprehensive review by the treating clinician is needed.":"기록상 뚜렷한 반복 패턴 후보는 확인되지 않았습니다. 담당 의료진의 종합 검토가 필요합니다.");
   return pts;
 }
 
 /* ---------- 환자 질문 (§12 순서: 자유 질문 → 선택 질문 → 제안 질문[별도 표기]) ---------- */
-function buildQuestions(startSurvey, endSurvey, analysis){
-  const qs=[];
-  if(startSurvey&&startSurvey.freeQuestion) qs.push({type:"free", text:startSurvey.freeQuestion}); // 환자가 입력한 그대로
-  (startSurvey&&startSurvey.selectedPatientQuestions||[]).forEach(q=>qs.push({type:"selected", text:q}));
+PHS.QUESTION_PRESETS={
+  q_delay_reason:{ko:"약 반응이 늦어지는 이유가 궁금합니다.",en:"I would like to understand why my medication response is delayed."},
+  q_timing:{ko:"복용 시간 조정이 필요한지 여쭙고 싶습니다.",en:"I would like to ask whether my dose timing needs adjustment."},
+  q_afternoon:{ko:"오후에 나빠지는 것에 대해 여쭙고 싶습니다.",en:"I would like to ask about getting worse in the afternoon."},
+  q_dyskinesia:{ko:"이상운동(몸이 저절로 흔들림)에 대해 여쭙고 싶습니다.",en:"I would like to ask about dyskinesia (involuntary movements)."},
+  q_method:{ko:"지금 기록 방법이 적절한지 확인받고 싶습니다.",en:"I would like to confirm whether my current recording method is appropriate."},
+};
+function presetText(code,lang){ const p=PHS.QUESTION_PRESETS[code]; return p? p[lang==="en"?"en":"ko"] : code; }
+function buildQuestions(startSurvey, endSurvey, analysis, lang){
+  const qs=[]; const en=lang==="en";
+  if(startSurvey&&startSurvey.freeQuestion) qs.push({type:"free", text:startSurvey.freeQuestion}); // 환자 입력 원문 보존 (자동 번역 금지)
+  (startSurvey&&startSurvey.selectedPatientQuestions||[]).forEach(q=>qs.push({type:"selected", text:presetText(q,lang)}));
   if(endSurvey&&endSurvey.additionalClinicianQuestion) qs.push({type:"free", text:endSurvey.additionalClinicianQuestion});
   /* 반복 패턴 기반 제안 질문 — 별도 라벨, 지시 아님 */
   const m=analysis.medicationResponse.morningFirstDose;
-  if(m.delayedCandidates>=2) qs.push({type:"suggested", text:"오전 첫 복용 후 반응이 늦어지는 기록이 반복되는데, 이에 대해 어떻게 보시는지 여쭙고 싶습니다."});
-  if(analysis.medicationResponse.wearingOff.candidate) qs.push({type:"suggested", text:"다음 약 시간 전에 몸이 먼저 가라앉는 기록이 반복되는데, 검토를 부탁드리고 싶습니다."});
+  if(m.delayedCandidates>=2) qs.push({type:"suggested", text:en?"My records repeatedly show a slow response after the first morning dose — I would like to ask how you see this.":"오전 첫 복용 후 반응이 늦어지는 기록이 반복되는데, 이에 대해 어떻게 보시는지 여쭙고 싶습니다."});
+  if(analysis.medicationResponse.wearingOff.candidate) qs.push({type:"suggested", text:en?"My records repeatedly show decline before the next dose is due — I would like to ask for your review.":"다음 약 시간 전에 몸이 먼저 가라앉는 기록이 반복되는데, 검토를 부탁드리고 싶습니다."});
   return qs;
 }
 
 /* ---------- 보고서 엔진 (총괄) ---------- */
-PHS.buildReport = function({profile, startSurvey, endSurvey, analysis, confidence, medsList}){
-  const T=PHS.templatesKo;
-  const cc=buildCC(startSurvey);
-  const hpi=buildHPI({profile,startSurvey,analysis,confidence}, T);
+PHS.buildReport = function({profile, startSurvey, endSurvey, analysis, confidence, medsList, lang}){
+  lang = lang==="en"? "en":"ko";
+  const T = lang==="en"? PHS.templatesEn : PHS.templatesKo;
+  const cc=buildCC(startSurvey,lang);
+  const hpi=buildHPI({profile,startSurvey,analysis,confidence,lang}, T);
   const m=analysis.medicationResponse, o=analysis.output;
   const keyResults=[];
   if(o.average!=null) keyResults.push(T.outputRange({min:o.minimum,max:o.maximum,avg:o.average}));
   if(m.morningFirstDose.medianRiseMinutes!=null) keyResults.push(T.medianRiseOnly({minutes:m.morningFirstDose.medianRiseMinutes}));
   const symTop=Object.values(analysis.symptoms).sort((a,b)=>b.count-a.count)[0];
-  if(symTop&&symTop.count>0) keyResults.push(T.symptomLine({label:symTop.labelKo,count:symTop.count,avgOut:symTop.averageOutputAtEvent,relation:RELATION_KO[symTop.relation],dur:symTop.medianDurationMinutes}));
+  if(symTop&&symTop.count>0) keyResults.push(T.symptomLine({label:PHS.symptomLabel(symTop.key,lang),count:symTop.count,avgOut:symTop.averageOutputAtEvent,relation:PHS.relationText(symTop.relation,lang),dur:symTop.medianDurationMinutes}));
   keyResults.push(T.confidenceLine({level:confidence.overall,score:confidence.score}));
   const mainDailyPattern = (()=>{
     const parts=[];
     const tp=T.timePattern({stable:o.mostStablePeriod,variable:o.mostVariablePeriod});
     if(tp) parts.push(tp);
     if(m.wearingOff.candidate) parts.push(T.wearingOffCandidate({days:m.wearingOff.days}));
-    return parts.join(" ") || "시간대별 패턴을 평가하기에 기록이 충분하지 않습니다.";
+    if(m.wearingOff.candidate && m.wearingOff.recurrentHours.length) parts.push(T.declineHours({hours:m.wearingOff.recurrentHours}));
+    return parts.join(" ") || (lang==="en"? "Not enough records to assess time-of-day patterns." : "시간대별 패턴을 평가하기에 기록이 충분하지 않습니다.");
   })();
-  const questions=buildQuestions(startSurvey,endSurvey,analysis);
-  const reviewPoints=buildReviewPoints(analysis,startSurvey);
+  const questions=buildQuestions(startSurvey,endSurvey,analysis,lang);
+  const reviewPoints=buildReviewPoints(analysis,startSurvey,lang);
   /* 현재 약물: 관찰기간 복약 기록 기준 (등록된 약 목록 참조) */
   const doseDays={};
   analysis._adapted.medicationEvents.forEach(me=>{
-    const k=me.name; (doseDays[k]||(doseDays[k]={n:0,dose:me.doseMg})).n++;
+    const k=me.name; (doseDays[k]||(doseDays[k]={n:0})).n++;
   });
   const days=Math.max(1,analysis.period.recordedDays);
-  const currentMedication=Object.entries(doseDays).map(([name,v])=>
-    T.currentMedLine({name,dose:v.dose,perDay:(v.n/days).toFixed(1)}));
+  const currentMedication=(analysis.medicationResponse.doseSchedule||[]).map(ds=>
+    T.currentMedLine({name:ds.name, dose:ds.doseMg, times:ds.times,
+                      perDay:((doseDays[ds.name]||{n:0}).n/days).toFixed(1)}));
   const limitations=[];
   if(o.missingMinutes>0) limitations.push(T.missingDataLimitation());
   if(analysis.period.recordedDays<3) limitations.push(T.lowRecordLimitation({days:analysis.period.recordedDays}));
-  confidence.reasons.forEach(r=>limitations.push(r));
+  confidence.reasons.forEach(rr=>limitations.push(PHS.reasonText(rr,lang)));
   const report={
     title:"Patient History Summary",
+    lang,
     generatedAt:new Date().toISOString(),
     schemaVersion:PHS.SCHEMA_VERSION,
     period:{start:analysis.period.start, end:analysis.period.end},
@@ -256,14 +390,14 @@ PHS.buildReport = function({profile, startSurvey, endSurvey, analysis, confidenc
         wearingOffDays:m.wearingOff.days,
       },
       associatedSymptoms:Object.values(analysis.symptoms).map(sy=>({
-        label:sy.labelKo, count:sy.count, averageOutputAtEvent:sy.averageOutputAtEvent,
-        medianDurationMinutes:sy.medianDurationMinutes, relation:RELATION_KO[sy.relation]||sy.relation,
+        key:sy.key, label:PHS.symptomLabel(sy.key,lang), count:sy.count, averageOutputAtEvent:sy.averageOutputAtEvent,
+        medianDurationMinutes:sy.medianDurationMinutes, relation:PHS.relationText(sy.relation,lang),
       })),
-      possibleInfluencingFactors:analysis.lifestyle.associations.map(a=>T.lifestyleLine({label:a.labelKo,n:a.supportingEvents})),
+      possibleInfluencingFactors:analysis.lifestyle.associations.map(a=>T.lifestyleLine({label:lifestyleLabel(a,lang),n:a.supportingEvents})),
       patientQuestions:questions,
       clinicalReviewPoints:reviewPoints,
       limitations,
-      confidence,
+      confidence:{...confidence, reasonsText:confidence.reasons.map(rr=>PHS.reasonText(rr,lang))},
     },
     graphs:{ outputCurve:true, medicationMarkers:true, symptomMarkers:true,
              lifestyleMarkers:true, estimatedMedicationEffect:true, missingIntervals:true },
