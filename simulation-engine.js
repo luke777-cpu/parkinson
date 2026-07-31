@@ -69,6 +69,27 @@ ENG.medRole = function(name){
   return {category:"other", leddIncluded:false, pkIncluded:false, certainty:"unknown", note:"약물 종류를 확인할 수 없어 계산에서 제외"};
 };
 
+/* ---- 약물별로 적절한 용량 조절 단위 ----
+   검토 반영: 도파민 작용제(미라펙스 0.125~1.5mg)에 +25mg 버튼을 만들면 안 된다.
+   dose 조절이 의미 없거나 위험한 분류는 null을 반환해 용량 변경 UI 자체를 제공하지 않는다. */
+ENG.doseStepsFor = function(name){
+  const role=ENG.medRole(name);
+  const n=name||"";
+  if(role.category==="levodopa") return [-50,-25,25,50];
+  if(role.category==="dopamine_agonist"){
+    if(n.includes("리큅")||n.includes("로피니롤")) return [-0.5,-0.25,0.25,0.5];
+    return [-0.25,-0.125,0.125,0.25]; /* 프라미펙솔(미라펙스) 계열 */
+  }
+  if(role.category==="amantadine") return [-100,100];
+  return null; /* COMT·MAO-B는 고정 함량 제제, 알 수 없는 약은 조절 불가 */
+};
+/* 표시용 용량 포맷 — 미기록(null)은 0으로 만들지 않고 확인 필요로 표시 */
+ENG.DOSE_UNKNOWN_LABEL = "용량 확인 필요";
+ENG.formatDose = function(dose){
+  if(dose==null || dose==="" || Number.isNaN(+dose)) return ENG.DOSE_UNKNOWN_LABEL;
+  return `${+dose}mg`;
+};
+
 /* ---- 복약안(doses) → 상대 PK 포인트 배열. t0/t1/step 단위: 분(당일 0시 기준 상대 분) ---- */
 ENG.doseCurvePts = function(doses, t0, t1, step){
   step = step||10;
