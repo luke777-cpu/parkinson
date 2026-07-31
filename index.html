@@ -399,111 +399,71 @@ body{font-size:calc(15px*var(--app-font-scale))}
 
   <!-- SIM (LEDD 복약 시뮬레이션) -->
   <section class="tab" id="tab-sim">
-    <div class="card no-print" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:14px 16px; margin-bottom:12px; display:flex; align-items:center; gap:10px">
-      <span style="font-size:22px">🧪</span>
-      <div style="flex:1"><div class="card-title" style="margin:0" data-i18n="chgEntryTitle">약효 비교 테스트 (Medication Challenge)</div>
-      <div style="font-size:12px; color:var(--ink-2)" data-i18n="chgEntryDesc">기준·변경 복용안을 같은 방식으로 기록해 비교해요</div></div>
-      <button class="btn primary" id="challengeEntryBtn" style="width:auto" data-i18n="chgEntryBtn">열기</button>
-    </div>
-    <!-- v0.9.26: 기간 분석 — 오늘 하루가 아니라 최근 N일에 문제가 반복되는지 먼저 확인 -->
-    <div class="chart-card" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px">
-      <div class="card-title"><span>1단계 · 최근 기록에서 문제 확인</span></div>
-      <div class="hint">오늘 한 번의 기록만으로는 delayed ON인지 알 수 없습니다. 같은 복용을 여러 날 모아 평소 반응과 비교합니다.</div>
-      <div style="display:flex; gap:6px; margin:8px 0">
-        <select id="clinPeriod" class="btn" style="flex:1; font-weight:700">
-          <option value="7">최근 7일</option><option value="14">최근 14일</option><option value="30">최근 30일</option>
-        </select>
-        <select id="clinGroup" class="btn" style="flex:1.4; font-weight:700"></select>
-      </div>
-      <div id="clinSummary"></div>
-      <div id="clinTable" style="overflow-x:auto"></div>
-      <div id="clinContext" style="font-size:12.5px; margin-top:8px"></div>
-      <div id="clinGoalWrap" style="margin-top:12px; display:none">
-        <div style="font-size:12px; color:var(--ink-2); margin-bottom:4px">2단계 · 개선하려는 문제</div>
-        <select id="clinGoal" class="btn" style="width:100%; font-weight:700"></select>
-        <div id="clinGoalNote" class="hint" style="margin-top:6px"></div>
-        <button class="btn primary no-print" id="clinToSimBtn" style="margin-top:10px; display:none">이 문제를 시뮬레이션하기</button>
-      </div>
+    <div class="disclaimer" style="margin-bottom:12px">
+      이 곡선은 약물 종류, 제형, 용량, 복용시간 및 LEDD를 이용해 시간적 특성을 단순화한 참조 모델입니다. 실제 혈중농도, 개인의 실제 약효 또는 치료 결과를 예측하지 않습니다.
     </div>
 
-    <div class="btn-row no-print" style="margin-bottom:10px">
-      <select id="simDate" class="btn" style="font-weight:700"></select>
-    </div>
+    <!-- 1단계: 날짜와 실제 출력곡선 -->
     <div class="card" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px">
-      <div class="card-title"><span data-i18n="simPlanTitle">현재 복약안 (선택한 날짜의 실제 기록)</span></div>
-      <div id="simPlanList" style="font-size:13px; color:var(--ink-2)"></div>
-    </div>
-    <div class="card" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px">
-      <div class="card-title"><span data-i18n="simVirtualTitle">가상 변경안</span></div>
-      <div id="simVirtualRows"></div>
-      <div class="btn-row no-print" style="margin-top:8px">
-        <button class="btn ghost" id="simAddDose" data-i18n="simAddDose">+ 복용 추가</button>
-        <button class="btn ghost" id="simCopyPlan" data-i18n="simCopyPlan">현재안 복사해오기</button>
+      <div class="card-title"><span>출력곡선과 약효곡선 비교</span></div>
+      <div class="btn-row no-print" style="margin:8px 0">
+        <select id="simDate" class="btn" style="font-weight:700"></select>
       </div>
+      <div class="hint">내가 기록한 실제 출력과 현재 약물 조합의 시간적 특성을 함께 살펴봅니다.</div>
     </div>
+
+    <!-- 2단계: 현재 복용약 확인 -->
+    <div class="card" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px">
+      <div class="card-title"><span>현재 복용약</span></div>
+      <div id="simPlanList" style="font-size:13px; color:var(--ink-2)"></div>
+      <div id="simUnregisteredNote" style="font-size:12px; color:var(--ink-2); margin-top:6px"></div>
+    </div>
+
+    <!-- 3단계: 실제 출력곡선 + 복합 약효 추정곡선 -->
+    <div class="chart-card" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px">
+      <div class="card-title"><span>실제 출력과 약효 추정곡선</span></div>
+      <div class="hint">실제 출력과 약효 추정치는 서로 다른 자료입니다. 곡선의 일치 여부는 참고용이며 인과관계를 의미하지 않습니다.</div>
+      <div id="simCarryNote" style="font-size:12px; color:var(--ink-2); margin:4px 0"></div>
+      <div id="simMainChart"></div>
+      <div class="legend">
+        <span><i style="background:#E8663C"></i><span>실제 출력: 환자 기록</span></span>
+        <span><i style="background:#5C93D6"></i><span>현재 약효 추정: 약물모델</span></span>
+      </div>
+      <button class="btn ghost no-print" id="simPerDrugToggle" style="margin-top:8px">약물별 곡선 보기</button>
+      <div id="simPerDrugChart" style="display:none; margin-top:8px"></div>
+    </div>
+
+    <!-- 4단계: 변경안 비교 -->
     <div class="card no-print" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:14px 16px; margin-bottom:14px">
-      <div class="card-title"><span>가상안 만들기</span></div>
-      <div style="font-size:12px; color:var(--ink-2); margin-bottom:6px">① 변경할 약</div>
+      <div class="card-title"><span>변경안 만들기</span></div>
+      <div class="hint">현재안을 복사한 뒤 한 가지만 바꿔서 곡선의 상대적 모양 차이를 비교합니다.</div>
+      <div style="font-size:12px; color:var(--ink-2); margin:8px 0 4px">변경할 약</div>
       <select id="simTargetMed" style="width:100%; min-height:48px"></select>
       <div id="simTargetInfo" style="font-size:12.5px; margin:6px 0 8px"></div>
-      <div style="font-size:12px; color:var(--ink-2); margin-bottom:4px">② 변경 방식</div>
+      <div style="font-size:12px; color:var(--ink-2); margin-bottom:4px">변경 방식</div>
       <div class="chips" id="simChangeKind"></div>
       <div id="simChangeControls" style="margin-top:8px"></div>
-      <div style="font-size:12px; color:var(--ink-2); margin:10px 0 4px">③ 결과</div>
-      <div id="simPlanCompare" style="font-size:12.5px; line-height:1.8"></div>
-      <div id="simDiffLine" style="font-size:12.5px; color:var(--ink-2); margin-top:6px"></div>
-      <button class="btn ghost" id="simResetBtn" style="margin-top:8px">가상안 초기화</button>
-    </div>
-    <div class="chart-card" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px">
-      <div class="card-title"><span data-i18n="simChartTitle">① 추정 상대 약물효과 (%)</span></div>
-      <div class="hint" style="margin-bottom:4px">출력 점수와 다른 단위입니다 — 두 복약안의 상대적인 작용 시간·중첩만 비교하세요.</div>
-      <div id="simChart"></div>
-      <div class="legend">
-        <span><i style="background:#5C93D6"></i><span data-i18n="simLegendPlan">현재안</span></span>
-        <span><i style="background:#E0A030"></i><span data-i18n="simLegendVirtual">가상안</span></span>
-      </div>
-    </div>
-    <div class="chart-card" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px">
-      <div class="card-title"><span>② 실제 출력 · 예상 출력 (0–100)</span></div>
-      <div class="hint" style="margin-bottom:4px">점: 실제 기록 · 실선: 현재안 예상 · 점선: 가상안 예상. 예상 곡선은 실제 반응을 보장하지 않는 가상 시뮬레이션입니다.</div>
-      <div id="simOutChart"></div>
-      <div class="legend">
-        <span><i style="background:#E8663C"></i><span data-i18n="simLegendActual">실제 출력</span></span>
-        <span><i style="background:#5C93D6"></i><span>현재안 예상</span></span>
-        <span><i style="background:#E0A030"></i><span>가상안 예상</span></span>
-      </div>
-      <div id="simConfLine" class="hint" style="margin-top:6px"></div>
-      <div id="simDyskNote" class="hint" style="margin-top:4px"></div>
-    </div>
-    <div class="chart-card" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px">
-      <div class="card-title"><span>결과 요약 비교</span></div>
-      <div id="simCards" style="display:grid; grid-template-columns:1fr 1fr; gap:10px"></div>
-      <div id="simLeddDetail" style="font-size:12.5px; margin-top:12px"></div>
-      <button class="btn primary no-print" id="simToChallengeBtn" style="margin-top:12px">🧪 이 가상안으로 비교 테스트 시작</button>
-      <div class="hint">가상안이 그대로 약효 비교 테스트의 시험 복용안으로 넘어갑니다. 실제 복용 변경은 의료진과 상의하십시오.</div>
-      <div class="stat-grid" id="simStatGrid" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin-top:14px"></div>
-    </div>
-    <div class="disclaimer" style="margin:10px 0" data-i18n-html="simDisclaimer">
-      <b>이 곡선은 실제 혈중 약물농도나 도파민 농도를 측정한 것이 아닙니다.</b> 복약 기록과 약물별 일반적인 흡수·반감기 특성을 바탕으로 계산한 추정치이며, 실제 약효를 보장하거나 처방 변경을 지시하지 않습니다. 화면은 현재안과 가상안의 예상 차이를 비교하는 참고 자료이며, 약물 조정은 반드시 주치의와 상의하세요.
+      <button class="btn ghost" id="simResetBtn" style="margin-top:8px">변경안 초기화</button>
     </div>
 
-    <!-- v1.0 Simulation Platform: 최대 3개 실험안 동시 비교 -->
-    <div class="chart-card" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px">
-      <div class="card-title"><span>실험안 비교 (최대 3개)</span></div>
-      <div class="hint">각 실험안은 현재안을 기준으로 서로 독립적으로 계산됩니다 — 실험 2가 실험 1의 결과를 이어받지 않습니다.</div>
-      <div id="scenarioBasis" style="font-size:12px; color:var(--ink-2); margin-top:6px"></div>
-      <div id="scenarioList"></div>
-      <button class="btn ghost no-print" id="scenarioAddBtn" style="margin-top:8px">＋ 실험안 추가</button>
-      <div id="scenarioCombinedWrap" style="margin-top:14px; display:none">
-        <div class="card-title" style="margin-top:6px"><span>종합 비교 그래프</span></div>
-        <div id="scenarioCombinedChart"></div>
-        <div class="legend">
-          <span><i style="background:#E8663C"></i><span>실제 출력</span></span>
-          <span><i style="background:#5C93D6"></i><span>현재안</span></span>
-          <span id="scenarioCombinedLegendExtra"></span>
-        </div>
-        <div id="scenarioOverallText" style="font-size:12.5px; line-height:1.7; margin-top:10px; padding:8px 10px; background:var(--surface-2); border-radius:8px"></div>
+    <div class="chart-card" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px" id="simCompareWrap">
+      <div class="card-title"><span>현재안 · 변경안 비교</span></div>
+      <div id="simCompareChart"></div>
+      <div class="legend">
+        <span><i style="background:#E8663C"></i><span>실제 출력</span></span>
+        <span><i style="background:#5C93D6"></i><span>현재 약효 추정</span></span>
+        <span><i style="background:#E0A030"></i><span>변경안 약효 추정</span></span>
       </div>
+      <div id="simOverlapNote" class="hint" style="margin-top:6px"></div>
+      <div id="simLeddCompare" style="font-size:12.5px; margin-top:10px"></div>
+      <div id="simDiffLine" style="font-size:12.5px; color:var(--ink-2); margin-top:8px"></div>
+      <div class="disclaimer" style="margin-top:10px">
+        약물의 용량이나 복용시간 변경은 담당 의료진과 상의해야 합니다. 실제 반응은 약효 비교 테스트와 진료를 통해 확인하십시오.
+      </div>
+    </div>
+
+    <div class="hint no-print" style="text-align:center; margin:6px 0 16px">
+      실제 복용 결과는 <a href="challenge/index.html" onclick="syncSharedProfile()">약효 비교 테스트</a>에서 확인할 수 있습니다.
     </div>
   </section>
 
@@ -610,11 +570,7 @@ body{font-size:calc(15px*var(--app-font-scale))}
 <script src="shared-profile.js"></script>
 <script src="phs-engine.js"></script>
 <script src="phs-report.js"></script>
-<script src="simulation-clinical.js"></script>
-<script src="simulation-engine.js"></script>
-<script src="simulation-compare.js"></script>
-<script src="simulation-interpret.js"></script>
-<script src="simulation-report.js"></script>
+<script src="simulation-drugmodel.js"></script>
 <script>
 "use strict";
 /* ---------- i18n ---------- */
@@ -673,7 +629,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음 (INSUF)",
-    versionLabel:"약효일지 · 테스트판 0.9.27",
+    versionLabel:"약효일지 · 테스트판 1.0.1",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -732,7 +688,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests (INSUF)",
-    versionLabel:"Med Log · Test build 0.9.27",
+    versionLabel:"Med Log · Test build 1.0.1",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -2590,199 +2546,77 @@ function curveGapNoticeHtml(k){
     <span style="color:var(--ink-2)"> · ${L("기억나지 않으면 그대로 두어도 됩니다","Leave it unrecorded if you don't remember")}</span></div>`;
 }
 
-/* ---------- render: SIM (LEDD 복약 시뮬레이션) ----------
-   저장 구조 변경 없음: 현재안은 기존 db.events(type:med)에서 그 날짜분을 그대로 읽어옴(읽기 전용).
-   가상안은 db.settings.simVirtual(선택적 필드)에 담아 두되, 없어도 정상 동작하며 기존 백업 파일과 100% 호환됨. */
-let _simVirtual = null; // {dayKey, doses:[{name,dose,time}]}
-function simDoseCurvePts(doses){
-  const START=5*60, END=26*60, STEP=10;
-  const pts=[];
-  for(let t=START; t<=END; t+=STEP){
-    let sum=0;
-    doses.forEach(d=>{
-      if(!d.time) return;
-      const role=medRole(d.name);
-      if(!role.pkIncluded) return; /* v0.9.22 검토 반영: 알 수 없는 약·아만타딘은 PK 곡선에서 제외 */
-      const [h,m]=d.time.split(":").map(Number);
-      const doseMin=h*60+m;
-      const since=t-doseMin;
-      if(since<-60) return;
-      const prof=kineticFor(d.name);
-      const factor=leddFactorFor(d.name); /* 기본값 1.0은 role 게이트를 통과한 레보도파 계열에만 적용됨 */
-      const ledd=(d.dose||0)*factor;
-      if(prof.type==="extend"){
-        if(since>=0 && since<=300) sum += Math.max(0,1-(since/300))*ledd*0.4;
-      } else {
-        sum += doseCurve(prof, since)*ledd;
-      }
-    });
-    pts.push({t,val:sum});
-  }
-  return pts;
-}
-function simTotalLEDD(doses){
-  return doses.reduce((s,d)=>{
-    const role=medRole(d.name);
-    if(!role.leddIncluded) return s;
-    return s + (d.dose||0)*leddFactorFor(d.name);
-  },0);
-}
-function simPeak(pts){
-  if(!pts.length) return {val:0,t:null};
-  let best=pts[0]; pts.forEach(p=>{ if(p.val>best.val) best=p; });
-  return best;
-}
-function simFmtTime(tMin){ const t=((tMin%1440)+1440)%1440; return `${pad(Math.floor(t/60))}:${pad(Math.round(t%60))}`; }
-
+/* ============================================================
+   시뮬레이터 v1.0 — 전면 재설계
+   책임: 실제 출력곡선 + 다중약물 복합 약효 추정곡선을 함께 보여주고,
+   변경안의 상대적 곡선 차이만 비교한다. 문제 자동진단·추천·챌린지 자동연결 없음.
+   저장 구조: 실제 기록(db.events)은 읽기 전용. 변경안은 db.settings.simVariant(선택 필드)에만 저장,
+   없어도 정상 동작하며 기존 백업과 100% 호환된다.
+   ============================================================ */
 function medsForDay(dayKey){
   const days=byDay();
-  /* v0.9.23: dose가 없는 기록을 0mg으로 바꾸지 않는다 (0→125mg 같은 잘못된 변경 표시의 원인이었음).
-     null을 유지하고 화면에서 "용량 확인 필요"로 표시한다. */
   return (days[dayKey]||[]).filter(e=>e.type==="med").map(e=>({name:e.drug, dose:(e.dose==null||e.dose==="")? null : +e.dose, time:hm(e.ts)}));
+}
+function prevDayKey(dayKey){ const d=new Date(dayKey+"T00:00:00"); d.setDate(d.getDate()-1); return dkey(d); }
+/* 검토 반영: 전날 밤 온젠티스(보정형)나 지속형 도파민 작용제(배경형)는 곡선 계산에 넘어가지
+   않으면 다음날 아침 복합곡선에서 그 효과가 통째로 빠진다. 오늘 목록에 전날의 보정·배경형만
+   dayOffset:-1로 추가해서 넘긴다. 직접곡선형(레보도파)은 지속시간이 짧아 이월하지 않는다.
+   전날 것을 오늘 "복용약 목록"에 얹지는 않고, 곡선 계산에만 별도로 합친다. */
+function carryoverDosesFor(dayKey){
+  const prev=medsForDay(prevDayKey(dayKey));
+  return prev.filter(d=>{
+    const model=SIMDRUG.classify(d.name);
+    if(!model) return false;
+    if(model.role==="background") return true; /* 24시간 지속형은 시각 무관하게 이월 */
+    if(model.role==="modifier"){ const h=+d.time.split(":")[0]; return h>=12; } /* 저녁~밤 복용분만 */
+    return false;
+  }).map(d=>({...d, dayOffset:-1}));
+}
+function medsForSimulationDay(dayKey){
+  const today=medsForDay(dayKey).map(d=>({...d, dayOffset:0}));
+  const carry=carryoverDosesFor(dayKey);
+  return {today, carry, all:carry.concat(today)};
 }
 function outputsForDay(dayKey){
   const days=byDay();
   return (days[dayKey]||[]).filter(e=>e.type==="state" && e.output!=null).map(e=>({time:hm(e.ts), val:e.output}));
 }
+function simFmtTime(tMin){ const t=((tMin%1440)+1440)%1440; return `${pad(Math.floor(t/60))}:${pad(Math.round(t%60))}`; }
+function doseLabel(v){ return (v==null||v==="")? SIMDRUG.UNREGISTERED_NOTE&&"용량 확인 필요" : `${+v}mg`; }
 
 function renderSimPlanList(dayKey){
   const el=document.getElementById("simPlanList");
   const doses=medsForDay(dayKey);
-  if(!doses.length){ el.textContent=tr("simNoMed"); return; }
-  el.innerHTML = doses.map(d=>`<div style="padding:4px 0">💊 ${d.time} · ${escapeHtml(d.name)}${d.dose?` ${d.dose}mg`:""}</div>`).join("");
+  if(!doses.length){ el.textContent=tr("simNoMed"); document.getElementById("simUnregisteredNote").textContent=""; return; }
+  el.innerHTML = doses.map(d=>{
+    const model=SIMDRUG.classify(d.name);
+    const roleTxt=model? model.roleLabel : "곡선 모델 미등록";
+    return `<div style="padding:4px 0">💊 ${d.time} · ${escapeHtml(d.name)}${d.dose?` ${d.dose}mg`:` <span style="color:var(--ink-2)">(용량 확인 필요)</span>`}
+      <span style="color:var(--ink-2); font-size:11.5px">— ${escapeHtml(roleTxt)}</span></div>`;
+  }).join("");
+  const unreg=doses.filter(d=>!SIMDRUG.classify(d.name));
+  document.getElementById("simUnregisteredNote").innerHTML = unreg.length
+    ? unreg.map(d=>`<div>· ${escapeHtml(d.name)}: ${escapeHtml(SIMDRUG.UNREGISTERED_NOTE)}</div>`).join("") : "";
 }
-function renderSimVirtualRows(){
-  const el=document.getElementById("simVirtualRows");
-  el.innerHTML="";
-  const doses=_simVirtual.doses;
-  doses.forEach((d,i)=>{
-    const row=document.createElement("div");
-    row.className="dose-row";
-    row.style.cssText="display:grid;grid-template-columns:1.4fr 1fr 0.9fr auto;gap:6px;align-items:center;margin-bottom:8px;padding:8px;background:var(--surface-2);border-radius:10px";
-    row.innerHTML=`
-      <input data-f="name" value="${escapeHtml(d.name)}" placeholder="${L('약 이름','Medication name')}" style="font-size:14px;padding:7px 8px;border:1px solid var(--line);border-radius:8px">
-      <input type="time" data-f="time" value="${d.time}" style="font-size:14px;padding:7px 8px;border:1px solid var(--line);border-radius:8px">
-      <input type="number" data-f="dose" value="${d.dose}" min="0" step="0.125" style="font-size:14px;padding:7px 8px;border:1px solid var(--line);border-radius:8px">
-      <button data-del style="border:none;background:transparent;color:var(--ink-2);font-size:16px;cursor:pointer">✕</button>`;
-    row.querySelector('[data-f="name"]').onchange=e=>{ d.name=e.target.value; saveSimVirtual(); renderSimChart(); };
-    row.querySelector('[data-f="time"]').onchange=e=>{ d.time=e.target.value; saveSimVirtual(); renderSimChart(); };
-    row.querySelector('[data-f="dose"]').oninput=e=>{ d.dose=+e.target.value||0; saveSimVirtual(); renderSimChart(); };
-    row.querySelector('[data-del]').onclick=()=>{ doses.splice(i,1); saveSimVirtual(); renderSimVirtualRows(); renderSimChart(); };
-    el.appendChild(row);
-  });
-}
-function saveSimVirtual(){
-  db.settings.simVirtual = _simVirtual; // 선택적 필드: 없어도 앱은 정상 동작, 기존 백업과 호환
-  save();
-}
-/* ===== v0.9.22 시뮬 개편 =====
-   1단: 추정 상대 약물효과(%) — PK 정규화, 출력과 축 분리
-   2단: 실제 출력 + 예상 출력(현재안/가상안) — 개인 기록으로 스케일 보정
-   원칙: 예측은 "예상/가능성" 표현만 사용, 실제 기록은 절대 수정하지 않음 */
-function simExpectedOutputCurve(pts, pkMaxRef, cal){
-  /* 상대효과 → 예상 출력: base + (top-base) × (val/pkMaxRef), 100 상한 */
-  return pts.map(p=>({t:p.t, val:Math.min(100, cal.base + (cal.top-cal.base)*Math.min(1.15, p.val/(pkMaxRef||1)))}));
-}
-function simCalibration(actualSorted){
-  /* 실제 기록이 3점 이상이면 그 날의 최저·최고로 스케일 보정, 아니면 일반 추정(30~85) */
-  if(actualSorted.length>=3){
-    const vals=actualSorted.map(a=>a.val);
-    return {base:Math.min(...vals), top:Math.max(...vals), personal:true, n:actualSorted.length};
+
+/* ---- 변경안 저장/로드 (기존 simVirtual 자리를 재사용 — 저장 키는 그대로, 구조만 단순화) ---- */
+let _simVirtual=null;
+function simEnsureVariant(dayKey){
+  const base=medsForDay(dayKey);
+  if(!_simVirtual || _simVirtual.dayKey!==dayKey){
+    const saved=db.settings.simVirtual;
+    _simVirtual = (saved && saved.dayKey===dayKey && Array.isArray(saved.doses))
+      ? {dayKey, doses:JSON.parse(JSON.stringify(saved.doses))}
+      : {dayKey, doses:JSON.parse(JSON.stringify(base))};
   }
-  return {base:30, top:85, personal:false, n:actualSorted.length};
-}
-/* 신뢰도 낮음 사유 — 기록 수 외에 시간 분포·복용 전후·범위·회상 비율을 본다 */
-function simConfidenceReasons(dayKey, actualSorted, cal, planDoses, t0){
-  const rs=[];
-  if(actualSorted.length<3){ rs.push("출력 기록이 3개 미만"); return rs; }
-  if(cal.top-cal.base<15) rs.push("출력 최고·최저 차이가 15점 미만");
-  const doseMins=planDoses.filter(d=>d.time).map(d=>{ const [h,m]=d.time.split(":").map(Number); let t=h*60+m; if(t<t0) t+=1440; return t; });
-  if(doseMins.length){
-    const first=Math.min(...doseMins);
-    if(!actualSorted.some(a=>a.t<first)) rs.push("복용 전 출력 기록 없음");
-    if(!doseMins.some(dm=>actualSorted.some(a=>a.t>=dm+30 && a.t<=dm+120))) rs.push("복용 후 30~120분 출력 기록 부족");
-  }
-  for(let i=1;i<actualSorted.length;i++) if(actualSorted[i].t-actualSorted[i-1].t>240){ rs.push("4시간 이상 미기록 구간"); break; }
-  const dayEvs=(byDay()[dayKey]||[]).filter(e=>e.type==="state"&&e.output!=null);
-  const retro=dayEvs.filter(e=>e.entryMode==="retrospective").length;
-  if(dayEvs.length && retro/dayEvs.length>0.5) rs.push("회상 기록 비율이 높음");
-  return rs;
-}
-function simCurveMetrics(curve){
-  const STEP=10; /* 분 */
-  let peak=null, on=null, dwell80=0, dwell5079=0, dwellLow=0, wear=null;
-  curve.forEach(p=>{
-    if(!peak||p.val>peak.val) peak=p;
-    if(on==null && p.val>=80) on=p.t;
-    if(p.val>=80) dwell80+=STEP; else if(p.val>=50) dwell5079+=STEP; else if(p.val<20) dwellLow+=STEP;
-  });
-  if(peak){ for(const p of curve){ if(p.t>peak.t && p.val<50){ wear=p.t; break; } } }
-  return {onT:on, peak, dwell80, dwell5079, dwellLow, wearT:wear, incomplete: peak? peak.val<80 : true};
-}
-function simLeddDetail(doses){
-  const rows=[], excluded=[], notes=new Set();
-  let total=0;
-  doses.forEach(d=>{
-    const role=medRole(d.name);
-    if(!role.leddIncluded){
-      excluded.push(`${d.name} ${d.dose||0}mg${role.certainty==="unknown"? " (종류 확인 불가)":""}`);
-      if(role.note) notes.add(role.note);
-      return;
-    }
-    const led=(d.dose||0)*leddFactorFor(d.name);
-    total+=led;
-    rows.push(`${d.name} ${d.dose||0}mg → LEDD ${Math.round(led)}${role.certainty==="approximate"?" (근사)":""}`);
-    if(role.note) notes.add(role.note);
-  });
-  return {total, rows, excluded, notes:[...notes]};
-}
-function simDyskNoteFor(dayKey){
-  /* 이상운동증·근긴장이상 기록 당시의 출력값으로 패턴 참고 문구 생성 (진단 아님) */
-  const evs=(byDay()[dayKey]||[]);
-  const outs=evs.filter(e=>e.type==="state"&&e.output!=null).sort((a,b)=>a.ts-b.ts);
-  const MAX_OUTPUT_MATCH_MIN=30; /* 검토 반영: 30분 이내 출력 기록만 매칭 */
-  const outAt=ts=>{ let best=null; for(const o of outs){ if(o.ts<=ts && ts-o.ts<=MAX_OUTPUT_MATCH_MIN*60000) best=o.output; if(o.ts>ts) break; } return best; };
-  const dysk=evs.filter(e=>e.type==="symptom"&&e.key==="dysk").map(e=>outAt(e.ts)).filter(v=>v!=null);
-  const dyst=evs.filter(e=>e.type==="symptom"&&(e.key==="dyst")).map(e=>outAt(e.ts)).filter(v=>v!=null);
-  const dyskAll=evs.filter(e=>e.type==="symptom"&&e.key==="dysk").length;
-  if(dyskAll>0 && !dysk.length && !dyst.length) return "이상운동증 기록은 있으나 당시(30분 이내) 출력 자료가 없어 유형을 분류할 수 없습니다";
-  if(!dysk.length&&!dyst.length) return "";
-  const notes=[];
-  if(dysk.length){
-    const hi=dysk.filter(v=>v>=80).length, mid=dysk.filter(v=>v>=50&&v<80).length;
-    if(hi>=mid&&hi>0) notes.push("이 날 이상운동증은 출력 80 이상 구간에서 주로 기록되었습니다 — peak-dose 양상 가능성 (참고용, 진단 아님)");
-    else if(mid>0) notes.push("이 날 이상운동증은 출력 50~79 전환 구간에서 기록되었습니다 — diphasic(전환기) 양상 가능성 (참고용, 진단 아님)");
-    else notes.push("이상운동증 기록이 있으나 패턴을 분류하기에는 자료가 부족합니다");
-  }
-  if(dyst.length && dyst.every(v=>v<50)) notes.push("낮은 출력에서 근긴장이상이 기록되었습니다 — OFF dystonia 양상 가능성 (참고용, 진단 아님)");
-  return notes.join(" · ");
-}
-function simCardHtml(title, mtr, color){
-  const fmtT=t=>t!=null? simFmtTime(t):"도달하지 못함(예상)";
-  const dur=m=>m>=60? `${Math.floor(m/60)}시간 ${m%60?m%60+"분":""}`.trim() : `${m}분`;
-  return `<div style="border:1.5px solid ${color}; border-radius:12px; padding:10px 12px">
-    <div style="font-weight:900; color:${color}; margin-bottom:6px">${title}</div>
-    <div style="font-size:12.5px; line-height:1.9">
-      예상 ON(≥80) 도달: <b>${fmtT(mtr.onT)}</b><br>
-      최고 예상 출력: <b>${mtr.peak? Math.round(mtr.peak.val):"–"}</b>${mtr.peak?` (${simFmtTime(mtr.peak.t)})`:""}<br>
-      80 이상 예상 체류: <b>${dur(mtr.dwell80)}</b><br>
-      50~79 예상 체류: ${dur(mtr.dwell5079)}<br>
-      20 미만 예상 체류: ${dur(mtr.dwellLow)}<br>
-      예상 wearing-off: ${mtr.wearT? simFmtTime(mtr.wearT):"—"}<br>
-      ${mtr.incomplete? `<span style="color:var(--danger)">Incomplete ON 가능성</span>`:"&nbsp;"}
-    </div></div>`;
-}
-/* v0.9.23: 변경은 항상 "현재안 원본" 기준으로 계산한다 (반복 탭이 누적되지 않음).
-   simTargetIdx는 현재안 doses 배열의 인덱스 — 같은 약이 여러 번 복용돼도 정확히 한 회분만 바꾼다. */
-let _simTargetIdx=0, _simChangeKind="dose";
-function simBaselineDoses(){ return medsForDay(document.getElementById("simDate").value||todayKey()); }
-function simEnsureVirtualLength(){
-  const base=simBaselineDoses();
-  if(!_simVirtual || !Array.isArray(_simVirtual.doses)) _simVirtual={dayKey:document.getElementById("simDate").value, doses:JSON.parse(JSON.stringify(base))};
   return base;
 }
+function saveSimVariant(){ db.settings.simVirtual={dayKey:_simVirtual.dayKey, doses:_simVirtual.doses}; save(); }
+
+let _simTargetIdx=0, _simChangeKind="dose";
 function simApplyChange(kind, arg){
-  const base=simEnsureVirtualLength();
+  const dayKey=document.getElementById("simDate").value||todayKey();
+  const base=simEnsureVariant(dayKey);
   const i=_simTargetIdx;
   const b=base[i];
   if(kind==="reset"){ _simVirtual.doses=JSON.parse(JSON.stringify(base)); }
@@ -2790,7 +2624,7 @@ function simApplyChange(kind, arg){
     if(!b) return;
     if(b.dose==null){ toast("현재 용량이 기록되어 있지 않아 용량 변경을 할 수 없어요"); return; }
     const target=_simVirtual.doses[i] || (_simVirtual.doses[i]=JSON.parse(JSON.stringify(b)));
-    const next=Math.round((+b.dose + (+arg))*1000)/1000; /* 원본 기준 — 누적 아님 */
+    const next=Math.round((+b.dose + (+arg))*1000)/1000; /* 항상 현재안 원본 기준 — 누적하지 않음 */
     if(next<=0){ toast("0mg 이하로는 만들 수 없어요"); return; }
     target.dose=next; target.name=b.name; target.time=target.time||b.time;
   }
@@ -2798,8 +2632,8 @@ function simApplyChange(kind, arg){
     if(!b) return;
     const target=_simVirtual.doses[i] || (_simVirtual.doses[i]=JSON.parse(JSON.stringify(b)));
     const [h,m]=(b.time||"08:00").split(":").map(Number);
-    const t=(h*60+m+(+arg)+1440)%1440; /* 원본 시각 기준 */
-    target.time=`${String(Math.floor(t/60)).padStart(2,"0")}:${String(t%60).padStart(2,"0")}`;
+    const t=(h*60+m+(+arg)+1440)%1440;
+    target.time=`${pad(Math.floor(t/60))}:${pad(t%60)}`;
     target.name=b.name; if(target.dose===undefined) target.dose=b.dose;
   }
   else if(kind==="remove"){ if(!b) return; _simVirtual.doses=_simVirtual.doses.filter((d,idx)=>idx!==i); }
@@ -2807,78 +2641,10 @@ function simApplyChange(kind, arg){
   else if(kind==="replace"){ if(!b) return;
     const target=_simVirtual.doses[i] || (_simVirtual.doses[i]=JSON.parse(JSON.stringify(b)));
     target.name=arg; target.dose=null; target.time=b.time; }
-  saveSimVirtual(); renderSimVirtualRows(); renderSimChart();
+  saveSimVariant(); renderSim();
 }
-/* 3단계 가이드 UI 렌더 */
-function renderSimScenarioBuilder(){
-  const base=simEnsureVirtualLength();
-  const sel=document.getElementById("simTargetMed"); if(!sel) return;
-  if(!base.length){
-    sel.innerHTML=`<option>이 날짜에 복약 기록이 없습니다</option>`;
-    document.getElementById("simTargetInfo").textContent="";
-    document.getElementById("simChangeKind").innerHTML="";
-    document.getElementById("simChangeControls").innerHTML="";
-    return;
-  }
-  if(_simTargetIdx>=base.length) _simTargetIdx=0;
-  sel.innerHTML=base.map((d,i)=>`<option value="${i}" ${i===_simTargetIdx?"selected":""}>${escapeHtml(d.time)} ${escapeHtml(d.name)} ${SIMENG.formatDose(d.dose)}</option>`).join("");
-  sel.onchange=()=>{ _simTargetIdx=+sel.value; renderSimScenarioBuilder(); };
 
-  const b=base[_simTargetIdx];
-  const role=SIMENG.medRole(b.name);
-  const steps=SIMENG.doseStepsFor(b.name);
-  const info=document.getElementById("simTargetInfo");
-  info.innerHTML = (b.dose==null)
-    ? `<span style="color:var(--danger); font-weight:700">${SIMENG.DOSE_UNKNOWN_LABEL}</span> — 이 기록에는 용량이 없어 용량 변경을 할 수 없습니다. 기록을 수정해 용량을 넣으면 사용할 수 있어요.`
-    : `현재안: <b>${escapeHtml(b.time)} ${escapeHtml(b.name)} ${SIMENG.formatDose(b.dose)}</b>`;
-
-  const kinds=[["dose","용량 변경"],["time","시간 변경"],["add","약 추가"],["remove","약 삭제"],["replace","약 교체"]];
-  document.getElementById("simChangeKind").innerHTML=kinds.map(([k,l])=>
-    `<button type="button" class="chip${_simChangeKind===k?" sel":""}" data-kind="${k}">${l}</button>`).join("");
-  document.querySelectorAll("#simChangeKind .chip").forEach(btn=>{
-    btn.onclick=()=>{ _simChangeKind=btn.dataset.kind; renderSimScenarioBuilder(); };
-  });
-
-  const ctl=document.getElementById("simChangeControls");
-  if(_simChangeKind==="dose"){
-    if(b.dose==null) ctl.innerHTML=`<div class="hint">용량이 기록된 약에서만 사용할 수 있습니다.</div>`;
-    else if(!steps) ctl.innerHTML=`<div class="hint">${escapeHtml(b.name)}은(는) 이 도구에서 용량 조절 단위를 제공하지 않습니다 (고정 함량 제제이거나 종류를 확인할 수 없음). 시간 변경·약 추가·삭제·교체는 사용할 수 있어요.</div>`;
-    else ctl.innerHTML=`<div class="chips">${steps.map(v=>`<button type="button" class="chip" data-dose="${v}">${v>0?"+":""}${v}mg</button>`).join("")}</div>
-      <div class="hint">현재안 ${SIMENG.formatDose(b.dose)} 기준으로 계산됩니다 (여러 번 눌러도 누적되지 않습니다).</div>`;
-    ctl.querySelectorAll("[data-dose]").forEach(x=>x.onclick=()=>simApplyChange("dose", x.dataset.dose));
-  } else if(_simChangeKind==="time"){
-    ctl.innerHTML=`<div class="chips">${[-60,-30,30,60].map(v=>`<button type="button" class="chip" data-min="${v}">${v>0?"+":""}${v}분</button>`).join("")}</div>
-      <div class="hint">현재안 ${escapeHtml(b.time)} 기준으로 계산됩니다.</div>`;
-    ctl.querySelectorAll("[data-min]").forEach(x=>x.onclick=()=>simApplyChange("time", x.dataset.min));
-  } else if(_simChangeKind==="add"){
-    ctl.innerHTML=`<select id="simAddPick" style="width:100%; min-height:48px">${MED_PRESETS.map(n=>`<option>${escapeHtml(n)}</option>`).join("")}</select>
-      <button class="btn ghost" id="simAddGo" style="margin-top:6px">이 약을 가상안에 추가</button>
-      <div class="hint">추가한 약의 용량은 아래 목록에서 입력하세요.</div>`;
-    document.getElementById("simAddGo").onclick=()=>simApplyChange("add", document.getElementById("simAddPick").value);
-  } else if(_simChangeKind==="remove"){
-    ctl.innerHTML=`<button class="btn ghost" id="simRemoveGo">${escapeHtml(b.time)} ${escapeHtml(b.name)} 을(를) 가상안에서 빼기</button>`;
-    document.getElementById("simRemoveGo").onclick=()=>simApplyChange("remove");
-  } else if(_simChangeKind==="replace"){
-    ctl.innerHTML=`<select id="simReplacePick" style="width:100%; min-height:48px">${MED_PRESETS.map(n=>`<option ${n===b.name?"selected":""}>${escapeHtml(n)}</option>`).join("")}</select>
-      <button class="btn ghost" id="simReplaceGo" style="margin-top:6px">이 약으로 교체</button>
-      <div class="hint">교체 후 용량은 아래 목록에서 입력하세요. 제형·약물이 다르면 예상 곡선의 신뢰도가 낮아집니다.</div>`;
-    document.getElementById("simReplaceGo").onclick=()=>simApplyChange("replace", document.getElementById("simReplacePick").value);
-  }
-
-  /* ③ 결과: 현재안 vs 가상안 */
-  const cmpEl=document.getElementById("simPlanCompare");
-  const fmtList=(arr)=>arr.length? arr.map(d=>`${escapeHtml(d.time||"--:--")} ${escapeHtml(d.name)} ${SIMENG.formatDose(d.dose)}`).join("<br>") : "—";
-  cmpEl.innerHTML=`<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
-    <div><div style="font-size:11.5px; color:var(--ink-2)">현재안</div>${fmtList(base)}</div>
-    <div><div style="font-size:11.5px; color:var(--ink-2)">가상안</div>${fmtList(_simVirtual.doses)}</div></div>`;
-}
-function doseLabel(v){ return SIMENG.formatDose(v); }
-function simDiffSummary(planDoses, virtDoses){
-  const parts=planDiffParts(planDoses, virtDoses).map(p=>p.desc);
-  return parts.length? "변경 내용: "+parts.join(" · ") : "변경 내용: 없음 (현재안과 동일)";
-}
-/* 현재안 ↔ 가상안 차이를 구조체로. 같은 약이 여러 회분이면 인덱스로 먼저 짝지어
-   "마도파 HBS 06:03 100→125mg" 형식이 정확히 나오게 한다. 용량 미기록은 0으로 쓰지 않는다. */
+/* 현재안 ↔ 변경안 차이 (구조체 + 요약 문자열) */
 function planDiffParts(planDoses, virtDoses){
   const parts=[]; const usedV=new Set();
   planDoses.forEach((p,i)=>{
@@ -2895,506 +2661,191 @@ function planDiffParts(planDoses, virtDoses){
   virtDoses.forEach((v,j)=>{ if(!usedV.has(j)) parts.push({type:"add", name:v.name, newTime:v.time, desc:`추가: ${v.name} ${doseLabel(v.dose)} ${v.time||""}`.trim()}); });
   const seen=new Set(); return parts.filter(p=>!seen.has(p.desc)&&seen.add(p.desc));
 }
-function renderSimChart(){
-  const dayKey = document.getElementById("simDate").value || todayKey();
-  const planDoses = medsForDay(dayKey);
-  const virtDoses = _simVirtual.doses;
-  const actual = outputsForDay(dayKey);
-
-  const planPts = simDoseCurvePts(planDoses);
-  const virtPts = simDoseCurvePts(virtDoses);
-  const pkMax = Math.max(1, ...planPts.map(p=>p.val), ...virtPts.map(p=>p.val));
-
-  const W=760,H=200,padL=36,padR=12,padT=12,padB=28;
-  const plotW=W-padL-padR, plotH=H-padT-padB;
-  const t0=planPts[0].t, t1=planPts[planPts.length-1].t;
-  const x=t=>padL+(t-t0)/(t1-t0)*plotW;
-
-  /* ---- ① 상대 약물효과(%) — 공통 최대치로 정규화 ---- */
-  const yPk=v=>padT+plotH-(v/pkMax)*plotH;
-  const line=(pts,yf)=>pts.map(p=>`${x(p.t)},${yf(p.val)}`).join(" ");
-  let axis=""; for(let h=0;h<=(t1-t0)/60;h+=2){ const tt=t0+h*60;
-    axis+=`<text x="${x(tt)}" y="${H-8}" font-size="9" fill="var(--ink-2)" text-anchor="middle">${simFmtTime(tt)}</text>`; }
-  const doseMarks=(doses,color,dy)=>doses.filter(d=>d.time).map(d=>{ const [h,m]=d.time.split(":").map(Number); let tm=h*60+m; if(tm<t0) tm+=1440;
-    return `<g><line x1="${x(tm)}" y1="${padT}" x2="${x(tm)}" y2="${H-padB}" stroke="${color}" stroke-width="1" opacity="0.35"/><text x="${x(tm)}" y="${padT+dy}" font-size="8.5" fill="${color}" text-anchor="middle">${escapeHtml(d.name.slice(0,4))}${d.dose||""}</text></g>`; }).join("");
-  const pkAxisLbl=[0,50,100].map(p=>`<text x="${padL-6}" y="${padT+plotH-(p/100)*plotH+3}" font-size="9" fill="var(--ink-2)" text-anchor="end">${p}%</text>`).join("");
-  document.getElementById("simChart").innerHTML = (!planDoses.length&&!virtDoses.length)? `<div class="hint" style="padding:20px 0;text-align:center">${tr("simNoMed")}</div>` : `
-    <svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">
-      ${pkAxisLbl}
-      <polyline points="${line(planPts,yPk)}" fill="none" stroke="#5C93D6" stroke-width="2.4"/>
-      <polyline points="${line(virtPts,yPk)}" fill="none" stroke="#E0A030" stroke-width="2.2" stroke-dasharray="6,4"/>
-      ${doseMarks(planDoses,"#5C93D6",10)}${doseMarks(virtDoses.filter(v=>!planDoses.some(p=>p.name===v.name&&p.time===v.time&&+p.dose===+v.dose)),"#E0A030",20)}
-      ${axis}
-    </svg>`;
-
-  /* ---- ② 실제 출력 + 예상 출력 (0~100) ---- */
-  function toMin(hmStr){ const [h,m]=hmStr.split(":").map(Number); let tm=h*60+m; if(tm<t0) tm+=1440; return tm; }
-  /* outputsForDay()의 val은 이미 0~100 출력 점수다. (v0.9.23 수정: ×10 하면 범위가 350~800이 되어
-     예상 출력 곡선이 전부 100에 붙어버렸다 — v0.9.22에 있던 버그) */
-  const actualSorted = actual.map(a=>({t:toMin(a.time), val:a.val})).sort((a,b)=>a.t-b.t);
-  const cal=simCalibration(actualSorted);
-  const expPlan=simExpectedOutputCurve(planPts, pkMax, cal);
-  const expVirt=simExpectedOutputCurve(virtPts, pkMax, cal);
-  const yOut=v=>padT+plotH-(Math.min(100,v)/100)*plotH;
-  const outAxisLbl=[0,20,50,80,100].map(p=>`<text x="${padL-6}" y="${yOut(p)+3}" font-size="9" fill="var(--ink-2)" text-anchor="end">${p}</text>`).join("");
-  const band=`<line x1="${padL}" y1="${yOut(80)}" x2="${W-padR}" y2="${yOut(80)}" stroke="#1FA971" stroke-width="0.8" stroke-dasharray="2,3" opacity="0.6"/><line x1="${padL}" y1="${yOut(20)}" x2="${W-padR}" y2="${yOut(20)}" stroke="#B3261E" stroke-width="0.8" stroke-dasharray="2,3" opacity="0.5"/>`;
-  const dots=actualSorted.map(p=>`<circle cx="${x(p.t)}" cy="${yOut(p.val)}" r="4" fill="#E8663C"/>`).join("");
-  const actLine=actualSorted.length>1?`<polyline points="${actualSorted.map(p=>`${x(p.t)},${yOut(p.val)}`).join(" ")}" fill="none" stroke="#E8663C" stroke-width="1.4" stroke-dasharray="1,3"/>`:"";
-  document.getElementById("simOutChart").innerHTML = (!planDoses.length&&!virtDoses.length)? "" : `
-    <svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">
-      ${outAxisLbl}${band}
-      <polyline points="${line(expPlan,yOut)}" fill="none" stroke="#5C93D6" stroke-width="2.2"/>
-      <polyline points="${line(expVirt,yOut)}" fill="none" stroke="#E0A030" stroke-width="2" stroke-dasharray="6,4"/>
-      ${actLine}${dots}
-      ${axis}
-    </svg>`;
-  const confReasons=simConfidenceReasons(dayKey, actualSorted, cal, planDoses, t0);
-  document.getElementById("simConfLine").textContent = (cal.personal && !confReasons.length?
-    `당일 출력 범위 반영: 이 날짜의 실제 출력 ${cal.n}개 기록의 범위(${cal.base}~${cal.top})에 맞춰 그렸습니다.` :
-    (cal.personal? `신뢰도 낮음 — ${confReasons.join(" · ")}. 당일 출력 ${cal.n}개 기록 범위(${cal.base}~${cal.top})를 사용했습니다.` :
-      `개인 자료가 부족하여 일반 모델(30~85 범위)을 사용했습니다 — 신뢰도 낮음${confReasons.length? " ("+confReasons.join(" · ")+")":""}.`))
-    +" 예상 출력선은 기록을 이해하기 위한 단순 가상 모델이며, 실제 출력이나 약물 효과를 예측하거나 처방을 결정하지 않습니다.";
-  document.getElementById("simDyskNote").textContent = simDyskNoteFor(dayKey);
-
-  /* ---- 결과 요약 카드 ---- */
-  const mp=simCurveMetrics(expPlan), mv=simCurveMetrics(expVirt);
-  let riskNote="";
-  const ld_p=simLeddDetail(planDoses), ld_v=simLeddDetail(virtDoses);
-  if(ld_v.total>ld_p.total && mv.dwell80>mp.dwell80) riskNote=`<div class="hint" style="color:var(--danger); margin-top:8px">주의: 가상안에서는 높은 출력 구간이 길어져 이상운동증 위험이 비교상 증가할 수 있습니다 (가능성 표현이며 진단이 아닙니다).</div>`;
-  document.getElementById("simCards").innerHTML = simCardHtml("현재안", mp, "#5C93D6")+simCardHtml("가상안", mv, "#E0A030");
-  document.getElementById("simLeddDetail").innerHTML = `
-    <b>LEDD 비교</b> — 현재안 ${Math.round(ld_p.total)}mg / 가상안 ${Math.round(ld_v.total)}mg (${ld_v.total-ld_p.total>=0?"+":""}${Math.round(ld_v.total-ld_p.total)}mg)
-    <details style="margin-top:4px"><summary style="cursor:pointer; color:var(--ink-2)">계산 근거 보기</summary>
-      <div style="color:var(--ink-2); line-height:1.8; margin-top:4px">현재안: ${ld_p.rows.join(" · ")||"—"}<br>가상안: ${ld_v.rows.join(" · ")||"—"}
-      ${(ld_p.excluded.length||ld_v.excluded.length)?`<br>제외: ${[...new Set([...ld_p.excluded,...ld_v.excluded])].join(", ")}`:""}
-      ${[...new Set([...ld_p.notes,...ld_v.notes])].map(n=>`<br>※ ${n}`).join("")}</div></details>
-    ${riskNote}`;
-  document.getElementById("simDiffLine").textContent = simDiffSummary(planDoses, virtDoses);
-
-  /* ---- 가상안 만들기 (3단계 가이드) ---- */
-  renderSimScenarioBuilder();
-  { const rb=document.getElementById("simResetBtn"); if(rb) rb.onclick=()=>simApplyChange("reset"); }
-
-  /* ---- 기존 상단 통계 (피크 시간 유지) ---- */
-  const planPk=simPeak(planPts), virtPk=simPeak(virtPts);
-  const item=(n,l)=>`<div class="stat" style="background:var(--surface-2);border-radius:10px;padding:10px 12px"><div style="font-size:18px;font-weight:900">${n}</div><div style="font-size:11.5px;color:var(--ink-2);font-weight:600;margin-top:2px">${l}</div></div>`;
-  document.getElementById("simStatGrid").innerHTML = [
-    item(Math.round(ld_p.total), tr("simPlanLED")),
-    item(`${Math.round(ld_v.total)}${Math.round(ld_v.total-ld_p.total)!==0?` (${ld_v.total-ld_p.total>0?"+":""}${Math.round(ld_v.total-ld_p.total)})`:""}`, tr("simVirtualLED")),
-    item(planPk.t!=null?simFmtTime(planPk.t):"–", tr("simPlanPeak")),
-    item(virtPk.t!=null?simFmtTime(virtPk.t):"–", tr("simVirtualPeak")),
-  ].join("");
-}
-function renderSim(){
-  const sel=document.getElementById("simDate");
-  const keys=curveDayKeys();
-  const prev=sel.value;
-  sel.innerHTML = keys.length? keys.map(k=>`<option value="${k}">${fmtDateK(k)}</option>`).join("") : `<option value="${todayKey()}">${fmtDateK(todayKey())}</option>`;
-  if(prev && keys.includes(prev)) sel.value=prev; else sel.value=keys[0]||todayKey();
-
-  // 가상안 초기화: 저장된 값이 있으면 재사용, 없으면 오늘 실제 기록으로 시작
-  if(!_simVirtual){
-    const saved = db.settings.simVirtual;
-    if(saved && saved.doses){ _simVirtual = saved; }
-    else { _simVirtual = { dayKey: sel.value, doses: JSON.parse(JSON.stringify(medsForDay(sel.value))) }; }
-  }
-
-  const draw=()=>{ renderSimPlanList(sel.value); renderSimChart(); };
-  sel.onchange=draw;
-  document.getElementById("simAddDose").onclick=()=>{
-    _simVirtual.doses.push({name:MED_PRESETS[0]||"", dose:50, time:"08:00"});
-    saveSimVirtual(); renderSimVirtualRows(); renderSimChart();
-  };
-  document.getElementById("simCopyPlan").onclick=()=>{
-    _simVirtual.doses = JSON.parse(JSON.stringify(medsForDay(sel.value)));
-    saveSimVirtual(); renderSimVirtualRows(); renderSimChart();
-  };
-  renderSimVirtualRows();
-  draw();
-  renderClinical();
-  renderMultiScenario();
+function simDiffSummary(planDoses, virtDoses){
+  const parts=planDiffParts(planDoses, virtDoses).map(p=>p.desc);
+  return parts.length? "변경 내용: "+parts.join(" · ") : "변경 내용: 없음 (현재안과 동일)";
 }
 
-/* ============================================================
-   v0.9.26 기간 분석 — 최근 N일 기록에서 delayed/incomplete ON 반복 여부 확인
-   실제 기록(db.events) → simulation-clinical.js → 화면
-   ============================================================ */
-let _clinState={periodDays:7, groupId:null, goalId:null, result:null};
-function clinCollect(periodDays){
-  const days=byDay();
-  /* v0.9.27: 기록이 있는 최근 N개가 아니라 달력 기준 최근 N일 */
-  const period=SIMCLIN.calendarPeriod(Object.keys(days), periodDays);
-  const keys=period.keys;
-  const doses=[], byKeyOutputs={}, byKeyEvents={};
-  keys.forEach(k=>{
-    const evs=days[k]||[];
-    byKeyOutputs[k]=evs.filter(e=>e.type==="state"&&e.output!=null)
-      .map(e=>({timeMin:new Date(e.ts).getHours()*60+new Date(e.ts).getMinutes(), val:e.output, ts:e.ts}))
-      .sort((a,b)=>a.timeMin-b.timeMin);
-    byKeyEvents[k]=evs.filter(e=>e.type==="symptom"||e.type==="life").map(e=>{
-      const timeMin=new Date(e.ts).getHours()*60+new Date(e.ts).getMinutes();
-      if(e.type==="symptom"&&e.key==="dysk") return {kind:"dysk", timeMin};
-      if(e.type==="life"&&e.kind==="meal") return {kind: (e.mealType&&/육류|고기|단백/.test(e.mealType))? "protein":"meal", timeMin};
-      return {kind:e.kind||e.key||"other", timeMin};
-    });
-    evs.filter(e=>e.type==="med").forEach(e=>{
-      doses.push({dayKey:k, name:e.drug, dose:(e.dose==null||e.dose==="")?null:+e.dose,
-        timeMin:new Date(e.ts).getHours()*60+new Date(e.ts).getMinutes(), ts:e.ts});
-    });
-  });
-  return {keys, doses, byKeyOutputs, byKeyEvents, period};
-}
-function clinAnalyze(periodDays, groupId){
-  const {keys, doses, byKeyOutputs, byKeyEvents, period}=clinCollect(periodDays);
-  const groups=SIMCLIN.groupDoses(doses);
-  if(!groups.length) return {groups:[], group:null, dayCount:keys.length, period};
-  const group=groups.find(g=>g.id===groupId)||groups[0];
-  const eps=group.items.map(item=>{
-    const outs=byKeyOutputs[item.dayKey]||[];
-    const sameDay=doses.filter(d=>d.dayKey===item.dayKey && d.timeMin>item.timeMin).sort((a,b)=>a.timeMin-b.timeMin);
-    const next=sameDay.length? sameDay[0].timeMin : null;
-    const ep=SIMCLIN.analyzeEpisode(item, outs, null, next, byKeyEvents[item.dayKey]||[]);
-    ep.relOutputs=outs.filter(p=>p.timeMin>=item.timeMin-60 && p.timeMin<=item.timeMin+240)
-      .map(p=>({rel:p.timeMin-item.timeMin, val:p.val}));
-    return ep;
-  });
-  const baseline=SIMCLIN.personalBaseline(eps);
-  const classified=eps.map(e=>SIMCLIN.classifyEpisode(e, baseline));
-  const summary=SIMCLIN.periodSummary(classified, baseline);
-  const repCurve=SIMCLIN.representativeCurve(classified);
-  /* 기간 대표 복약안: 각 그룹의 대표 시각·용량 (시뮬레이션의 현재안으로 사용) */
-  const repPlan=groups.map(g=>({name:g.name, dose:g.dose, time:g.timeLabel}));
-  return {groups, group, dayCount:keys.length, episodes:classified, baseline, summary, repCurve, repPlan, period};
-}
-function renderClinical(){
-  const sel=document.getElementById("clinPeriod"); if(!sel) return;
-  sel.value=String(_clinState.periodDays);
-  sel.onchange=()=>{ _clinState.periodDays=+sel.value; _clinState.groupId=null; renderClinical(); };
-  const r=clinAnalyze(_clinState.periodDays, _clinState.groupId);
-  _clinState.result=r;
-  const gsel=document.getElementById("clinGroup");
-  if(!r.groups.length){
-    gsel.innerHTML=`<option>복약 기록 없음</option>`;
-    document.getElementById("clinSummary").innerHTML=`<div class="hint">최근 ${_clinState.periodDays}일에 복약 기록이 없습니다.</div>`;
-    document.getElementById("clinTable").innerHTML="";
-    document.getElementById("clinContext").innerHTML="";
-    document.getElementById("clinGoalWrap").style.display="none";
+/* ---- 변경 대상 선택 · 3단 편집 UI ---- */
+function renderSimVariantBuilder(dayKey){
+  const base=simEnsureVariant(dayKey);
+  const sel=document.getElementById("simTargetMed"); if(!sel) return;
+  if(!base.length){
+    sel.innerHTML=`<option>이 날짜에 복약 기록이 없습니다</option>`;
+    document.getElementById("simTargetInfo").textContent="";
+    document.getElementById("simChangeKind").innerHTML="";
+    document.getElementById("simChangeControls").innerHTML="";
     return;
   }
-  gsel.innerHTML=r.groups.map(g=>`<option value="${escapeHtml(g.id)}" ${g.id===r.group.id?"selected":""}>${escapeHtml(g.timeLabel)} ${escapeHtml(g.name)} ${SIMENG.formatDose(g.dose)} · ${g.occurrences}회</option>`).join("");
-  gsel.onchange=()=>{ _clinState.groupId=gsel.value; renderClinical(); };
+  if(_simTargetIdx>=base.length) _simTargetIdx=0;
+  sel.innerHTML=base.map((d,i)=>`<option value="${i}" ${i===_simTargetIdx?"selected":""}>${escapeHtml(d.time)} ${escapeHtml(d.name)} ${doseLabel(d.dose)}</option>`).join("");
+  sel.onchange=()=>{ _simTargetIdx=+sel.value; renderSimVariantBuilder(dayKey); };
 
-  const s=r.summary, b=r.baseline;
-  const L=SIMCLIN.LABELS;
-  /* 한눈에 보이는 막대 요약 — 채운 칸은 발생 횟수, 전체 칸은 분석 가능 사례 수 */
-  const bar=(n,total)=>{ const t=Math.max(1,Math.min(10,total)); const f=Math.min(t,n);
-    return `<span style="letter-spacing:1px">${"■".repeat(f)}${"□".repeat(Math.max(0,t-f))}</span>`; };
-  const pill=(k,color)=>`<div style="background:var(--surface-2); border-left:3px solid ${color}; border-radius:8px; padding:8px 10px">
-    <div style="font-size:11.5px; color:var(--ink-2)">${L[k]}</div>
-    <div style="font-size:15px; color:${color}; margin:2px 0">${bar(s.counts[k], s.judgedEpisodes)}</div>
-    <div style="font-weight:800">${s.counts[k]}회 / ${s.judgedEpisodes}회 <span style="font-size:12px; color:var(--ink-2)">(${s.ratios[k]}%)</span></div>
-    ${s.verdicts[k]?`<div style="font-size:11.5px; color:var(--ink-2)">${s.verdicts[k]}</div>`:""}</div>`;
-  document.getElementById("clinSummary").innerHTML=`
-    <div style="font-size:12.5px; margin-bottom:6px">
-      분석기간: <b>${escapeHtml(r.period.startKey)} ~ ${escapeHtml(r.period.endKey)}</b> · 기록 존재일 ${r.period.recordedDays}일<br>
-      분석 대상: <b>${escapeHtml(r.group.timeLabel)} ${escapeHtml(r.group.name)} ${SIMENG.formatDose(r.group.dose)}</b>
-      · 분석 가능 사례 <b>${s.judgedEpisodes}회</b>${s.counts.insufficient_data?` (판정 불가 ${s.counts.insufficient_data}회)`:""}
-      ${b.medianOnLatencyMin!=null?`<br>평소 ON 도달 중앙값 <b>${b.medianOnLatencyMin}분</b>${b.normalRange?` (개인 정상 범위 ${b.normalRange[0]}~${b.normalRange[1]}분)`:""}`:"<br>유효 ON에 도달한 사례가 없어 개인 기준을 세울 수 없습니다."}
-    </div>
-    ${s.reliabilityNote?`<div class="hint" style="color:var(--danger)">${escapeHtml(s.reliabilityNote)}</div>`:""}
-    ${s.slowBaselineNote?`<div class="hint" style="color:var(--danger)">${escapeHtml(s.slowBaselineNote)}</div>`:""}
-    ${s.deferredDelayedNote?`<div class="hint" style="color:var(--danger)">${escapeHtml(s.deferredDelayedNote)}</div>`:""}
-    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:8px; margin-top:8px">
-      ${pill("delayed_on","#E0A030")}${pill("incomplete_on","#7B5CD6")}${pill("on_failure","#B3261E")}${pill("adequate","#1FA971")}
-    </div>`;
+  const b=base[_simTargetIdx];
+  const model=SIMDRUG.classify(b.name);
+  const info=document.getElementById("simTargetInfo");
+  info.innerHTML = (b.dose==null)
+    ? `<span style="color:var(--danger); font-weight:700">용량 확인 필요</span> — 이 기록에는 용량이 없어 용량 변경을 할 수 없습니다.`
+    : `현재안: <b>${escapeHtml(b.time)} ${escapeHtml(b.name)} ${doseLabel(b.dose)}</b>${model?` · ${escapeHtml(model.roleLabel)}`:` · 곡선 모델 미등록`}`;
 
-  const rows=r.episodes.map(e=>`<tr>
-    <td style="padding:4px 6px">${escapeHtml(e.dayKey.slice(5))}</td>
-    <td style="padding:4px 6px; text-align:right">${e.preDoseOutput==null?"—":e.preDoseOutput}</td>
-    <td style="padding:4px 6px; text-align:right">${e.onLatencyMin==null?"미도달":e.onLatencyMin+"분"}</td>
-    <td style="padding:4px 6px; text-align:right">${e.peakOutput==null?"—":e.peakOutput}</td>
-    <td style="padding:4px 6px">${L[e.classification]}</td></tr>`).join("");
-  document.getElementById("clinTable").innerHTML=`<table style="width:100%; font-size:12px; border-collapse:collapse; margin-top:10px">
-    <tr style="color:var(--ink-2)"><td style="padding:4px 6px">날짜</td><td style="padding:4px 6px; text-align:right">직전 출력</td>
-    <td style="padding:4px 6px; text-align:right">ON 도달</td><td style="padding:4px 6px; text-align:right">최고 출력</td><td style="padding:4px 6px">판정</td></tr>
-    ${rows}</table>
-    <div class="hint" style="margin-top:4px">이 분류는 앱 내부의 패턴 탐지 규칙이며 확정 진단이 아닙니다.</div>`;
+  const steps = model && model.category==="levodopa" ? [-50,-25,25,50]
+    : (model && model.category==="dopamine_agonist" ? (b.name.includes("리큅")||b.name.includes("로피니롤")? [-0.5,-0.25,0.25,0.5] : [-0.25,-0.125,0.125,0.25])
+    : (model && model.category==="amantadine" ? [-100,100] : null));
 
-  /* 동반 변수: 가장 많이 관찰된 문제 기준 */
-  const top=["delayed_on","incomplete_on","on_failure"].sort((a,b)=>s.counts[b]-s.counts[a])[0];
-  const cc=(s.counts[top]>0)? SIMCLIN.contextComparison(r.episodes, top) : null;
-  document.getElementById("clinContext").innerHTML = cc? `
-    <div style="background:var(--surface-2); border-radius:8px; padding:8px 10px">
-      <b>동반 변수 비교</b>
-      ${cc.items.map(it=>`<div style="margin-top:4px">· ${escapeHtml(it.label)} — ${escapeHtml(it.note)}</div>`).join("")}
-      <div class="hint" style="margin-top:4px">${escapeHtml(cc.caution)}</div>
-    </div>`:"";
+  const kinds=[["dose","용량 변경"],["time","시간 변경"],["add","약 추가"],["remove","약 삭제"],["replace","약 교체"]];
+  document.getElementById("simChangeKind").innerHTML=kinds.map(([k,l])=>
+    `<button type="button" class="chip${_simChangeKind===k?" sel":""}" data-kind="${k}">${l}</button>`).join("");
+  document.querySelectorAll("#simChangeKind .chip").forEach(btn=>{
+    btn.onclick=()=>{ _simChangeKind=btn.dataset.kind; renderSimVariantBuilder(dayKey); };
+  });
 
-  /* 목적 선택 — 관찰된 문제를 기본값으로 */
-  const gw=document.getElementById("clinGoalWrap");
-  if(s.judgedEpisodes>0){
-    gw.style.display="block";
-    const goalSel=document.getElementById("clinGoal");
-    if(!_clinState.goalId) _clinState.goalId = (s.counts[top]>0? top : "delayed_on");
-    goalSel.innerHTML=SIMCLIN.GOALS.map(g=>`<option value="${g.id}" ${g.id===_clinState.goalId?"selected":""}>${escapeHtml(g.label)}</option>`).join("");
-    goalSel.onchange=()=>{ _clinState.goalId=goalSel.value; renderClinical(); if(typeof renderMultiScenario==="function") renderMultiScenario(); };
-    { const btn=document.getElementById("clinToSimBtn");
-      if(btn){ btn.style.display=""; btn.onclick=()=>{
-        _clinState.basis="period";
-        renderMultiScenario();
-        const el=document.getElementById("scenarioList");
-        if(el&&el.scrollIntoView) el.scrollIntoView({block:"start"});
-        toast("최근 " + _clinState.periodDays + "일 대표 반응을 기준으로 시뮬레이션합니다");
-      }; } }
-    const gv=s.verdicts[_clinState.goalId];
-    document.getElementById("clinGoalNote").textContent = gv
-      ? `최근 ${_clinState.periodDays}일 이 복용에서 ${SIMCLIN.LABELS[_clinState.goalId]}는 ${s.counts[_clinState.goalId]}회 관찰되었습니다 — ${gv}. 아래에서 가상 변경의 예상 효과를 확인할 수 있습니다.`
-      : `아래에서 가상 변경의 예상 효과를 확인할 수 있습니다.`;
-  } else gw.style.display="none";
-}
-
-/* ============================================================
-   v1.0 Simulation Platform — 최대 3개 실험안 동시 비교
-   시나리오 편집기(scenario-editor) → simulation-engine.js → simulation-compare.js
-   → simulation-interpret.js → simulation-report.js. 모두 현재안을 기준으로 독립 계산.
-   ============================================================ */
-function loadScenarios(dayKey){
-  const saved=db.settings.simScenarios;
-  if(saved && saved.dayKey===dayKey && Array.isArray(saved.list)) return saved.list;
-  return [];
-}
-function saveScenarios(dayKey, list){
-  db.settings.simScenarios={dayKey, list};
-  save();
-}
-function scenarioBaselineDoses(dayKey){ return JSON.parse(JSON.stringify(medsForDay(dayKey))); }
-function scenarioActualSorted(dayKey, t0){
-  return outputsForDay(dayKey).map(a=>{ const [h,m]=a.time.split(":").map(Number); let t=h*60+m; if(t<t0) t+=1440; return {t, val:a.val}; }).sort((a,b)=>a.t-b.t);
-}
-function newScenarioTitle(list){ return `실험 ${list.length+1}`; }
-function renderMultiScenario(){
-  const dayKey=document.getElementById("simDate").value||todayKey();
-  const t0=0, t1=1440;
-  const baselineDoses=scenarioBaselineDoses(dayKey);
-  const actualSorted=scenarioActualSorted(dayKey, t0);
-  /* v0.9.27: 기준을 "선택한 하루"가 아니라 "최근 N일 대표 반응"으로 쓴다.
-     기간 분석이 유효하면 대표 복약안 + 대표곡선을 현재안으로 사용한다. */
-  let basisLabel, baselineDoses2=baselineDoses, actualForCal=actualSorted, cal, periodBasis=false;
-  const cr=_clinState.result;
-  const usePeriod = _clinState.basis!=="day" && cr && cr.repCurve && cr.repCurve.length>=4
-                    && cr.summary && cr.summary.judgedEpisodes>=3 && cr.group;
-  if(usePeriod){
-    periodBasis=true;
-    baselineDoses2=cr.repPlan.map(d=>({name:d.name, dose:d.dose, time:d.time}));
-    actualForCal=SIMENG.periodCurveToAbsolute(cr.repCurve, cr.group.medianTimeMin)
-      .map(p=>({t:p.t, val:p.val, n:p.n})).sort((a,b)=>a.t-b.t);
-    cal=SIMENG.calibrateFromPeriod(cr.repCurve);
-    basisLabel=`현재안 기준: 최근 ${_clinState.periodDays}일 ${cr.group.timeLabel} ${cr.group.name} ${SIMENG.formatDose(cr.group.dose)}의 중앙 반응 (${cr.summary.judgedEpisodes}회)`;
-  } else {
-    cal=SIMENG.calibrate(actualSorted, baselineDoses, t0);
-    basisLabel=`현재안 기준: ${fmtDateK(dayKey)} 하루 기록`;
+  const ctl=document.getElementById("simChangeControls");
+  if(_simChangeKind==="dose"){
+    if(b.dose==null) ctl.innerHTML=`<div class="hint">용량이 기록된 약에서만 사용할 수 있습니다.</div>`;
+    else if(!steps) ctl.innerHTML=`<div class="hint">${escapeHtml(b.name)}은(는) 이 도구에서 용량 조절 단위를 제공하지 않습니다. 시간 변경·추가·삭제·교체는 사용할 수 있어요.</div>`;
+    else ctl.innerHTML=`<div class="chips">${steps.map(v=>`<button type="button" class="chip" data-dose="${v}">${v>0?"+":""}${v}mg</button>`).join("")}</div>
+      <div class="hint">현재안 ${doseLabel(b.dose)} 기준으로 계산됩니다.</div>`;
+    ctl.querySelectorAll("[data-dose]").forEach(x=>x.onclick=()=>simApplyChange("dose", x.dataset.dose));
+  } else if(_simChangeKind==="time"){
+    ctl.innerHTML=`<div class="chips">${[-60,-30,30,60].map(v=>`<button type="button" class="chip" data-min="${v}">${v>0?"+":""}${v}분</button>`).join("")}</div>
+      <div class="hint">현재안 ${escapeHtml(b.time)} 기준으로 계산됩니다.</div>`;
+    ctl.querySelectorAll("[data-min]").forEach(x=>x.onclick=()=>simApplyChange("time", x.dataset.min));
+  } else if(_simChangeKind==="add"){
+    ctl.innerHTML=`<select id="simAddPick" style="width:100%; min-height:48px">${MED_PRESETS.map(n=>`<option>${escapeHtml(n)}</option>`).join("")}</select>
+      <button class="btn ghost" id="simAddGo" style="margin-top:6px">이 약을 변경안에 추가</button>`;
+    document.getElementById("simAddGo").onclick=()=>simApplyChange("add", document.getElementById("simAddPick").value);
+  } else if(_simChangeKind==="remove"){
+    ctl.innerHTML=`<button class="btn ghost" id="simRemoveGo">${escapeHtml(b.time)} ${escapeHtml(b.name)} 을(를) 변경안에서 빼기</button>`;
+    document.getElementById("simRemoveGo").onclick=()=>simApplyChange("remove");
+  } else if(_simChangeKind==="replace"){
+    ctl.innerHTML=`<select id="simReplacePick" style="width:100%; min-height:48px">${MED_PRESETS.map(n=>`<option ${n===b.name?"selected":""}>${escapeHtml(n)}</option>`).join("")}</select>
+      <button class="btn ghost" id="simReplaceGo" style="margin-top:6px">이 약으로 교체</button>
+      <div class="hint">제형·약물이 다르면 곡선의 모양도 달라집니다.</div>`;
+    document.getElementById("simReplaceGo").onclick=()=>simApplyChange("replace", document.getElementById("simReplacePick").value);
   }
-  const baselineRaw=SIMENG.computeRawPlan(baselineDoses2, t0, t1);
-  const baseline=SIMENG.applyOutputModel(baselineRaw, baselineRaw.pkMax, cal);
-  { const el=document.getElementById("scenarioBasis");
-    if(el) el.innerHTML=`${escapeHtml(basisLabel)}
-      <button class="btn ghost small" id="scenarioBasisToggle" style="width:auto; margin-left:8px">${periodBasis?"하루 기록으로 보기":"기간 대표로 보기"}</button>`; }
-  let list=loadScenarios(dayKey);
+}
 
-  document.getElementById("scenarioAddBtn").onclick=()=>{
-    if(list.length>=3){ toast("실험안은 최대 3개까지 만들 수 있어요"); return; }
-    list=list.concat([{id:"sc_"+Date.now(), title:newScenarioTitle(list), doses:JSON.parse(JSON.stringify(baselineDoses2)), changes:[], open:false}]);
-    saveScenarios(dayKey, list); renderMultiScenario();
-  };
-
-  /* v0.9.25: 기본은 실험안 1개. 없으면 현재안 사본으로 자동 생성해 바로 편집할 수 있게 한다.
-     복약 기록이 없는 날은 만들 것이 없으므로 안내만 표시한다. */
-  if(!list.length){
-    if(!baselineDoses2.length){
-      document.getElementById("scenarioList").innerHTML=`<div class="hint" style="padding:10px 0">이 날짜에는 복약 기록이 없어 실험안을 만들 수 없습니다.</div>`;
-      document.getElementById("scenarioCombinedWrap").style.display="none";
-      document.getElementById("scenarioAddBtn").style.display="none";
-      return;
-    }
-    list=[{id:"sc_"+Date.now(), title:"실험안 1", doses:JSON.parse(JSON.stringify(baselineDoses2)), changes:[], open:false}];
-    saveScenarios(dayKey, list);
-  }
-  document.getElementById("scenarioAddBtn").style.display="";
-
-  /* 각 실험안 독립 계산 (baseline 사본에서 출발 — 서로 영향 없음) */
-  const computedList=list.map(sc=>({
-    ...sc,
-    computed: SIMENG.applyOutputModel(SIMENG.computeRawPlan(sc.doses, t0, t1), baselineRaw.pkMax, cal),
-    actualSorted:actualForCal,
-  }));
-  const diffs=computedList.map(sc=>SIMCMP.diff(baseline, sc.computed));
-  const ranked=SIMCMP.rankScenarios(computedList.map((sc,i)=>({id:sc.id,title:sc.title,computed:sc.computed,changes:scenarioChangeParts(sc.doses, baselineDoses2)})), baseline);
-  const overall=SIMCMP.overallComparison(ranked);
-  /* 검토 반영: 종합 숫자 점수는 처방 점수로 오해될 수 있어 표시하지 않고, 해당하는 항목만 배지로 보여준다 */
-  const badgeFor=(id)=>{
-    if(!overall) return "";
-    const b=[];
-    if(overall.fastestOnLatency===id) b.push("ON 도달 가장 빠름");
-    if(overall.longestTargetDuration===id) b.push("80 이상 유지 가장 김");
-    if(overall.lowestPeakBurden===id) b.push("피크 증가 가장 낮음");
-    return b.join(" · ");
-  };
-
-  document.getElementById("scenarioList").innerHTML = computedList.map((sc,i)=>{
-    const diff=diffs[i];
-    const effChanges=scenarioChangeParts(sc.doses, baselineDoses2);
-    const effCategory=SIMCMP.detectScenarioCategory(effChanges);
-    const interp=SIMITP.interpretScenario({title:sc.title, changes:effChanges, category:effCategory}, diff,
-      {personal:baseline.cal.personal, reasons:baseline.cal.reasons||[], confidenceReasons:baseline.cal.reasons||[]});
-    /* v0.9.27: 선택한 문제의 복용을 실제로 바꾼 실험안에만 목적별 분석을 적용한다 */
-    let goalHtml="";
-    const grp=_clinState.result && _clinState.result.group;
-    const affects=grp? scenarioAffectsClinicalGroup(effChanges, grp) : false;
-    if(_clinState.goalId && grp && !affects){
-      goalHtml=`<div style="margin-top:8px; padding:10px 12px; background:var(--surface-2); border-left:3px solid var(--ink-2); border-radius:8px; font-size:12.5px; line-height:1.7">
-        선택한 문제는 <b>${escapeHtml(grp.timeLabel)} ${escapeHtml(grp.name)} ${SIMENG.formatDose(grp.dose)}</b>에 관한 것입니다.
-        현재 실험안은 해당 복용을 변경하지 않아 ${escapeHtml(SIMCLIN.goalById(_clinState.goalId)?SIMCLIN.goalById(_clinState.goalId).label:"")} 분석을 적용하지 않았습니다.</div>`;
-    }
-    else if(_clinState.goalId && _clinState.result && _clinState.result.summary){
-      const cs=_clinState.result.summary;
-      const gi=SIMITP.interpretForGoal(_clinState.goalId, diff, baseline.metrics, sc.computed.metrics, {
-        periodDays:_clinState.periodDays, occurrences:cs.counts[_clinState.goalId],
-        judged:cs.judgedEpisodes, verdict:cs.verdicts[_clinState.goalId]});
-      goalHtml=`<div style="margin-top:8px; padding:10px 12px; background:var(--surface-2); border-left:3px solid var(--accent); border-radius:8px">
-        <div style="font-size:11.5px; color:var(--ink-2)">선택한 문제: ${escapeHtml(SIMCLIN.goalById(_clinState.goalId)?SIMCLIN.goalById(_clinState.goalId).label:"")}</div>
-        <div style="font-size:12.5px; line-height:1.75; margin-top:4px">${escapeHtml(gi.text)}</div></div>`;
-    }
-    const rk=ranked.find(r=>r.id===sc.id);
-    const multi=computedList.length>1;
-    return `<div class="card" style="border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-top:10px">
-      <div style="display:flex; align-items:center; gap:8px">
-        <input type="text" data-sc-title="${sc.id}" value="${escapeHtml(sc.title)}" style="flex:1; border:none; background:transparent; font-weight:800; font-size:15px">
-        ${multi? `<span class="hint" style="white-space:nowrap" data-sc-badges="${sc.id}"></span>`:""}
-        ${multi? `<button class="btn ghost small" data-sc-del="${sc.id}" style="width:auto; color:var(--danger)">삭제</button>`:""}
-      </div>
-      <div style="font-size:12px; color:var(--ink-2); margin-top:4px" data-sc-changesummary="${sc.id}">${escapeHtml(scenarioChangeSummary(sc.doses, baselineDoses2))}</div>
-      <div class="chips" style="margin-top:6px">
-        <button type="button" class="chip" data-sc-op="${sc.id}|copy">현재안 복사</button>
-        <button type="button" class="chip" data-sc-op="${sc.id}|addmed">약 추가</button>
-      </div>
-      <div id="scDoses_${sc.id}"></div>
-      <button class="btn primary no-print sc-run" data-sc-run="${sc.id}">${sc.open? "다시 계산하기" : "적용하고 결과 보기"}</button>
-      ${sc.open? goalHtml : ""}
-      ${sc.open? SIMREP.scenarioDetailHtml({title:sc.title, changes:sc.changes, computed:sc.computed, actualSorted}, baseline, diff, interp) : ""}
-      ${sc.open? `<button class="btn ghost no-print" data-sc-tochallenge="${sc.id}" style="margin-top:10px">🧪 이 실험안으로 비교 테스트 시작</button>`:""}
-      ${sc.open? `<button class="btn ghost no-print" data-sc-toggle="${sc.id}" style="margin-top:6px">결과 접기</button>`:""}
-    </div>`;
+/* ---- 그래프 그리기 (SVG) ---- */
+function simSvgAxes(W,H,padL,padR,padT,padB){
+  const plotW=W-padL-padR, plotH=H-padT-padB;
+  return {plotW,plotH, x:(t,t0,t1)=>padL+(t-t0)/(t1-t0)*plotW, y:v=>padT+plotH-(Math.min(100,Math.max(0,v))/100)*plotH};
+}
+function simDoseMarkers(doses, x, t0, t1, y0){
+  return doses.filter(d=>d.time).map(d=>{ const [h,m]=d.time.split(":").map(Number); let tm=h*60+m; if(tm<t0) tm+=1440; if(tm>t1) return "";
+    return `<line x1="${x(tm,t0,t1)}" y1="${y0}" x2="${x(tm,t0,t1)}" y2="${y0-6}" stroke="var(--ink-2)" stroke-width="1.4"/>`; }).join("");
+}
+function simActualPoints(dayKey){
+  return outputsForDay(dayKey).map(a=>{ const [h,m]=a.time.split(":").map(Number); return {t:h*60+m, val:a.val}; }).sort((a,b)=>a.t-b.t);
+}
+function renderSimMainChart(dayKey, planDoses, composite){
+  const W=700,H=210,padL=32,padR=10,padT=10,padB=26;
+  const {x,y}=simSvgAxes(W,H,padL,padR,padT,padB);
+  const t0=0,t1=1440;
+  const axisLbl=[0,20,50,80,100].map(p=>`<text x="${padL-6}" y="${y(p)+3}" font-size="8.5" fill="var(--ink-2)" text-anchor="end">${p}</text>`).join("");
+  const actual=simActualPoints(dayKey);
+  const actLine=actual.length? `<polyline points="${actual.map(p=>`${x(p.t,t0,t1)},${y(p.val)}`).join(" ")}" fill="none" stroke="#E8663C" stroke-width="1.6" stroke-dasharray="1,3"/>`+actual.map(p=>`<circle cx="${x(p.t,t0,t1)}" cy="${y(p.val)}" r="3.4" fill="#E8663C"/>`).join("") : "";
+  const compLine=composite.points.length? `<polyline points="${composite.points.map(p=>`${x(p.t,t0,t1)},${y(p.val)}`).join(" ")}" fill="none" stroke="#5C93D6" stroke-width="2"/>` : "";
+  const markers=simDoseMarkers(planDoses, x, t0, t1, H-padB);
+  document.getElementById("simMainChart").innerHTML = (!planDoses.length&&!actual.length)
+    ? `<div class="hint" style="padding:20px 0; text-align:center">이 날짜에는 기록이 없습니다.</div>`
+    : `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${axisLbl}${compLine}${actLine}${markers}</svg>`;
+}
+function renderSimPerDrugChart(dayKey, planDoses, composite){
+  const el=document.getElementById("simPerDrugChart");
+  if(!composite.perDrug.length){ el.innerHTML=`<div class="hint">약물별 곡선이 없습니다.</div>`; return; }
+  const W=700,H=140,padL=32,padR=10,padT=8,padB=18;
+  const {x,y}=simSvgAxes(W,H,padL,padR,padT,padB);
+  const t0=0,t1=1440;
+  const colors=["#5C93D6","#7B5CD6","#1FA971","#E0A030","#B3261E"];
+  el.innerHTML = composite.perDrug.map((pd,i)=>{
+    const maxV=Math.max(1,...pd.points.map(p=>p.val));
+    const norm=pd.points.map(p=>({t:p.t, val:p.val/maxV*90}));
+    return `<div style="margin-top:6px">
+      <div style="font-size:11.5px; color:var(--ink-2)">${escapeHtml(pd.name)}</div>
+      <svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">
+        <polyline points="${norm.map(p=>`${x(p.t,t0,t1)},${y(p.val)}`).join(" ")}" fill="none" stroke="${colors[i%colors.length]}" stroke-width="1.8"/>
+      </svg></div>`;
   }).join("");
+}
+function renderSimCompareChart(dayKey, planDoses, virtDoses, curPlan, virtPlan){
+  const W=700,H=200,padL=32,padR=10,padT=10,padB=26;
+  const {x,y}=simSvgAxes(W,H,padL,padR,padT,padB);
+  const t0=0,t1=1440;
+  const axisLbl=[0,20,50,80,100].map(p=>`<text x="${padL-6}" y="${y(p)+3}" font-size="8.5" fill="var(--ink-2)" text-anchor="end">${p}</text>`).join("");
+  const actual=simActualPoints(dayKey);
+  const actLine=actual.length? `<polyline points="${actual.map(p=>`${x(p.t,t0,t1)},${y(p.val)}`).join(" ")}" fill="none" stroke="#E8663C" stroke-width="1.4" stroke-dasharray="1,3"/>`+actual.map(p=>`<circle cx="${x(p.t,t0,t1)}" cy="${y(p.val)}" r="3" fill="#E8663C"/>`).join("") : "";
+  const curLine=`<polyline points="${curPlan.points.map(p=>`${x(p.t,t0,t1)},${y(p.val)}`).join(" ")}" fill="none" stroke="#5C93D6" stroke-width="2"/>`;
+  const virtLine=`<polyline points="${virtPlan.points.map(p=>`${x(p.t,t0,t1)},${y(p.val)}`).join(" ")}" fill="none" stroke="#E0A030" stroke-width="2" stroke-dasharray="6,4"/>`;
+  const markers=simDoseMarkers(planDoses,x,t0,t1,H-padB)+simDoseMarkers(virtDoses,x,t0,t1,H-padB-8);
+  document.getElementById("simCompareChart").innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${axisLbl}${curLine}${virtLine}${actLine}${markers}</svg>`;
+}
 
-  { const tg=document.getElementById("scenarioBasisToggle");
-    if(tg) tg.onclick=()=>{ _clinState.basis=(_clinState.basis==="day")? "period" : "day"; renderMultiScenario(); }; }
-  computedList.forEach(sc=>renderScenarioDoseRows(dayKey, sc.id, list));
-  document.querySelectorAll("[data-sc-badges]").forEach(el=>{ el.textContent=badgeFor(el.dataset.scBadges); });
-  { /* 추가 버튼: 결과를 한 번 본 뒤에만, 3개 미만일 때만 노출 */
-    const addBtn=document.getElementById("scenarioAddBtn");
-    const anyOpen=computedList.some(sc=>sc.open);
-    addBtn.textContent=computedList.length>=2? "＋ 실험안 더 추가" : "＋ 다른 실험안 추가 비교";
-    addBtn.style.display=(anyOpen && computedList.length<3)? "" : "none";
+/* ---- LEDD 요약 카드 (크기 비교 전용 — 곡선 모양은 결정하지 않음) ---- */
+/* 검토 반영: 온젠티스·도파민 작용제·아만타딘 등은 leddIncluded:false라 이 합계에서
+   빠진다. "총 LEDD"라고 하면 전체를 다 더한 것처럼 오해할 수 있어 "계산 포함 LEDD"로 표기하고,
+   제외된 약이 있으면 그 목록을 함께 보여준다. */
+function simLeddCompareHtml(curPlan, virtPlan, planWithCarry, virtWithCarry){
+  const diff=virtPlan.leddTotal-curPlan.leddTotal;
+  const rows=(bd)=>bd.length? bd.map(x=>`${x.name} ${x.ledd}`).join(" · ") : "—";
+  const excludedNames=(list)=>{
+    const s=new Set();
+    (list||[]).forEach(d=>{ const m=SIMDRUG.classify(d.name); if(m && !m.leddIncluded) s.add(d.name); });
+    return [...s];
+  };
+  const excluded=[...new Set(excludedNames(planWithCarry).concat(excludedNames(virtWithCarry)))];
+  return `<b>계산 포함 LEDD</b> <span style="color:var(--ink-2); font-weight:400">(레보도파 계열 환산량 — 전체 LEDD가 아닙니다)</span><br>
+    현재 계산 포함 LEDD: ${curPlan.leddTotal} · 변경안 계산 포함 LEDD: ${virtPlan.leddTotal} · 변화: ${diff>=0?"+":""}${diff}${curPlan.leddTotal? ` (${diff>=0?"+":""}${Math.round(diff/curPlan.leddTotal*100)}%)`:""}
+    <details style="margin-top:4px"><summary style="cursor:pointer; color:var(--ink-2)">약물별 기여도</summary>
+      <div style="color:var(--ink-2); margin-top:4px">현재안: ${rows(curPlan.leddBreakdown)}<br>변경안: ${rows(virtPlan.leddBreakdown)}</div></details>
+    ${excluded.length? `<div class="hint" style="margin-top:4px">일부 보조약과 도파민 작용제(${escapeHtml(excluded.join(", "))})는 현재 이 합계에서 제외됩니다.</div>`:""}`;
+}
+/* 약효 추정 중첩 구간 — 위험 판정이 아니라 사실 표시 */
+function simOverlapNote(curPlan){
+  const th=curPlan.points.length? Math.max(...curPlan.points.map(p=>p.val))*0.6 : 0;
+  const overlapMin=curPlan.perDrug.length>=2? curPlan.points.filter(p=>{
+    const active=curPlan.perDrug.filter(pd=>{ const v=(pd.points.find(x=>x.t===p.t)||{}).val||0; return v>0.05; }).length;
+    return active>=2 && p.val>=th;
+  }).length*10 : 0;
+  return overlapMin>0? `약효 추정 중첩 구간: 약 ${overlapMin}분 (여러 약의 추정 효과가 동시에 높은 시간대 — 이상운동증 위험을 단정하지 않습니다)` : "";
+}
+
+function renderSim(){
+  const sel=document.getElementById("simDate");
+  if(!sel._bound){
+    sel._bound=true;
+    const days=Object.keys(byDay()).sort().reverse();
+    sel.innerHTML=(days.length? days : [todayKey()]).map(k=>`<option value="${k}" ${k===todayKey()?"selected":""}>${fmtDateK(k)}</option>`).join("");
+    sel.onchange=renderSim;
   }
+  const dayKey=sel.value||todayKey();
+  const {today:planDoses, carry, all:planWithCarry}=medsForSimulationDay(dayKey);
+  renderSimPlanList(dayKey);
+  document.getElementById("simCarryNote").innerHTML = carry.length
+    ? carry.map(d=>`전날 ${escapeHtml(d.time)} ${escapeHtml(d.name)}${d.dose?` ${d.dose}mg`:""} · 다음 날 보정 반영`).map(t=>`<div>${t}</div>`).join("")
+    : "";
 
-  document.querySelectorAll("[data-sc-title]").forEach(inp=>{
-    inp.onchange=()=>{ const it=list.find(x=>x.id===inp.dataset.scTitle); if(it){ it.title=inp.value||it.title; saveScenarios(dayKey,list); } };
-  });
-  document.querySelectorAll("[data-sc-toggle]").forEach(b=>{
-    b.onclick=()=>{ const it=list.find(x=>x.id===b.dataset.scToggle); if(it){ it.open=!it.open; saveScenarios(dayKey,list); renderMultiScenario(); } };
-  });
-  /* v0.9.25: 저장과 계산을 한 번에 — 결과가 이 버튼 아래에 펼쳐진다 */
-  document.querySelectorAll("[data-sc-run]").forEach(b=>{
-    b.onclick=()=>{ const it=list.find(x=>x.id===b.dataset.scRun); if(!it) return;
-      it.open=true; saveScenarios(dayKey,list); renderMultiScenario();
-      const card=document.querySelector(`[data-sc-run="${it.id}"]`);
-      if(card&&card.scrollIntoView) card.scrollIntoView({block:"center"});
-    };
-  });
-  document.querySelectorAll("[data-sc-del]").forEach(b=>{
-    b.onclick=()=>{ if(!confirm("이 실험안을 삭제할까요?")) return; list=list.filter(x=>x.id!==b.dataset.scDel); saveScenarios(dayKey,list); renderMultiScenario(); };
-  });
-  document.querySelectorAll("[data-sc-op]").forEach(b=>{
-    b.onclick=()=>{ const [id,op]=b.dataset.scOp.split("|"); const it=list.find(x=>x.id===id); if(!it) return;
-      if(op==="copy") it.doses=JSON.parse(JSON.stringify(baselineDoses2));
-      else if(op==="addmed") it.doses.push({name:MED_PRESETS[0]||"", dose:50, time:"08:00"});
-      saveScenarios(dayKey,list); renderMultiScenario(); };
-  });
-  document.querySelectorAll("[data-sc-tochallenge]").forEach(b=>{
-    b.onclick=()=>{
-      const id=b.dataset.scTochallenge; const it=list.find(x=>x.id===id); if(!it) return;
-      try{
-        if(typeof SHARED!=="undefined"){
-          SHARED.write({pendingChallengePlan:{createdAt:new Date().toISOString(), dayKey,
-            baselinePlan:baselineDoses2.map(d=>({name:d.name,dose:+d.dose||0,time:d.time||""})),
-            trialPlan:it.doses.map(d=>({name:d.name,dose:+d.dose||0,time:d.time||""})),
-            changeSummary:scenarioChangeSummary(it.doses, baselineDoses2),
-            goalId:_clinState.goalId||null,
-            goalLabel:(_clinState.goalId&&SIMCLIN.goalById(_clinState.goalId))? SIMCLIN.goalById(_clinState.goalId).label : null,
-            periodFindings:(_clinState.result&&_clinState.result.summary&&_clinState.goalId)?
-              `최근 ${_clinState.periodDays}일 ${_clinState.result.summary.judgedEpisodes}회 중 ${_clinState.result.summary.counts[_clinState.goalId]}회 관찰 (${_clinState.result.summary.verdicts[_clinState.goalId]||""})` : null}});
-        }
-        syncSharedProfile(); location.href="challenge/index.html#fromsim";
-      }catch(e){ toast("전달 실패"); }
-    };
-  });
+  const t0=0,t1=1440;
+  const curPlan=SIMDRUG.compositeCurve(planWithCarry, t0, t1, 10);
+  renderSimMainChart(dayKey, planDoses, curPlan);
 
-  /* 종합 비교 그래프 + 종합 해석 */
-  const wrap=document.getElementById("scenarioCombinedWrap");
-  /* v0.9.25: 실험안이 하나면 종합 비교·순위를 숨기고 그 실험안의 3개 곡선만 보여준다 */
-  if(computedList.length>1 && computedList.some(sc=>sc.open)){
-    wrap.style.display="block";
-    const colors=["#E0A030","#7B5CD6","#1FA971"];
-    document.getElementById("scenarioCombinedChart").innerHTML = SIMREP.combinedSvg({
-      t0, t1, actual:actualSorted, baselineExpected:baseline.expected,
-      scenarios:computedList.map(sc=>sc.computed.expected),
-    });
-    document.getElementById("scenarioCombinedLegendExtra").innerHTML = computedList.map((sc,i)=>
-      `<span style="margin-left:10px"><i style="background:${colors[i%3]}"></i>${escapeHtml(sc.title)}</span>`).join("");
-    const io=SIMITP.interpretOverall(ranked, overall, {personal:baseline.cal.personal, reasons:baseline.cal.reasons||[]});
-    document.getElementById("scenarioOverallText").textContent = io.text;
-  } else {
-    wrap.style.display="none";
-  }
-}
-/* 실험안 doses와 baseline doses를 비교해 "무엇을 바꿨는지" 한 줄로 요약 (기존 simDiffSummary와 동일 원리) */
-function scenarioChangeParts(scDoses, baseDoses){ return planDiffParts(baseDoses, scDoses); }
-function scenarioChangeSummary(scDoses, baseDoses){
-  const parts=scenarioChangeParts(scDoses, baseDoses);
-  return parts.length? parts.map(p=>p.desc).join(" · ") : "변경 없음 (현재안과 동일)";
-}
-/* v0.9.27: 실험안이 기간 분석에서 고른 복용(그룹)을 실제로 변경했는지 확인.
-   같은 약 이름 + 그룹 대표 시각 ±45분 안의 변경일 때만 목적별 분석을 적용한다. */
-function normalizeDrugName(n){ return String(n||"").replace(/\s+/g,"").toLowerCase(); }
-function scenarioAffectsClinicalGroup(changes, group){
-  if(!group) return false;
-  const tol=(SIMCLIN.DEFAULTS&&SIMCLIN.DEFAULTS.timeGroupToleranceMin)||45;
-  return (changes||[]).some(ch=>{
-    if(normalizeDrugName(ch.name)!==normalizeDrugName(group.name)) return false;
-    const tm=ch.baseTime||ch.newTime;
-    if(!tm) return false;
-    return Math.abs(SIMCLIN.hhmmToMin(tm)-group.medianTimeMin)<=tol;
-  });
+  const toggle=document.getElementById("simPerDrugToggle");
+  toggle.onclick=()=>{ const box=document.getElementById("simPerDrugChart");
+    const show=box.style.display==="none"; box.style.display=show?"block":"none";
+    toggle.textContent=show?"약물별 곡선 숨기기":"약물별 곡선 보기";
+    if(show) renderSimPerDrugChart(dayKey, planWithCarry, curPlan); };
+
+  simEnsureVariant(dayKey);
+  renderSimVariantBuilder(dayKey);
+  document.getElementById("simResetBtn").onclick=()=>simApplyChange("reset");
+
+  const virtDoses=_simVirtual.doses;
+  const virtPlan=SIMDRUG.compositeCurve(carry.concat(virtDoses), t0, t1, 10); /* 전날 이월분은 양쪽에 동일하게 적용 — 오늘 변경안 편집 대상은 아님 */
+  renderSimCompareChart(dayKey, planDoses, virtDoses, curPlan, virtPlan);
+  document.getElementById("simOverlapNote").textContent = simOverlapNote(curPlan) || simOverlapNote(virtPlan);
+  document.getElementById("simLeddCompare").innerHTML = simLeddCompareHtml(curPlan, virtPlan, planWithCarry, carry.concat(virtDoses));
+  document.getElementById("simDiffLine").textContent = simDiffSummary(planDoses, virtDoses);
 }
 
-/* 실험안의 개별 약 편집 행 (이름/용량/시각/삭제) — 기존 renderSimVirtualRows와 동일 패턴, 실험안별로 독립 */
-function renderScenarioDoseRows(dayKey, scId, list){
-  const wrap=document.getElementById("scDoses_"+scId); if(!wrap) return;
-  const it=list.find(x=>x.id===scId); if(!it) return;
-  wrap.innerHTML = it.doses.map((d,i)=>`
-    <div class="dose-row" style="display:flex; gap:4px; align-items:center; margin-top:4px">
-      <select data-f="name" style="flex:1.3">${MED_PRESETS.map(n=>`<option ${n===d.name?"selected":""}>${escapeHtml(n)}</option>`).join("")}</select>
-      <input data-f="dose" type="number" value="${d.dose||0}" style="width:56px" placeholder="mg">
-      <input data-f="time" type="time" value="${d.time||""}" style="width:88px">
-      <button data-del type="button" class="btn ghost small" style="width:auto">✕</button>
-    </div>`).join("");
-  [...wrap.querySelectorAll(".dose-row")].forEach((row,i)=>{
-    row.querySelector('[data-f="name"]').onchange=e=>{ it.doses[i].name=e.target.value; saveScenarios(dayKey,list); renderMultiScenario(); };
-    row.querySelector('[data-f="time"]').onchange=e=>{ it.doses[i].time=e.target.value; saveScenarios(dayKey,list); renderMultiScenario(); };
-    row.querySelector('[data-f="dose"]').oninput=e=>{ it.doses[i].dose=+e.target.value||0; saveScenarios(dayKey,list); renderMultiScenario(); };
-    row.querySelector('[data-del]').onclick=()=>{ it.doses.splice(i,1); saveScenarios(dayKey,list); renderMultiScenario(); };
-  });
-}
 
 /* ---------- render: REPORT ---------- */
 function renderReport(){
@@ -4446,29 +3897,11 @@ function setHeadDate(){ const d=new Date();
   document.getElementById("headDate").textContent=`${d.getMonth()+1}.${d.getDate()} (${wd})`; }
 
 applyTheme(); applyI18nStatic(); renderLangToggle(); setHeadDate(); renderAll(); renderNotifyToggle(); setupVoice();
-/* v0.9.21: Medication Challenge 통합 */
+/* v0.9.21: Medication Challenge 통합 (본체와 챌린지는 독립 도구 — 시뮬레이터에서 강제 연결하지 않음) */
 syncSharedProfile(); ingestChallengeEvents();
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden) ingestChallengeEvents(); }); /* 챌린지에서 돌아오면 편입 */
-const ENABLE_CHALLENGE=true; /* 정식 공개 전 시험 기간에는 false로 두면 시뮬 탭 진입 카드가 숨겨짐 */
 document.getElementById("topMedBtn").onclick=()=>openMedSheet();
-document.getElementById("simToChallengeBtn").onclick=()=>{
-  try{
-    const dayKey=document.getElementById("simDate").value||todayKey();
-    const plan=medsForDay(dayKey), virt=(_simVirtual&&_simVirtual.doses)||[];
-    if(!virt.length){ toast(L("가상안이 비어 있어요","Virtual plan is empty")); return; }
-    if(typeof SHARED!=="undefined"){
-      SHARED.write({pendingChallengePlan:{createdAt:new Date().toISOString(), dayKey,
-        baselinePlan:plan.map(d=>({name:d.name,dose:+d.dose||0,time:d.time||""})),
-        trialPlan:virt.map(d=>({name:d.name,dose:+d.dose||0,time:d.time||""})),
-        changeSummary:simDiffSummary(plan,virt).replace(/^변경 내용: /,"")}});
-    }
-    syncSharedProfile(); location.href="challenge/index.html#fromsim";
-  }catch(e){ toast("전달 실패"); }
-};
 document.getElementById("topPastBtn").onclick=()=>openAddPast();
-{ const b=document.getElementById("challengeEntryBtn");
-  if(b){ if(!ENABLE_CHALLENGE){ b.closest(".card").style.display="none"; }
-    b.onclick=()=>{ syncSharedProfile(); location.href="challenge/index.html"; }; } }
 
 /* alarm loop: check every 30s while app is open */
 setInterval(alarmLoop, 30000); alarmLoop();
