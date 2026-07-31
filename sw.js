@@ -1,8 +1,9 @@
-const CACHE = "yakhyo-v33-single925";
+const CACHE = "yakhyo-v35-period927";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./shared-profile.js",
+  "./simulation-clinical.js",
   "./simulation-engine.js",
   "./simulation-compare.js",
   "./simulation-interpret.js",
