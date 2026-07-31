@@ -168,6 +168,17 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
 .field{margin-bottom:14px} .field label{display:block; font-size:13px; font-weight:700; color:var(--ink-2); margin-bottom:6px}
 .field input,.field select,.field textarea{width:100%; font-size:16px; font-family:inherit; padding:12px 14px; border:1.5px solid var(--line); border-radius:12px; background:var(--surface); color:var(--ink)}
 .field textarea{min-height:64px; resize:vertical}
+.opk-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:4px 0}
+.opk-btn{min-height:48px; border-radius:10px; border:1px solid var(--line); background:var(--surface-2); font-size:16px; font-weight:800; cursor:pointer}
+.opk-btn.sel{background:var(--accent); border-color:var(--accent); color:#fff}
+.opk-cur{display:flex; align-items:center; justify-content:center; gap:10px; margin-top:8px}
+.opk-adj{min-width:56px; min-height:48px; border-radius:10px; border:1px solid var(--line); background:var(--surface-2); font-size:16px; font-weight:800; cursor:pointer}
+.opk-val{text-align:center; min-width:64px}
+.opk-val span{font-size:34px; font-weight:900; display:block; line-height:1}
+.opk-val small{font-size:11.5px; color:var(--ink-2); font-weight:700}
+.opk-info{min-width:44px; min-height:44px; border-radius:50%; border:1px solid var(--line); background:var(--surface); color:var(--ink-2); font-weight:800; cursor:pointer}
+.top-actions{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:10px 0}
+.top-actions .btn{min-height:56px; font-size:16.5px; font-weight:800}
 .slider-row{display:flex; align-items:center; gap:12px}
 .slider-row input[type=range]{flex:1; accent-color:var(--accent)}
 .slider-row .v{width:46px; text-align:right; font-weight:800; font-variant-numeric:tabular-nums}
@@ -292,6 +303,11 @@ body{font-size:calc(15px*var(--app-font-scale))}
       <div style="text-align:center; margin-top:6px"><button class="btn ghost no-print" id="qoCheckBtn" style="font-size:12px; color:var(--accent, #5C93D6)" data-i18n="qoCheckBtn">출력 기준 확인하기</button></div>
     </div>
 
+    <div class="top-actions no-print">
+      <button class="btn primary" id="topMedBtn">💊 <span data-i18n="topMedBtn">약 복용 기록</span></button>
+      <button class="btn ghost" id="topPastBtn">🕒 <span data-i18n="topPastBtn">지난 기록 추가</span></button>
+    </div>
+
     <div class="ribbon-card" id="outputGraphCard" style="display:none">
       <div class="card-title"><span data-i18n="outputGraphTitle">출력 변화 그래프</span></div>
       <div id="outputGraphWrap"></div>
@@ -380,6 +396,12 @@ body{font-size:calc(15px*var(--app-font-scale))}
 
   <!-- SIM (LEDD 복약 시뮬레이션) -->
   <section class="tab" id="tab-sim">
+    <div class="card no-print" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:14px 16px; margin-bottom:12px; display:flex; align-items:center; gap:10px">
+      <span style="font-size:22px">🧪</span>
+      <div style="flex:1"><div class="card-title" style="margin:0" data-i18n="chgEntryTitle">약효 비교 테스트 (Medication Challenge)</div>
+      <div style="font-size:12px; color:var(--ink-2)" data-i18n="chgEntryDesc">기준·변경 복용안을 같은 방식으로 기록해 비교해요</div></div>
+      <button class="btn primary" id="challengeEntryBtn" style="width:auto" data-i18n="chgEntryBtn">열기</button>
+    </div>
     <div class="btn-row no-print" style="margin-bottom:10px">
       <select id="simDate" class="btn" style="font-weight:700"></select>
     </div>
@@ -395,14 +417,38 @@ body{font-size:calc(15px*var(--app-font-scale))}
         <button class="btn ghost" id="simCopyPlan" data-i18n="simCopyPlan">현재안 복사해오기</button>
       </div>
     </div>
+    <div class="card no-print" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:14px 16px; margin-bottom:14px">
+      <div class="card-title"><span>빠른 시나리오</span></div>
+      <div class="chips" id="simScenarioChips"></div>
+      <div id="simDiffLine" style="font-size:12.5px; color:var(--ink-2); margin-top:6px"></div>
+    </div>
     <div class="chart-card" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px">
-      <div class="card-title"><span data-i18n="simChartTitle">추정 혈중농도(PK) 곡선 비교</span></div>
+      <div class="card-title"><span data-i18n="simChartTitle">① 추정 상대 약물효과 (%)</span></div>
+      <div class="hint" style="margin-bottom:4px">출력 점수와 다른 단위입니다 — 두 복약안의 상대적인 작용 시간·중첩만 비교하세요.</div>
       <div id="simChart"></div>
       <div class="legend">
         <span><i style="background:#5C93D6"></i><span data-i18n="simLegendPlan">현재안</span></span>
         <span><i style="background:#E0A030"></i><span data-i18n="simLegendVirtual">가상안</span></span>
-        <span><i style="background:#E8663C"></i><span data-i18n="simLegendActual">실제 출력</span></span>
       </div>
+    </div>
+    <div class="chart-card" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px">
+      <div class="card-title"><span>② 실제 출력 · 예상 출력 (0–100)</span></div>
+      <div class="hint" style="margin-bottom:4px">점: 실제 기록 · 실선: 현재안 예상 · 점선: 가상안 예상. 예상 곡선은 실제 반응을 보장하지 않는 가상 시뮬레이션입니다.</div>
+      <div id="simOutChart"></div>
+      <div class="legend">
+        <span><i style="background:#E8663C"></i><span data-i18n="simLegendActual">실제 출력</span></span>
+        <span><i style="background:#5C93D6"></i><span>현재안 예상</span></span>
+        <span><i style="background:#E0A030"></i><span>가상안 예상</span></span>
+      </div>
+      <div id="simConfLine" class="hint" style="margin-top:6px"></div>
+      <div id="simDyskNote" class="hint" style="margin-top:4px"></div>
+    </div>
+    <div class="chart-card" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px">
+      <div class="card-title"><span>결과 요약 비교</span></div>
+      <div id="simCards" style="display:grid; grid-template-columns:1fr 1fr; gap:10px"></div>
+      <div id="simLeddDetail" style="font-size:12.5px; margin-top:12px"></div>
+      <button class="btn primary no-print" id="simToChallengeBtn" style="margin-top:12px">🧪 이 가상안으로 비교 테스트 시작</button>
+      <div class="hint">가상안이 그대로 약효 비교 테스트의 시험 복용안으로 넘어갑니다. 실제 복용 변경은 의료진과 상의하십시오.</div>
       <div class="stat-grid" id="simStatGrid" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin-top:14px"></div>
     </div>
     <div class="disclaimer" style="margin:10px 0" data-i18n-html="simDisclaimer">
@@ -471,6 +517,13 @@ body{font-size:calc(15px*var(--app-font-scale))}
           <button class="btn ghost fsBtn" data-fs="1.15" style="width:auto; min-height:40px; padding:0 10px; font-size:15px" data-i18n="fsLarge">크게</button>
           <button class="btn ghost fsBtn" data-fs="1.3" style="width:auto; min-height:40px; padding:0 10px; font-size:17px" data-i18n="fsXLarge">매우 크게</button>
         </div></div>
+      <div class="li"><div class="grow"><div class="name">출력 입력 방식</div><div class="meta">버튼(기본) · 슬라이더 · 함께</div></div>
+        <div style="display:flex; gap:6px">
+          <button class="btn ghost oiBtn" data-oi="buttons" style="width:auto; min-height:40px; padding:0 10px; font-size:13px">버튼</button>
+          <button class="btn ghost oiBtn" data-oi="slider" style="width:auto; min-height:40px; padding:0 10px; font-size:13px">슬라이더</button>
+          <button class="btn ghost oiBtn" data-oi="both" style="width:auto; min-height:40px; padding:0 10px; font-size:13px">함께</button>
+        </div>
+      </div>
       <div class="li"><div class="grow"><div class="name" data-i18n="primarySym">주증상 (최대 3개)</div><div class="meta" data-i18n="primarySymDesc">집중 기록할 증상을 골라두면 다음 버전 기능에 사용돼요</div></div><button class="btn ghost" id="primarySymBtn" style="width:auto">☰</button></div>
       <div class="li"><div class="grow"><div class="name" data-i18n="lang">언어</div><div class="meta" data-i18n="langDesc">한국어 / English</div></div><button class="btn ghost" id="langToggle" style="width:auto">한국어</button></div>
     </div>
@@ -503,6 +556,7 @@ body{font-size:calc(15px*var(--app-font-scale))}
 <div id="phsOverlay"></div>
 <div class="toast" id="toast"></div>
 
+<script src="shared-profile.js"></script>
 <script src="phs-engine.js"></script>
 <script src="phs-report.js"></script>
 <script>
@@ -560,7 +614,10 @@ const I18N = {
     pastDateSaved:"기록을 추가했습니다", viewAddedRecord:"추가한 기록 보기", refState:"참고 상태",
     symptomTitle:"⚡ 증상 기록 — 시작할 때 누르고, 끝나면 한 번 더", medLifeTitle:"약·생활 기록",
     outputOverlayTitle:"출력 곡선 + 생활기록 + 이벤트", overlayTapHint:"그래프를 눌러 그 시각의 출력·약효·이벤트를 확인하세요",
-    versionLabel:"약효일지 · 테스트판 0.9.20",
+    topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
+    chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
+    chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음 (INSUF)",
+    versionLabel:"약효일지 · 테스트판 0.9.22",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -616,7 +673,10 @@ const I18N = {
     pastDateSaved:"Record added", viewAddedRecord:"View added record", refState:"Reference state",
     symptomTitle:"⚡ Symptoms — tap to start, tap again to end", medLifeTitle:"Medication & life records",
     outputOverlayTitle:"Output curve + life records + events", overlayTapHint:"Tap the chart to see output, drug level, and events at that time",
-    versionLabel:"Med Log · Test build 0.9.20",
+    topMedBtn:"Log a dose", topPastBtn:"Add past record",
+    chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
+    chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests (INSUF)",
+    versionLabel:"Med Log · Test build 0.9.22",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -935,7 +995,7 @@ const EXERCISE_DURATIONS = [10,30,60];
 const BOWEL_CONSISTENCY = ["딱딱함","보통","묽음"];
 const BOWEL_EXTRAS = ["힘들었음","잔변감"];
 const BODY_SYMPTOMS = ["이상 없음","어지럼","기립 시 어지럼","소변 급박","빈뇨","땀 증가","침 흘림","메스꺼움","극심한 피로","불안","졸림","통증"];
-const MED_PRESETS = ["마도파","마도파 HBS","시네메트","시네메트 CR","스타레보","퍼킨","온젠티스(엔타카폰)","아질렉트","미라펙스","리큅","아만타딘","컴탄"];
+const MED_PRESETS = ["마도파","마도파 HBS","시네메트","시네메트 CR","스타레보","퍼킨","온젠티스(오피카폰)","아질렉트","미라펙스","리큅","아만타딘","컴탄"];
 
 /* 빠른 기록: 시트 없이 한 번의 탭으로 바로 저장되는 버튼들 (가장 많이 나온 피드백 반영) */
 const QUICK_ACTIONS = [
@@ -962,7 +1022,7 @@ const MED_KINETICS = {
   "스타레보":            {type:"fast",  peakMin:45,  durMin:200, amp:1.1},
   "마도파 HBS":          {type:"slow",  peakMin:90,  durMin:300, amp:0.9},
   "시네메트 CR":         {type:"slow",  peakMin:100, durMin:300, amp:0.9},
-  "온젠티스(엔타카폰)":   {type:"extend",peakMin:0,   durMin:0,   amp:0.25},
+  "온젠티스(오피카폰)":   {type:"extend",peakMin:0,   durMin:0,   amp:0.25},
   "컴탄":                {type:"extend",peakMin:0,   durMin:0,   amp:0.25},
   "아질렉트":            {type:"extend",peakMin:0,   durMin:0,   amp:0.15},
   "미라펙스":            {type:"flat",  peakMin:180, durMin:480, amp:0.5},
@@ -973,7 +1033,7 @@ function kineticFor(name){
   if(MED_KINETICS[name]) return MED_KINETICS[name];
   const n=name||"";
   if(n.includes("HBS")||n.includes("CR")||n.includes("서방")) return {type:"slow",peakMin:90,durMin:300,amp:0.9};
-  if(n.includes("온젠티스")||n.includes("엔타카폰")||n.includes("컴탄")||n.includes("콤탄")) return {type:"extend",peakMin:0,durMin:0,amp:0.25};
+  if(n.includes("온젠티스")||n.includes("오피카폰")||n.includes("엔타카폰")||n.includes("컴탄")||n.includes("콤탄")) return {type:"extend",peakMin:0,durMin:0,amp:0.25};
   if(n.includes("아질렉트")||n.includes("셀레길린")) return {type:"extend",peakMin:0,durMin:0,amp:0.15};
   if(n.includes("미라펙스")||n.includes("리큅")||n.includes("프라미펙솔")||n.includes("로피니롤")) return {type:"flat",peakMin:180,durMin:480,amp:0.5};
   if(n.includes("아만타딘")) return {type:"flat",peakMin:120,durMin:360,amp:0.3};
@@ -996,12 +1056,33 @@ const KEY = "yakhyo_log_v1";
 function leddFactorFor(name){
   const n=name||"";
   if(n.includes("HBS")||n.includes("CR")||n.includes("서방")) return 0.75;
-  if(n.includes("온젠티스")||n.includes("엔타카폰")||n.includes("컴탄")||n.includes("콤탄")) return 0.5; // 보조제: 그날 레보도파 총량 대비 가산이 원칙이나, 단순화를 위해 소량 가산으로 처리
+  if(n.includes("온젠티스")||n.includes("오피카폰")||n.includes("엔타카폰")||n.includes("컴탄")||n.includes("콤탄")) return 0.5; // 보조제: 그날 레보도파 총량 대비 가산이 원칙이나, 단순화를 위해 소량 가산으로 처리
   if(n.includes("아질렉트")||n.includes("셀레길린")||n.includes("라사길린")) return 100;
   if(n.includes("미라펙스")||n.includes("프라미펙솔")) return 100;
   if(n.includes("리큅")||n.includes("로피니롤")) return 20;
   if(n.includes("아만타딘")) return 1.0; // LEDD 환산계수가 확립되지 않아 참고용으로만 1:1 처리
-  return 1.0; // 기본: 레보도파 속방형과 동일 취급
+  return 1.0; // 기본: 레보도파 속방형과 동일 취급 (※ LEDD 합계 포함 여부는 medRole()이 결정)
+}
+/* v0.9.22 검토 반영: 약물 역할 명시 분류 — LEDD·PK 포함 여부를 한 곳에서 결정.
+   알 수 없는 약은 LEDD 합계에서 제외하고 "종류 확인 불가"로 표시한다 (기본 1:1 환산 금지). */
+function medRole(name){
+  const n=name||"";
+  const has=(...ks)=>ks.some(k=>n.includes(k));
+  if(has("마도파","시네메트","퍼킨","레보도파","도파민정")){
+    return {category:"levodopa", leddIncluded:true, pkIncluded:true, certainty:"known"};
+  }
+  if(has("스타레보")){ /* 복합제: 표기 용량=레보도파 함량 기준 근사 */
+    return {category:"levodopa", leddIncluded:true, pkIncluded:true, certainty:"approximate",
+      note:"스타레보는 표기 용량을 레보도파 함량으로 간주한 근사치"};
+  }
+  if(has("온젠티스","오피카폰","엔타카폰","컴탄","콤탄")){
+    return {category:"comt", leddIncluded:false, pkIncluded:true, certainty:"approximate",
+      note:"COMT 억제제는 자체 mg 환산이 확립되지 않아 합계에서 제외"};
+  }
+  if(has("아질렉트","라사길린","셀레길린")) return {category:"mao_b", leddIncluded:false, pkIncluded:true, certainty:"approximate", note:"MAO-B 억제제는 이 합계에서 제외"};
+  if(has("미라펙스","프라미펙솔","리큅","로피니롤","뉴프로","로티고틴")) return {category:"dopamine_agonist", leddIncluded:false, pkIncluded:true, certainty:"approximate", note:"도파민 작용제는 이 합계에서 제외"};
+  if(has("아만타딘")) return {category:"amantadine", leddIncluded:false, pkIncluded:false, certainty:"known", note:"아만타딘은 이 LEDD 합계에 포함하지 않음"};
+  return {category:"other", leddIncluded:false, pkIncluded:false, certainty:"unknown", note:"약물 종류를 확인할 수 없어 계산에서 제외"};
 }
 
 let db = load();
@@ -1012,7 +1093,43 @@ function load(){
     return d; } }catch(e){}
   return { events:[], meds:[], questions:defaultQuestions(), settings:{theme:"light",notify:false}, outputChecks:[], dayMemos:{}, phs:{v:(typeof PHS!=="undefined"?PHS.SCHEMA_VERSION:1), profile:null, observations:[]}, primarySymptoms:[] };
 }
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){ toast(L("저장 공간이 부족합니다","Storage space is full")); } }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){ toast(L("저장 공간이 부족합니다","Storage space is full")); }
+  syncSharedProfile(); }
+/* v0.9.21: 본체 → Shared Profile (언어·글씨·주증상·복용약 사본). 본체 DB는 절대 이 경로로 수정되지 않음 */
+function syncSharedProfile(){
+  try{ if(typeof SHARED==="undefined") return;
+    SHARED.write({
+      language:(db.settings&&db.settings.lang)||"ko",
+      fontScale:(db.settings&&db.settings.fontScale)||1,
+      zoomEnabled:true,
+      primarySymptoms:(db.primarySymptoms||[]).filter(x=>x.active),
+      medications:(db.meds||[]).map(m=>({name:m.name, dose:m.dose||null, sched:(m.sched||[]).slice(), note:m.note||""})),
+    });
+  }catch(e){}
+}
+/* v0.9.21: 챌린지에서 "약효일지에도 저장"을 선택한 결과 요약을 본체 이벤트로 편입 */
+function ingestChallengeEvents(){
+  try{ if(typeof SHARED==="undefined") return 0;
+    const q=SHARED.peekDiaryEvents(); if(!q.length) return 0;
+    q.forEach(ev=>{
+      if(db.events.some(x=>x.type==="challenge" && x.challengeTestId===ev.challengeTestId)) return; /* 중복 방지 */
+      db.events.push({ id:uid(), type:"challenge", ts:ev.ts||Date.now(),
+        doseTakenAt:ev.doseTakenAt||null, completedAt:ev.completedAt||null, /* 시작(복용)·완료 시각 모두 보존 */
+        title:ev.title||"Medication Challenge", lines:(ev.lines||[]).slice(0,6),
+        challengeTestId:ev.challengeTestId||null, memo:"" });
+    });
+    db.events.sort((a,b)=>a.ts-b.ts);
+    save();
+    /* 저장이 실제로 반영됐는지 확인 후에만 큐에서 제거 (환자 기록 유실 방지) */
+    let persisted=false;
+    try{ const chk=JSON.parse(localStorage.getItem(KEY));
+      persisted=q.every(ev=>chk.events.some(x=>x.type==="challenge"&&x.challengeTestId===ev.challengeTestId)); }catch(e){}
+    if(persisted) SHARED.removeDiaryEvents(q.map(x=>x.challengeTestId));
+    renderAll();
+    toast(L("약효 비교 테스트 결과를 기록에 추가했어요","Medication Challenge summary added to your log"));
+    return q.length;
+  }catch(e){ return 0; }
+}
 function defaultQuestions(){ return (currentLang()==="en" ? [
   "How can I reduce the delay before morning ON?",
   "How should I adjust timing to manage dyskinesia?",
@@ -1394,7 +1511,7 @@ function openMorningAnchor(){
       <button type="button" class="chip" id="anchorModeGuide" style="flex:1;text-align:center">${L("도움받아 추정","Guided estimate")}</button>
     </div>
     <div id="anchorDirectWrap">
-      <div class="slider-row"><input type="range" id="a_out" min="0" max="100" step="5" value="50" oninput="document.getElementById('a_outv').textContent=this.value"><div class="v" id="a_outv">50</div></div>
+      ${outputPickerHtml("a_out",50)}
     </div>
     <div id="anchorGuideWrap" style="display:none">
       ${OUTPUT_QUESTIONS.map(q=>`<div class="field" style="margin-bottom:10px"><label style="font-weight:600">${L(q.ko,q.en)}</label>
@@ -1408,6 +1525,7 @@ function openMorningAnchor(){
       <button class="btn primary" id="anchorSave">${L("저장","Save")}</button>
     </div>
   `);
+  bindOutputPicker("a_out");
   document.getElementById("anchorModeDirect").onclick=()=>{
     document.getElementById("anchorModeDirect").classList.add("sel");
     document.getElementById("anchorModeGuide").classList.remove("sel");
@@ -1435,13 +1553,12 @@ function openMorningAnchor(){
     if(vals.some(v=>v==null)){ toast(L("모든 항목에 답해주세요","Please answer every question")); return; }
     const avg = vals.reduce((a,b)=>a+b,0)/vals.length;
     const score = Math.round(avg/4*100);
-    document.getElementById("a_out").value=score;
-    document.getElementById("a_outv").textContent=score;
+    setOutputPickerValue("a_out",score);
     document.getElementById("anchorGuideResult").textContent = L(`추정 출력 ${score}점`,`Estimated output ${score}`);
     document.getElementById("anchorModeDirect").click();
   };
   document.getElementById("anchorSave").onclick=()=>{
-    const out = +document.getElementById("a_out").value;
+    const out = outputPickerValue("a_out");
     closeSheet();
     addState("wake", {output: out});
   };
@@ -1815,6 +1932,9 @@ function evRow(e){
     const outTxt = outVal!=null ? ` · ${L("출력","output")} ${outVal}` : "";
     row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">${label} ${phaseLabel}${outTxt}</div>${e.memo?`<div class="m">${escapeHtml(e.memo)}</div>`:""}</div>
       <span class="pill" style="background:var(--dysk)">${L("증상","Symptom")}</span>`;
+  } else if(e.type==="challenge"){
+    row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">🧪 ${escapeHtml(e.title||"Medication Challenge")}</div>${(e.lines&&e.lines.length)?`<div class="m">${escapeHtml(e.lines.join(" · "))}</div>`:""}</div>
+      <span class="pill" style="background:#8e44ad">${tr("chgPillLabel")}</span>`;
   } else {
     const {s, extraTxt} = lifeRowInfo(e);
     const memoLine=[extraTxt, e.memo].filter(Boolean).join(" · ");
@@ -1840,6 +1960,17 @@ function evRow(e){
   return row;
 }
 
+/* v0.9.21: 챌린지 이벤트 상세 (요약 + 챌린지 앱에서 자세히 보기) */
+function openChallengeEventSheet(e){
+  openSheet(`
+    <h2>🧪 ${escapeHtml(e.title||"Medication Challenge")}</h2>
+    <div class="hint">${hm(e.ts)} ${L("약효 챌린지 시작(복용)","challenge start (dose)")} · ${e.completedAt? `${hm(new Date(e.completedAt).getTime())} ${L("시험 완료","completed")}`:""} · ${new Date(e.ts).toLocaleDateString()}</div>
+    ${(e.lines||[]).map(l=>`<div style="margin:6px 0">· ${escapeHtml(l)}</div>`).join("")}
+    <div class="hint" style="margin-top:8px">${L("이 요약은 약효 비교 테스트의 기록 사실만 정리한 것으로, 치료 판단이 아닙니다.","This summary only restates recorded facts from the medication response test and is not a treatment judgment.")}</div>
+    ${e.challengeTestId?`<button class="btn primary" style="margin-top:10px" onclick="location.href='challenge/index.html#test=${encodeURIComponent(e.challengeTestId)}'">${L("챌린지에서 자세히 보기","View details in Challenge")}</button>`:""}
+    <button class="btn ghost" style="margin-top:8px" onclick="closeSheet()">${L("닫기","Close")}</button>
+  `);
+}
 /* ---------- record editing (설문 피드백: 기록 내용 수정) ---------- */
 function editEvent(e){
   if(e.type==="state"){
@@ -1849,6 +1980,7 @@ function editEvent(e){
     else openStateSheet(e.state, e);
   }
   else if(e.type==="med") openEditMedSheet(e);
+  else if(e.type==="challenge") openChallengeEventSheet(e);
   else openAddPast(e); /* life·symptom 기록은 종류 전환이 가능한 통합 수정 화면으로 */
 }
 /* 기존 참고 상태 기록(output:null) 전용 수정 화면.
@@ -1862,7 +1994,7 @@ function openLegacyStateSheet(e){
     <div class="field"><label>${L("메모 (선택)","Memo (optional)")}</label><textarea id="ls_memo">${escapeHtml(e.memo||"")}</textarea></div>
     <div class="field" id="ls_convertWrap" style="display:none">
       <label>${L("당시 출력 (0–100)","Output at the time (0–100)")}</label>
-      <div class="slider-row"><input type="range" id="ls_out" min="0" max="100" step="5" value="50" oninput="document.getElementById('ls_outv').textContent=this.value"><div class="v" id="ls_outv">50</div></div>
+      ${outputPickerHtml("ls_out",50)}
       <div class="hint" style="margin:8px 0 0">${L("방향","Direction")}</div>
       <div class="trend-row" id="ls_trendRow">
         <button type="button" class="trend-btn rising" data-trend="rising"><span class="sym">+</span><span>${L("상승 중","Rising")}</span></button>
@@ -1872,6 +2004,7 @@ function openLegacyStateSheet(e){
     </div>
     <button type="button" class="btn ghost" id="ls_convertBtn" style="width:100%; margin-bottom:10px">${L("출력 기록으로 전환","Convert to an output record")}</button>
     <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="ls_save">${L("수정 저장","Save changes")}</button></div>`);
+  bindOutputPicker("ls_out");
   let converting=false, lsTrend=null;
   document.getElementById("ls_convertBtn").onclick=function(){
     converting=!converting;
@@ -1888,7 +2021,7 @@ function openLegacyStateSheet(e){
     const memo=document.getElementById("ls_memo").value.trim();
     if(converting){
       if(!lsTrend){ toast(tr("trendPickAlert")); return; }
-      const out=+document.getElementById("ls_out").value;
+      const out=outputPickerValue("ls_out");
       Object.assign(e, {ts, memo, output:out, trend:lsTrend, state:stateFromTrend(lsTrend,out)});
     } else {
       /* 단순 수정 — output:null 그대로 유지, 출력·방향을 만들지 않는다 */
@@ -2285,6 +2418,7 @@ function svgCurve(dayKey){
   const plotW=W-padL-padR, plotH=H-padT-padB;
   const t0=pts[0].t, t1=pts[pts.length-1].t;
   const x = t => padL + (t-t0)/(t1-t0)*plotW;
+  window._curveAxis={t0,t1,W,padL,padR,dayKey}; /* v0.9.22: 그래프 탭 클릭 → 지난 기록 추가용 */
   const y = v => padT + plotH - (v/100)*plotH;
 
   let shading="";
@@ -2332,12 +2466,16 @@ function svgCurve(dayKey){
     ${gaitPts.length>1? `<polyline points="${gaitPts.join(" ")}" fill="none" stroke="#E0A030" stroke-width="1.6" stroke-dasharray="1,3"/>`:""}
     ${medMarks}
     ${axisLabels}
-  </svg>`;
+  ${(dayEvents.filter(e=>e.type==="challenge")).map(e=>{
+    const cx=x(e.ts);
+    return `<a href="challenge/index.html#test=${encodeURIComponent(e.challengeTestId||"")}"><title>${escapeHtml(e.title||"Medication Challenge")}</title><text x="${cx}" y="${padT+12}" font-size="13" text-anchor="middle">🧪</text></a>`;
+  }).join("")}</svg>`;
 }
 function curveEventListHtml(dayKey){
   const days=byDay(); const evs=(days[dayKey]||[]).slice().sort((a,b)=>a.ts-b.ts);
   if(!evs.length) return "";
   const rows = evs.map(e=>{
+    if(e.type==="challenge") return `<div class="li"><div class="grow"><div class="name">🧪 ${escapeHtml(e.title||"Medication Challenge")}</div><div class="meta">${hm(e.ts)}${(e.lines&&e.lines[0])?" · "+escapeHtml(e.lines[0]):""}</div></div></div>`;
     if(e.type==="med") return `<div class="li"><div class="grow"><div class="name">💊 ${escapeHtml(e.drug)}${e.dose?` ${e.dose}mg`:""}</div><div class="meta">${hm(e.ts)}</div></div></div>`;
     if(e.type==="state"){ const s=SMAP[e.state];
       const riseTxt = e.riseResult? riseLabel(e.riseResult) : "";
@@ -2360,10 +2498,40 @@ function renderCurve(){
     const k=sel.value||todayKey();
     document.getElementById("curveRange").textContent=fmtDateK(k);
     document.getElementById("curveChart").innerHTML=svgCurve(k);
-    document.getElementById("curveEventList").innerHTML=curveEventListHtml(k);
+    document.getElementById("curveEventList").innerHTML=curveEventListHtml(k)+curveGapNoticeHtml(k);
   };
   sel.onchange=draw;
   draw();
+  /* v0.9.22: 그래프의 빈 시간대를 누르면 그 시각으로 지난 기록 추가 (15분 단위 보정) */
+  const cc=document.getElementById("curveChart");
+  if(!cc._pastTapBound){
+    cc._pastTapBound=true;
+    cc.addEventListener("click",ev=>{
+      if(ev.target.closest("a")) return; /* 🧪 마커 링크는 그대로 이동 */
+      const ax=window._curveAxis; const svg=cc.querySelector("svg"); if(!ax||!svg) return;
+      const r=svg.getBoundingClientRect();
+      const ratio=((ev.clientX-r.left)/r.width*ax.W-ax.padL)/(ax.W-ax.padL-ax.padR);
+      if(ratio<0||ratio>1) return;
+      let ts=ax.t0+(ax.t1-ax.t0)*ratio;
+      ts=Math.round(ts/(15*60000))*(15*60000); /* 15분 단위 보정 */
+      if(ts>Date.now()) return;
+      if(!confirm(L(`${hm(ts)}에 지난 기록을 추가할까요?`,`Add a past record at ${hm(ts)}?`))) return;
+      openAddPast(null, ts);
+    });
+  }
+}
+/* v0.9.22: 2시간 이상 기록 공백 안내 (강제하지 않음) */
+function curveGapNoticeHtml(k){
+  if(k!==todayKey()) return "";
+  const evs=(byDay()[k]||[]).slice().sort((a,b)=>a.ts-b.ts);
+  if(!evs.length) return "";
+  const last=evs[evs.length-1].ts;
+  const gapH=(Date.now()-last)/3600000;
+  if(gapH<2) return "";
+  return `<div class="hint no-print" style="margin-top:8px; padding:10px 12px; background:var(--surface-2); border-radius:10px">
+    ${L(`${hm(last)} 이후 ${Math.floor(gapH)}시간 동안 기록이 없습니다.`,`No records for ${Math.floor(gapH)} hours since ${hm(last)}.`)}
+    <button class="btn ghost small" style="width:auto; margin-left:8px" onclick="openAddPast()">${L("지난 출력 추가","Add past output")}</button>
+    <span style="color:var(--ink-2)"> · ${L("기억나지 않으면 그대로 두어도 됩니다","Leave it unrecorded if you don't remember")}</span></div>`;
 }
 
 /* ---------- render: SIM (LEDD 복약 시뮬레이션) ----------
@@ -2377,12 +2545,14 @@ function simDoseCurvePts(doses){
     let sum=0;
     doses.forEach(d=>{
       if(!d.time) return;
+      const role=medRole(d.name);
+      if(!role.pkIncluded) return; /* v0.9.22 검토 반영: 알 수 없는 약·아만타딘은 PK 곡선에서 제외 */
       const [h,m]=d.time.split(":").map(Number);
       const doseMin=h*60+m;
       const since=t-doseMin;
       if(since<-60) return;
       const prof=kineticFor(d.name);
-      const factor=leddFactorFor(d.name);
+      const factor=leddFactorFor(d.name); /* 기본값 1.0은 role 게이트를 통과한 레보도파 계열에만 적용됨 */
       const ledd=(d.dose||0)*factor;
       if(prof.type==="extend"){
         if(since>=0 && since<=300) sum += Math.max(0,1-(since/300))*ledd*0.4;
@@ -2396,9 +2566,9 @@ function simDoseCurvePts(doses){
 }
 function simTotalLEDD(doses){
   return doses.reduce((s,d)=>{
-    const factor=leddFactorFor(d.name);
-    if(kineticFor(d.name).type==="extend") return s; // 보조제는 총량 표시에서 제외(단순화)
-    return s + (d.dose||0)*factor;
+    const role=medRole(d.name);
+    if(!role.leddIncluded) return s;
+    return s + (d.dose||0)*leddFactorFor(d.name);
   },0);
 }
 function simPeak(pts){
@@ -2447,6 +2617,125 @@ function saveSimVirtual(){
   db.settings.simVirtual = _simVirtual; // 선택적 필드: 없어도 앱은 정상 동작, 기존 백업과 호환
   save();
 }
+/* ===== v0.9.22 시뮬 개편 =====
+   1단: 추정 상대 약물효과(%) — PK 정규화, 출력과 축 분리
+   2단: 실제 출력 + 예상 출력(현재안/가상안) — 개인 기록으로 스케일 보정
+   원칙: 예측은 "예상/가능성" 표현만 사용, 실제 기록은 절대 수정하지 않음 */
+function simExpectedOutputCurve(pts, pkMaxRef, cal){
+  /* 상대효과 → 예상 출력: base + (top-base) × (val/pkMaxRef), 100 상한 */
+  return pts.map(p=>({t:p.t, val:Math.min(100, cal.base + (cal.top-cal.base)*Math.min(1.15, p.val/(pkMaxRef||1)))}));
+}
+function simCalibration(actualSorted){
+  /* 실제 기록이 3점 이상이면 그 날의 최저·최고로 스케일 보정, 아니면 일반 추정(30~85) */
+  if(actualSorted.length>=3){
+    const vals=actualSorted.map(a=>a.val);
+    return {base:Math.min(...vals), top:Math.max(...vals), personal:true, n:actualSorted.length};
+  }
+  return {base:30, top:85, personal:false, n:actualSorted.length};
+}
+/* 신뢰도 낮음 사유 — 기록 수 외에 시간 분포·복용 전후·범위·회상 비율을 본다 */
+function simConfidenceReasons(dayKey, actualSorted, cal, planDoses, t0){
+  const rs=[];
+  if(actualSorted.length<3){ rs.push("출력 기록이 3개 미만"); return rs; }
+  if(cal.top-cal.base<15) rs.push("출력 최고·최저 차이가 15점 미만");
+  const doseMins=planDoses.filter(d=>d.time).map(d=>{ const [h,m]=d.time.split(":").map(Number); let t=h*60+m; if(t<t0) t+=1440; return t; });
+  if(doseMins.length){
+    const first=Math.min(...doseMins);
+    if(!actualSorted.some(a=>a.t<first)) rs.push("복용 전 출력 기록 없음");
+    if(!doseMins.some(dm=>actualSorted.some(a=>a.t>=dm+30 && a.t<=dm+120))) rs.push("복용 후 30~120분 출력 기록 부족");
+  }
+  for(let i=1;i<actualSorted.length;i++) if(actualSorted[i].t-actualSorted[i-1].t>240){ rs.push("4시간 이상 미기록 구간"); break; }
+  const dayEvs=(byDay()[dayKey]||[]).filter(e=>e.type==="state"&&e.output!=null);
+  const retro=dayEvs.filter(e=>e.entryMode==="retrospective").length;
+  if(dayEvs.length && retro/dayEvs.length>0.5) rs.push("회상 기록 비율이 높음");
+  return rs;
+}
+function simCurveMetrics(curve){
+  const STEP=10; /* 분 */
+  let peak=null, on=null, dwell80=0, dwell5079=0, dwellLow=0, wear=null;
+  curve.forEach(p=>{
+    if(!peak||p.val>peak.val) peak=p;
+    if(on==null && p.val>=80) on=p.t;
+    if(p.val>=80) dwell80+=STEP; else if(p.val>=50) dwell5079+=STEP; else if(p.val<20) dwellLow+=STEP;
+  });
+  if(peak){ for(const p of curve){ if(p.t>peak.t && p.val<50){ wear=p.t; break; } } }
+  return {onT:on, peak, dwell80, dwell5079, dwellLow, wearT:wear, incomplete: peak? peak.val<80 : true};
+}
+function simLeddDetail(doses){
+  const rows=[], excluded=[], notes=new Set();
+  let total=0;
+  doses.forEach(d=>{
+    const role=medRole(d.name);
+    if(!role.leddIncluded){
+      excluded.push(`${d.name} ${d.dose||0}mg${role.certainty==="unknown"? " (종류 확인 불가)":""}`);
+      if(role.note) notes.add(role.note);
+      return;
+    }
+    const led=(d.dose||0)*leddFactorFor(d.name);
+    total+=led;
+    rows.push(`${d.name} ${d.dose||0}mg → LEDD ${Math.round(led)}${role.certainty==="approximate"?" (근사)":""}`);
+    if(role.note) notes.add(role.note);
+  });
+  return {total, rows, excluded, notes:[...notes]};
+}
+function simDyskNoteFor(dayKey){
+  /* 이상운동증·근긴장이상 기록 당시의 출력값으로 패턴 참고 문구 생성 (진단 아님) */
+  const evs=(byDay()[dayKey]||[]);
+  const outs=evs.filter(e=>e.type==="state"&&e.output!=null).sort((a,b)=>a.ts-b.ts);
+  const MAX_OUTPUT_MATCH_MIN=30; /* 검토 반영: 30분 이내 출력 기록만 매칭 */
+  const outAt=ts=>{ let best=null; for(const o of outs){ if(o.ts<=ts && ts-o.ts<=MAX_OUTPUT_MATCH_MIN*60000) best=o.output; if(o.ts>ts) break; } return best; };
+  const dysk=evs.filter(e=>e.type==="symptom"&&e.key==="dysk").map(e=>outAt(e.ts)).filter(v=>v!=null);
+  const dyst=evs.filter(e=>e.type==="symptom"&&(e.key==="dyst")).map(e=>outAt(e.ts)).filter(v=>v!=null);
+  const dyskAll=evs.filter(e=>e.type==="symptom"&&e.key==="dysk").length;
+  if(dyskAll>0 && !dysk.length && !dyst.length) return "이상운동증 기록은 있으나 당시(30분 이내) 출력 자료가 없어 유형을 분류할 수 없습니다";
+  if(!dysk.length&&!dyst.length) return "";
+  const notes=[];
+  if(dysk.length){
+    const hi=dysk.filter(v=>v>=80).length, mid=dysk.filter(v=>v>=50&&v<80).length;
+    if(hi>=mid&&hi>0) notes.push("이 날 이상운동증은 출력 80 이상 구간에서 주로 기록되었습니다 — peak-dose 양상 가능성 (참고용, 진단 아님)");
+    else if(mid>0) notes.push("이 날 이상운동증은 출력 50~79 전환 구간에서 기록되었습니다 — diphasic(전환기) 양상 가능성 (참고용, 진단 아님)");
+    else notes.push("이상운동증 기록이 있으나 패턴을 분류하기에는 자료가 부족합니다");
+  }
+  if(dyst.length && dyst.every(v=>v<50)) notes.push("낮은 출력에서 근긴장이상이 기록되었습니다 — OFF dystonia 양상 가능성 (참고용, 진단 아님)");
+  return notes.join(" · ");
+}
+function simCardHtml(title, mtr, color){
+  const fmtT=t=>t!=null? simFmtTime(t):"도달하지 못함(예상)";
+  const dur=m=>m>=60? `${Math.floor(m/60)}시간 ${m%60?m%60+"분":""}`.trim() : `${m}분`;
+  return `<div style="border:1.5px solid ${color}; border-radius:12px; padding:10px 12px">
+    <div style="font-weight:900; color:${color}; margin-bottom:6px">${title}</div>
+    <div style="font-size:12.5px; line-height:1.9">
+      예상 ON(≥80) 도달: <b>${fmtT(mtr.onT)}</b><br>
+      최고 예상 출력: <b>${mtr.peak? Math.round(mtr.peak.val):"–"}</b>${mtr.peak?` (${simFmtTime(mtr.peak.t)})`:""}<br>
+      80 이상 예상 체류: <b>${dur(mtr.dwell80)}</b><br>
+      50~79 예상 체류: ${dur(mtr.dwell5079)}<br>
+      20 미만 예상 체류: ${dur(mtr.dwellLow)}<br>
+      예상 wearing-off: ${mtr.wearT? simFmtTime(mtr.wearT):"—"}<br>
+      ${mtr.incomplete? `<span style="color:var(--danger)">Incomplete ON 가능성</span>`:"&nbsp;"}
+    </div></div>`;
+}
+function simScenarioApply(kind, name){
+  const doses=_simVirtual.doses;
+  if(kind==="reset"){ _simVirtual.doses=JSON.parse(JSON.stringify(medsForDay(document.getElementById("simDate").value||todayKey()))); }
+  else if(kind==="shift"){ doses.forEach(d=>{ if(!d.time) return; const [h,m]=d.time.split(":").map(Number); const t=(h*60+m+ (name==="early"?-30:30)+1440)%1440; d.time=`${String(Math.floor(t/60)).padStart(2,"0")}:${String(t%60).padStart(2,"0")}`; }); }
+  else if(kind==="plus"){ const amt=+name.split("|")[1]; const nm=name.split("|")[0];
+    const first=doses.find(d=>d.name===nm); if(first) first.dose=(+first.dose||0)+amt; }
+  saveSimVirtual(); renderSimVirtualRows(); renderSimChart();
+}
+function simDiffSummary(planDoses, virtDoses){
+  const key=d=>`${d.name}|${d.time}`;
+  const pm=new Map(planDoses.map(d=>[key(d),d])), vm=new Map(virtDoses.map(d=>[key(d),d]));
+  const parts=[];
+  vm.forEach((v,k)=>{ const p=pm.get(k);
+    if(!p) parts.push(`추가: ${v.name} ${v.dose}mg ${v.time||""}`);
+    else if(+p.dose!==+v.dose) parts.push(`${v.name} ${v.time||""} ${p.dose}→${v.dose}mg`); });
+  pm.forEach((p,k)=>{ if(!vm.has(k)){
+    const moved=[...vm.values()].find(v=>v.name===p.name && +v.dose===+p.dose);
+    if(moved) parts.push(`${p.name} 시각 ${p.time}→${moved.time}`);
+    else parts.push(`제외: ${p.name} ${p.dose}mg ${p.time||""}`); } });
+  const seen=new Set(); const uniq=parts.filter(x=>!seen.has(x)&&seen.add(x));
+  return uniq.length? "변경 내용: "+uniq.join(" · ") : "변경 내용: 없음 (현재안과 동일)";
+}
 function renderSimChart(){
   const dayKey = document.getElementById("simDate").value || todayKey();
   const planDoses = medsForDay(dayKey);
@@ -2455,43 +2744,86 @@ function renderSimChart(){
 
   const planPts = simDoseCurvePts(planDoses);
   const virtPts = simDoseCurvePts(virtDoses);
-  const allVals=[...planPts.map(p=>p.val), ...virtPts.map(p=>p.val), ...actual.map(a=>a.val*10)];
-  const maxV = Math.max(50, ...allVals);
+  const pkMax = Math.max(1, ...planPts.map(p=>p.val), ...virtPts.map(p=>p.val));
 
-  const W=760,H=240,padL=32,padR=12,padT=12,padB=28;
+  const W=760,H=200,padL=36,padR=12,padT=12,padB=28;
   const plotW=W-padL-padR, plotH=H-padT-padB;
   const t0=planPts[0].t, t1=planPts[planPts.length-1].t;
   const x=t=>padL+(t-t0)/(t1-t0)*plotW;
-  const y=v=>padT+plotH-Math.min(1,v/maxV)*plotH;
-  const linePts=pts=>pts.map(p=>`${x(p.t)},${y(p.val)}`).join(" ");
 
+  /* ---- ① 상대 약물효과(%) — 공통 최대치로 정규화 ---- */
+  const yPk=v=>padT+plotH-(v/pkMax)*plotH;
+  const line=(pts,yf)=>pts.map(p=>`${x(p.t)},${yf(p.val)}`).join(" ");
+  let axis=""; for(let h=0;h<=(t1-t0)/60;h+=2){ const tt=t0+h*60;
+    axis+=`<text x="${x(tt)}" y="${H-8}" font-size="9" fill="var(--ink-2)" text-anchor="middle">${simFmtTime(tt)}</text>`; }
+  const doseMarks=(doses,color,dy)=>doses.filter(d=>d.time).map(d=>{ const [h,m]=d.time.split(":").map(Number); let tm=h*60+m; if(tm<t0) tm+=1440;
+    return `<g><line x1="${x(tm)}" y1="${padT}" x2="${x(tm)}" y2="${H-padB}" stroke="${color}" stroke-width="1" opacity="0.35"/><text x="${x(tm)}" y="${padT+dy}" font-size="8.5" fill="${color}" text-anchor="middle">${escapeHtml(d.name.slice(0,4))}${d.dose||""}</text></g>`; }).join("");
+  const pkAxisLbl=[0,50,100].map(p=>`<text x="${padL-6}" y="${padT+plotH-(p/100)*plotH+3}" font-size="9" fill="var(--ink-2)" text-anchor="end">${p}%</text>`).join("");
+  document.getElementById("simChart").innerHTML = (!planDoses.length&&!virtDoses.length)? `<div class="hint" style="padding:20px 0;text-align:center">${tr("simNoMed")}</div>` : `
+    <svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">
+      ${pkAxisLbl}
+      <polyline points="${line(planPts,yPk)}" fill="none" stroke="#5C93D6" stroke-width="2.4"/>
+      <polyline points="${line(virtPts,yPk)}" fill="none" stroke="#E0A030" stroke-width="2.2" stroke-dasharray="6,4"/>
+      ${doseMarks(planDoses,"#5C93D6",10)}${doseMarks(virtDoses.filter(v=>!planDoses.some(p=>p.name===v.name&&p.time===v.time&&+p.dose===+v.dose)),"#E0A030",20)}
+      ${axis}
+    </svg>`;
+
+  /* ---- ② 실제 출력 + 예상 출력 (0~100) ---- */
   function toMin(hmStr){ const [h,m]=hmStr.split(":").map(Number); let tm=h*60+m; if(tm<t0) tm+=1440; return tm; }
   const actualSorted = actual.map(a=>({t:toMin(a.time), val:a.val*10})).sort((a,b)=>a.t-b.t);
-  const actualLine = actualSorted.map(p=>`${x(p.t)},${y(p.val)}`).join(" ");
-  const actualDots = actualSorted.map(p=>`<circle cx="${x(p.t)}" cy="${y(p.val)}" r="3.5" fill="#E8663C"/>`).join("");
-
-  let axisLabels="";
-  for(let h=0; h<=(t1-t0)/60; h+=2){
-    const tt=t0+h*60;
-    axisLabels += `<text x="${x(tt)}" y="${H-8}" font-size="9" fill="var(--ink-2)" text-anchor="middle">${simFmtTime(tt)}</text>`;
-  }
-  const svg = (!planDoses.length && !virtDoses.length) ? `<div class="hint" style="padding:20px 0;text-align:center">${tr("simNoMed")}</div>` : `
+  const cal=simCalibration(actualSorted);
+  const expPlan=simExpectedOutputCurve(planPts, pkMax, cal);
+  const expVirt=simExpectedOutputCurve(virtPts, pkMax, cal);
+  const yOut=v=>padT+plotH-(Math.min(100,v)/100)*plotH;
+  const outAxisLbl=[0,20,50,80,100].map(p=>`<text x="${padL-6}" y="${yOut(p)+3}" font-size="9" fill="var(--ink-2)" text-anchor="end">${p}</text>`).join("");
+  const band=`<line x1="${padL}" y1="${yOut(80)}" x2="${W-padR}" y2="${yOut(80)}" stroke="#1FA971" stroke-width="0.8" stroke-dasharray="2,3" opacity="0.6"/><line x1="${padL}" y1="${yOut(20)}" x2="${W-padR}" y2="${yOut(20)}" stroke="#B3261E" stroke-width="0.8" stroke-dasharray="2,3" opacity="0.5"/>`;
+  const dots=actualSorted.map(p=>`<circle cx="${x(p.t)}" cy="${yOut(p.val)}" r="4" fill="#E8663C"/>`).join("");
+  const actLine=actualSorted.length>1?`<polyline points="${actualSorted.map(p=>`${x(p.t)},${yOut(p.val)}`).join(" ")}" fill="none" stroke="#E8663C" stroke-width="1.4" stroke-dasharray="1,3"/>`:"";
+  document.getElementById("simOutChart").innerHTML = (!planDoses.length&&!virtDoses.length)? "" : `
     <svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">
-      <polyline points="${linePts(planPts)}" fill="none" stroke="#5C93D6" stroke-width="2.4"/>
-      <polyline points="${linePts(virtPts)}" fill="none" stroke="#E0A030" stroke-width="2.2" stroke-dasharray="6,4"/>
-      ${actualLine?`<polyline points="${actualLine}" fill="none" stroke="#E8663C" stroke-width="1.6" stroke-dasharray="1,3"/>`:""}
-      ${actualDots}
-      ${axisLabels}
+      ${outAxisLbl}${band}
+      <polyline points="${line(expPlan,yOut)}" fill="none" stroke="#5C93D6" stroke-width="2.2"/>
+      <polyline points="${line(expVirt,yOut)}" fill="none" stroke="#E0A030" stroke-width="2" stroke-dasharray="6,4"/>
+      ${actLine}${dots}
+      ${axis}
     </svg>`;
-  document.getElementById("simChart").innerHTML = svg;
+  const confReasons=simConfidenceReasons(dayKey, actualSorted, cal, planDoses, t0);
+  document.getElementById("simConfLine").textContent = (cal.personal && !confReasons.length?
+    `당일 출력 범위 반영: 이 날짜의 실제 출력 ${cal.n}개 기록의 범위(${cal.base}~${cal.top})에 맞춰 그렸습니다.` :
+    (cal.personal? `신뢰도 낮음 — ${confReasons.join(" · ")}. 당일 출력 ${cal.n}개 기록 범위(${cal.base}~${cal.top})를 사용했습니다.` :
+      `개인 자료가 부족하여 일반 모델(30~85 범위)을 사용했습니다 — 신뢰도 낮음${confReasons.length? " ("+confReasons.join(" · ")+")":""}.`))
+    +" 예상 출력선은 기록을 이해하기 위한 단순 가상 모델이며, 실제 출력이나 약물 효과를 예측하거나 처방을 결정하지 않습니다.";
+  document.getElementById("simDyskNote").textContent = simDyskNoteFor(dayKey);
 
-  const planTot=simTotalLEDD(planDoses), virtTot=simTotalLEDD(virtDoses);
+  /* ---- 결과 요약 카드 ---- */
+  const mp=simCurveMetrics(expPlan), mv=simCurveMetrics(expVirt);
+  let riskNote="";
+  const ld_p=simLeddDetail(planDoses), ld_v=simLeddDetail(virtDoses);
+  if(ld_v.total>ld_p.total && mv.dwell80>mp.dwell80) riskNote=`<div class="hint" style="color:var(--danger); margin-top:8px">주의: 가상안에서는 높은 출력 구간이 길어져 이상운동증 위험이 비교상 증가할 수 있습니다 (가능성 표현이며 진단이 아닙니다).</div>`;
+  document.getElementById("simCards").innerHTML = simCardHtml("현재안", mp, "#5C93D6")+simCardHtml("가상안", mv, "#E0A030");
+  document.getElementById("simLeddDetail").innerHTML = `
+    <b>LEDD 비교</b> — 현재안 ${Math.round(ld_p.total)}mg / 가상안 ${Math.round(ld_v.total)}mg (${ld_v.total-ld_p.total>=0?"+":""}${Math.round(ld_v.total-ld_p.total)}mg)
+    <details style="margin-top:4px"><summary style="cursor:pointer; color:var(--ink-2)">계산 근거 보기</summary>
+      <div style="color:var(--ink-2); line-height:1.8; margin-top:4px">현재안: ${ld_p.rows.join(" · ")||"—"}<br>가상안: ${ld_v.rows.join(" · ")||"—"}
+      ${(ld_p.excluded.length||ld_v.excluded.length)?`<br>제외: ${[...new Set([...ld_p.excluded,...ld_v.excluded])].join(", ")}`:""}
+      ${[...new Set([...ld_p.notes,...ld_v.notes])].map(n=>`<br>※ ${n}`).join("")}</div></details>
+    ${riskNote}`;
+  document.getElementById("simDiffLine").textContent = simDiffSummary(planDoses, virtDoses);
+
+  /* ---- 빠른 시나리오 칩 ---- */
+  const names=[...new Set(planDoses.map(d=>d.name))].slice(0,2);
+  const chips=[
+    ...names.flatMap(n=>[[`${n} +25mg`,`plus`,`${n}|25`],[`${n} +50mg`,`plus`,`${n}|50`]]),
+    ["복용 30분 앞당김","shift","early"],["복용 30분 늦춤","shift","late"],["가상안 초기화","reset",""],
+  ];
+  document.getElementById("simScenarioChips").innerHTML = chips.map(([lbl,k,n])=>`<button type="button" class="chip" onclick="simScenarioApply('${k}','${n}')">${escapeHtml(lbl)}</button>`).join("");
+
+  /* ---- 기존 상단 통계 (피크 시간 유지) ---- */
   const planPk=simPeak(planPts), virtPk=simPeak(virtPts);
-  const diff=Math.round(virtTot-planTot);
   const item=(n,l)=>`<div class="stat" style="background:var(--surface-2);border-radius:10px;padding:10px 12px"><div style="font-size:18px;font-weight:900">${n}</div><div style="font-size:11.5px;color:var(--ink-2);font-weight:600;margin-top:2px">${l}</div></div>`;
   document.getElementById("simStatGrid").innerHTML = [
-    item(Math.round(planTot), tr("simPlanLED")),
-    item(`${Math.round(virtTot)}${diff!==0?` (${diff>0?"+":""}${diff})`:""}`, tr("simVirtualLED")),
+    item(Math.round(ld_p.total), tr("simPlanLED")),
+    item(`${Math.round(ld_v.total)}${Math.round(ld_v.total-ld_p.total)!==0?` (${ld_v.total-ld_p.total>0?"+":""}${Math.round(ld_v.total-ld_p.total)})`:""}`, tr("simVirtualLED")),
     item(planPk.t!=null?simFmtTime(planPk.t):"–", tr("simPlanPeak")),
     item(virtPk.t!=null?simFmtTime(virtPk.t):"–", tr("simVirtualPeak")),
   ].join("");
@@ -2792,6 +3124,49 @@ function openStateSheet(key, editingEvent){
   };
 }
 
+/* ---- v0.9.22: 출력 입력 컴포넌트 — 기본 버튼식(10단위+±5), 설정에서 슬라이더/병용 선택 ---- */
+function outputInputMode(){ return (db.settings&&db.settings.outputInput)||"buttons"; }
+function outputBandLabel(v){ return v<20? L("매우 낮음","Very low") : v<50? L("낮음","Low") : v<80? L("중간","Medium") : L("높음","High"); }
+function outputPickerHtml(id, init){
+  const v=(init==null||isNaN(+init))? 50 : Math.max(0,Math.min(100,+init));
+  const mode=outputInputMode();
+  const sliderHtml=`<div class="slider-row"><input type="range" id="${id}_sl" min="0" max="100" step="5" value="${v}"><div class="v" id="${id}_slv">${v}</div></div>`;
+  if(mode==="slider") return `<div class="opk" id="${id}_wrap" data-val="${v}" data-mode="slider">${sliderHtml}</div>`;
+  const btns=[0,10,20,30,40,50,60,70,80,90,100].map(n=>
+    `<button type="button" class="opk-btn${n===v?" sel":""}" data-v="${n}">${n}</button>`).join("");
+  return `<div class="opk" id="${id}_wrap" data-val="${v}" data-mode="${mode}">
+      <div class="opk-grid">${btns}</div>
+      <div class="opk-cur"><button type="button" class="opk-adj" data-d="-5">−5</button>
+        <div class="opk-val"><span id="${id}_val">${v}</span><small id="${id}_band">${outputBandLabel(v)}</small></div>
+        <button type="button" class="opk-adj" data-d="5">+5</button>
+        <button type="button" class="opk-info">ⓘ</button></div>
+      ${mode==="both"? sliderHtml : ""}
+    </div>`;
+}
+function setOutputPickerValue(id,v){
+  const wrap=document.getElementById(id+"_wrap"); if(!wrap) return;
+  v=Math.max(0,Math.min(100,Math.round(+v)));
+  wrap.dataset.val=v;
+  const val=document.getElementById(id+"_val"), band=document.getElementById(id+"_band");
+  if(val) val.textContent=v; if(band) band.textContent=outputBandLabel(v);
+  wrap.querySelectorAll(".opk-btn").forEach(x=>x.classList.toggle("sel",+x.dataset.v===v));
+  const sl=document.getElementById(id+"_sl"); if(sl){ sl.value=v; const sv=document.getElementById(id+"_slv"); if(sv) sv.textContent=v; }
+}
+function bindOutputPicker(id){
+  const wrap=document.getElementById(id+"_wrap"); if(!wrap) return;
+  wrap.addEventListener("click",e=>{
+    if(e.target.closest(".opk-info")){ openOutputGuide(); return; }
+    const b=e.target.closest(".opk-btn"), a=e.target.closest(".opk-adj");
+    if(b) setOutputPickerValue(id,+b.dataset.v);
+    else if(a) setOutputPickerValue(id,(+wrap.dataset.val||50)+ +a.dataset.d);
+  });
+  const sl=document.getElementById(id+"_sl");
+  if(sl) sl.addEventListener("input",()=>setOutputPickerValue(id,+sl.value));
+}
+function outputPickerValue(id){
+  const wrap=document.getElementById(id+"_wrap");
+  return wrap? +wrap.dataset.val : 50;
+}
 function timeFieldHtml(id, ts){
   const d=new Date(ts||Date.now());
   return `<div class="field"><label>${L("시각 (필요하면 수정하세요)","Time (edit if needed)")}</label><input type="time" id="${id}" value="${pad(d.getHours())}:${pad(d.getMinutes())}"></div>`;
@@ -2951,13 +3326,56 @@ function openMedConfirm(med){
   document.getElementById("mc_ok").onclick=()=>{ closeSheet(); addMed(med.name, med.dose); };
 }
 
+/* v0.9.22: 다음 예정 약 계산 — 등록 스케줄 중 아직 오늘 기록 안 된 가장 가까운 시각 */
+function nextScheduledMeds(){
+  const now=new Date(); const nowMin=now.getHours()*60+now.getMinutes();
+  const taken=(byDay()[todayKey()]||[]).filter(e=>e.type==="med");
+  const out=[];
+  db.meds.forEach(m=>(m.sched||[]).forEach(t=>{
+    const [h,mm]=t.split(":").map(Number); const tm=h*60+mm;
+    const done=taken.some(e=>e.drug===m.name && Math.abs((new Date(e.ts).getHours()*60+new Date(e.ts).getMinutes())-tm)<=90);
+    if(!done && tm-nowMin>-120 && tm-nowMin<240) out.push({med:m, time:t, delta:tm-nowMin});
+  }));
+  return out.sort((a,b)=>Math.abs(a.delta)-Math.abs(b.delta)).slice(0,2);
+}
+/* v0.9.22: 같은 약이 20분 안에 두 번 저장되는 것을 확인 후 진행 */
+function medDupCheck(name, ts){
+  const dup=db.events.find(e=>e.type==="med" && e.drug===name && Math.abs(e.ts-ts)<20*60000);
+  if(dup) return confirm(L(`${name}이(가) ${hm(dup.ts)}에 이미 기록되어 있어요. 그래도 한 번 더 기록할까요?`,`${name} was already logged at ${hm(dup.ts)}. Record again anyway?`));
+  return true;
+}
+function quickDoseNow(medIdx, schedTime){
+  const m=db.meds[medIdx]; if(!m) return;
+  const ts=Date.now();
+  openSheet(`
+    <h2>${L("복용 확인","Confirm dose")}</h2>
+    <div style="font-size:20px; font-weight:800; margin:6px 0">${escapeHtml(m.name)}${m.dose?` ${m.dose}mg`:""}</div>
+    <div class="hint">${L(`${hm(ts)}에 복용으로 기록합니다`,`Will be recorded as taken at ${hm(ts)}`)}${schedTime?` · ${L("예정","scheduled")} ${schedTime}`:""}</div>
+    ${timeFieldHtml("qd_time", ts)}
+    <div class="btn-row"><button class="btn ghost" onclick="openMedSheet()">${L("수정·다른 약","Edit / other meds")}</button><button class="btn primary" id="qd_save">${L("저장","Save")}</button></div>`);
+  const btn=document.getElementById("qd_save");
+  btn.onclick=()=>{
+    btn.disabled=true; /* 빠른 연속 탭 중복 방지 */
+    const t2=tsFromTimeField("qd_time", ts);
+    if(!medDupCheck(m.name,t2)){ btn.disabled=false; return; }
+    closeSheet(); addMed(m.name, m.dose, t2);
+  };
+}
 function openMedSheet(){
   if(!db.meds.length){ closeSheet(); openAddMed(true); return; }
   const order=db.meds.map((m,i)=>({m,i})).sort((a,b)=>(b.m.fav?1:0)-(a.m.fav?1:0));
   const chips=order.map(({m,i})=>`<button class="chip" data-i="${i}">${m.fav?"★ ":""}${escapeHtml(m.name)}${m.dose?` ${m.dose}`:""}</button>`).join("");
   const now=Date.now();
+  const nexts=nextScheduledMeds();
+  const nextHtml=nexts.length? `<div style="background:var(--surface-2); border-radius:12px; padding:10px 12px; margin-bottom:10px">
+      <div style="font-size:12px; color:var(--ink-2); font-weight:700; margin-bottom:6px">${L("예정된 약","Scheduled")}</div>
+      ${nexts.map(n=>{ const i=db.meds.indexOf(n.med); return `<div style="display:flex; align-items:center; gap:8px; margin:4px 0">
+        <div style="flex:1; font-weight:800">${n.time} ${escapeHtml(n.med.name)}${n.med.dose?` ${n.med.dose}mg`:""}</div>
+        <button class="btn primary" style="width:auto; min-height:48px; padding:0 16px" onclick="quickDoseNow(${i},'${n.time}')">${L("지금 복용","Take now")}</button></div>`; }).join("")}
+    </div>`:"";
   openSheet(`
     <h2>${L("약 먹음","Took medication")}</h2><div class="hint">${L("여러 약을 한 번에 먹었으면 전부 선택하세요. 시간이 다르면 아래에서 고쳐주세요.","If you took several medications at once, select them all. Adjust the time below if needed.")}</div>
+    ${nextHtml}
     <div class="field"><label>${L("약 선택 (여러 개 가능)","Select medication(s) — multiple allowed")}</label><div class="chips" id="medChips">${chips}</div></div>
     ${timeFieldHtml("med_time", now)}
     <div class="field" id="med_dose_f"><label>${L("용량 조정 (mg, 선택 · 약 1개 선택 시에만)","Adjust dose (mg, optional · single selection only)")}</label><input type="number" id="med_dose" inputmode="numeric" placeholder="${L("등록 용량 사용","Use registered dose")}"></div>
@@ -2974,9 +3392,11 @@ function openMedSheet(){
     if(selSet.size===1){ doseF.style.display="block"; const only=[...selSet][0]; if(db.meds[only].dose) document.getElementById("med_dose").placeholder=db.meds[only].dose+"mg"; }
     else { doseF.style.display="none"; }
   });
-  document.getElementById("med_save").onclick=()=>{
+  document.getElementById("med_save").onclick=function(){
     if(!selSet.size) return;
+    this.disabled=true; /* 빠른 연속 탭 중복 저장 방지 */
     const ts=tsFromTimeField("med_time", now);
+    for(const i of selSet){ if(!medDupCheck(db.meds[i].name, ts)){ this.disabled=false; return; } }
     const d=document.getElementById("med_dose").value;
     const list=[...selSet];
     closeSheet();
@@ -3006,9 +3426,9 @@ function openAddMed(fromMedFlow){
   };
 }
 
-function openAddPast(editingEvent){
+function openAddPast(editingEvent, presetTs){
   const isEdit = !!editingEvent;
-  const now = isEdit ? new Date(editingEvent.ts) : new Date();
+  const now = isEdit ? new Date(editingEvent.ts) : (presetTs? new Date(presetTs) : new Date());
   const dval=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
   const medPreOpts = db.meds.map((m,i)=>`<button type="button" class="chip" data-i="${i}">${m.fav?"★ ":""}${escapeHtml(m.name)}${m.dose?` ${m.dose}mg`:""}</button>`).join("");
   const mealOpts=MEAL_TYPES.map(t=>`<option value="${t}">${tagLabel(t)}</option>`).join("");
@@ -3024,9 +3444,19 @@ function openAddPast(editingEvent){
     else if(editingEvent.type==="symptom") initKind="symptom"; /* v0.9.18 */
   }
   openSheet(`
-    <h2>${isEdit? L("기록 수정","Edit record") : L("지난 기록 추가","Add a past record")}</h2><div class="hint">${isEdit? L("날짜·시각과 내용을 고쳐서 저장해요. 종류를 바꾸면 그 종류의 기록으로 전환돼요.","Edit the date, time, and details, then save. Changing the type converts this record to that type.") : L("깜빡한 기록을 날짜·시각을 지정해 추가해요.","Add a record you forgot to log, with a specific date and time.")}</div>
+    <h2>${isEdit? L("기록 수정","Edit record") : L("지난 기록 추가","Add a past record")}</h2>
+    ${isEdit&&editingEvent.entryMode==="retrospective"? `<div class="hint" style="color:var(--ink-2)">${L(`지난 기록으로 추가됨 (입력 시각 ${editingEvent.createdAt? new Date(editingEvent.createdAt).toLocaleString():"-"})`,`Added retrospectively (entered ${editingEvent.createdAt? new Date(editingEvent.createdAt).toLocaleString():"-"})`)}</div>`:""}<div class="hint">${isEdit? L("날짜·시각과 내용을 고쳐서 저장해요. 종류를 바꾸면 그 종류의 기록으로 전환돼요.","Edit the date, time, and details, then save. Changing the type converts this record to that type.") : L("깜빡한 기록을 날짜·시각을 지정해 추가해요.","Add a record you forgot to log, with a specific date and time.")}</div>
     <div class="field"><label>${L("날짜","Date")}</label><input type="date" id="p_date" value="${dval}"></div>
     <div class="field"><label>${L("시각","Time")}</label><input type="time" id="p_time" value="${pad(now.getHours())}:${pad(now.getMinutes())}"></div>
+    ${isEdit? "" : `<div class="chips" id="p_quickTime" style="margin:-4px 0 10px">
+      <button type="button" class="chip" data-min="30">${L("30분 전","30 min ago")}</button>
+      <button type="button" class="chip" data-min="60">${L("1시간 전","1 hr ago")}</button>
+      <button type="button" class="chip" data-min="120">${L("2시간 전","2 hrs ago")}</button>
+      <button type="button" class="chip" data-h="6">06:00</button>
+      <button type="button" class="chip" data-h="7">07:00</button>
+      <button type="button" class="chip" data-h="8">08:00</button>
+      <button type="button" class="chip" data-h="9">09:00</button>
+    </div>`}
     <div class="field"><label>${L("종류","Type")}</label>
       <select id="p_kind">
         <option value="state">${L("출력","Output")}</option>
@@ -3040,7 +3470,7 @@ function openAddPast(editingEvent){
       </select></div>
     <div class="field" id="p_state_f">
       <label>${L("당시 출력 (0–100)","Output at the time (0–100)")}</label>
-      <div class="slider-row"><input type="range" id="p_out" min="0" max="100" step="5" value="50" oninput="document.getElementById('p_outv').textContent=this.value"><div class="v" id="p_outv">50</div></div>
+      ${outputPickerHtml("p_out",(isEdit&&editingEvent.type==="state"&&editingEvent.output!=null)? editingEvent.output : 50)}
       <div class="hint" style="margin:8px 0 0">${L("방향","Direction")}</div>
       <div class="trend-row" id="p_trendRow">
         <button type="button" class="trend-btn rising" data-trend="rising"><span class="sym">+</span><span>${L("상승 중","Rising")}</span></button>
@@ -3067,6 +3497,17 @@ function openAddPast(editingEvent){
     <div class="field" id="p_body_f" style="display:none"><label>${L("증상 (직접 입력, 쉼표로 구분)","Symptoms (custom, comma-separated)")}</label><input id="p_body_sym" placeholder="${L("예: 어지럼, 기립 시 어지럼","e.g. dizziness, dizziness on standing")}"></div>
     <div class="field"><label>${L("메모 (선택)","Memo (optional)")}</label><textarea id="p_memo"></textarea></div>
     <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="p_save">${isEdit? L("수정 저장","Save changes") : L("추가","Add")}</button></div>`);
+  bindOutputPicker("p_out");
+  { const qt=document.getElementById("p_quickTime");
+    if(qt) qt.addEventListener("click",e=>{
+      const b=e.target.closest(".chip"); if(!b) return;
+      const d=new Date();
+      if(b.dataset.min) d.setMinutes(d.getMinutes()-(+b.dataset.min));
+      else { d.setHours(+b.dataset.h,0,0,0); }
+      document.getElementById("p_date").value=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+      document.getElementById("p_time").value=`${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      qt.querySelectorAll(".chip").forEach(x=>x.classList.remove("sel")); b.classList.add("sel");
+    }); }
   const fieldMap = {
     state:"p_state_f", med:"p_med_f", symptom:"p_sym_f", life_sleep:"p_sleep_f", life_meal:"p_meal_f",
     life_exercise:"p_ex_f", life_bowel:"p_bowel_f", life_body:"p_body_f"
@@ -3094,8 +3535,7 @@ function openAddPast(editingEvent){
   const pTrendRowEl = document.getElementById("p_trendRow");
   if(pTrendRowEl){
     if(isEdit && editingEvent.type==="state" && editingEvent.output!=null){
-      document.getElementById("p_out").value = editingEvent.output;
-      document.getElementById("p_outv").textContent = editingEvent.output;
+      setOutputPickerValue("p_out", editingEvent.output);
     }
     if(isEdit && pTrend){
       const b=pTrendRowEl.querySelector(`.trend-btn[data-trend="${pTrend}"]`); if(b) b.classList.add("sel");
@@ -3143,7 +3583,9 @@ function openAddPast(editingEvent){
   document.getElementById("p_save").onclick=()=>{
     const d=document.getElementById("p_date").value, t=document.getElementById("p_time").value;
     if(!d||!t){ toast(L("날짜와 시각을 입력하세요","Please enter a date and time")); return; }
-    const ts=new Date(`${d}T${t}`).getTime(); const memo=document.getElementById("p_memo").value.trim();
+    const ts=new Date(`${d}T${t}`).getTime();
+    if(!isEdit && ts>Date.now()+60000){ toast(L("미래 시각으로는 기록할 수 없어요","Cannot record a future time")); return; }
+    const retro = !isEdit && (Date.now()-ts>10*60000); /* 10분 이상 과거면 회상 기록 */ const memo=document.getElementById("p_memo").value.trim();
     /* v0.9.18: 수정 모드에서도 종류 선택이 반영된다 — 종류가 바뀌면 그 종류의 새 기록으로 전환(변환) */
     const kind = document.getElementById("p_kind").value;
     if(kind==="state" && !pTrend){ toast(tr("trendPickAlert")); return; }
@@ -3157,7 +3599,7 @@ function openAddPast(editingEvent){
       /* 종류 변경: id·시각·메모만 유지하고 새 종류의 기록으로 재구성 */
       let ne=null;
       if(kind==="state"){
-        const out=+document.getElementById("p_out").value;
+        const out=outputPickerValue("p_out");
         ne={id:editingEvent.id,type:"state",state:stateFromTrend(pTrend,out),ts,output:out,trend:pTrend,gait:null,dysk:null,dyst:null,memo,symptoms:[],customSymptom:"",riseResult:null,inputMethod:"edit_converted",retrospective:true};
       } else if(kind==="med"){
         const drug=document.getElementById("p_drug").value.trim();
@@ -3186,7 +3628,7 @@ function openAddPast(editingEvent){
     }
     if(isEdit){
       if(kind==="state"){
-        const out=+document.getElementById("p_out").value;
+        const out=outputPickerValue("p_out");
         const derivedState = stateFromTrend(pTrend, out);
         Object.assign(editingEvent, {ts, memo, output:out, trend:pTrend, state:derivedState});
       } else if(kind==="med"){
@@ -3217,33 +3659,33 @@ function openAddPast(editingEvent){
       const customDose=(+document.getElementById("p_dose").value)||null;
       if(!pMedSel.size && !customDrug){ toast(L("약을 선택하거나 이름을 입력하세요","Select a medication or enter a name")); return; }
       /* 복약 기록에는 output/state/trend를 절대 포함하지 않는다 — 복약은 출력값을 바꾸지 않는다. */
-      pMedSel.forEach(i=>{ const m=db.meds[i]; db.events.push({id:uid(),type:"med",drug:m.name,dose:m.dose,ts,memo}); });
-      if(customDrug) db.events.push({id:uid(),type:"med",drug:customDrug,dose:customDose,ts,memo});
+      pMedSel.forEach(i=>{ const m=db.meds[i]; db.events.push({id:uid(), ...(typeof retro!=="undefined"&&retro?{entryMode:"retrospective",createdAt:new Date().toISOString()}:{}),type:"med",drug:m.name,dose:m.dose,ts,memo}); });
+      if(customDrug) db.events.push({id:uid(), ...(typeof retro!=="undefined"&&retro?{entryMode:"retrospective",createdAt:new Date().toISOString()}:{}),type:"med",drug:customDrug,dose:customDose,ts,memo});
       db.events.sort((a,b)=>a.ts-b.ts); save();
       afterPastSave(ts, L(`복약 ${pMedSel.size+(customDrug?1:0)}건 추가됨`,`${pMedSel.size+(customDrug?1:0)} medication record(s) added`));
       return;
     }
     if(kind==="state"){
-      const out=+document.getElementById("p_out").value;
+      const out=outputPickerValue("p_out");
       const derivedState = stateFromTrend(pTrend, out);
-      db.events.push({id:uid(),type:"state",state:derivedState,ts,output:out,trend:pTrend,gait:null,dysk:null,dyst:null,memo,symptoms:[],customSymptom:"",riseResult:null,inputMethod:"backdated_manual",retrospective:true});
+      db.events.push({id:uid(), ...(typeof retro!=="undefined"&&retro?{entryMode:"retrospective",createdAt:new Date().toISOString()}:{}),type:"state",state:derivedState,ts,output:out,trend:pTrend,gait:null,dysk:null,dyst:null,memo,symptoms:[],customSymptom:"",riseResult:null,inputMethod:"backdated_manual",retrospective:true});
     } else if(kind==="symptom"){
       /* v0.9.18: 지난 증상 기록도 직접 추가 가능 */
       const sf=readSymFields();
-      db.events.push({id:uid(),type:"symptom",key:sf.key,ts,phase:sf.phase,customText:sf.customText,outputAtStart:null,outputAtEnd:null,memo});
+      db.events.push({id:uid(), ...(typeof retro!=="undefined"&&retro?{entryMode:"retrospective",createdAt:new Date().toISOString()}:{}),type:"symptom",key:sf.key,ts,phase:sf.phase,customText:sf.customText,outputAtStart:null,outputAtEnd:null,memo});
     } else if(kind==="life_sleep"){
-      db.events.push({id:uid(),type:"life",kind:"sleep",phase:document.getElementById("p_sleep_type").value,ts,memo,quality:[]});
+      db.events.push({id:uid(), ...(typeof retro!=="undefined"&&retro?{entryMode:"retrospective",createdAt:new Date().toISOString()}:{}),type:"life",kind:"sleep",phase:document.getElementById("p_sleep_type").value,ts,memo,quality:[]});
     } else if(kind==="life_meal"){
-      db.events.push({id:uid(),type:"life",kind:"meal",mealType:document.getElementById("p_meal_type").value,ts,memo,extras:[],protein:false});
+      db.events.push({id:uid(), ...(typeof retro!=="undefined"&&retro?{entryMode:"retrospective",createdAt:new Date().toISOString()}:{}),type:"life",kind:"meal",mealType:document.getElementById("p_meal_type").value,ts,memo,extras:[],protein:false});
     } else if(kind==="life_exercise"){
       const dur=(+document.getElementById("p_ex_dur").value)||null;
-      db.events.push({id:uid(),type:"life",kind:"exercise",phase:"end",exType:document.getElementById("p_ex_type").value,durationMin:dur,ts,memo});
+      db.events.push({id:uid(), ...(typeof retro!=="undefined"&&retro?{entryMode:"retrospective",createdAt:new Date().toISOString()}:{}),type:"life",kind:"exercise",phase:"end",exType:document.getElementById("p_ex_type").value,durationMin:dur,ts,memo});
     } else if(kind==="life_bowel"){
       const c=document.getElementById("p_bowel_c").value||null;
-      db.events.push({id:uid(),type:"life",kind:"bowel",consistency:c,ts,memo,extras:[]});
+      db.events.push({id:uid(), ...(typeof retro!=="undefined"&&retro?{entryMode:"retrospective",createdAt:new Date().toISOString()}:{}),type:"life",kind:"bowel",consistency:c,ts,memo,extras:[]});
     } else if(kind==="life_body"){
       const syms=document.getElementById("p_body_sym").value.split(",").map(x=>x.trim()).filter(Boolean);
-      db.events.push({id:uid(),type:"life",kind:"body",symptoms:syms,ts,memo});
+      db.events.push({id:uid(), ...(typeof retro!=="undefined"&&retro?{entryMode:"retrospective",createdAt:new Date().toISOString()}:{}),type:"life",kind:"body",symptoms:syms,ts,memo});
     }
     db.events.sort((a,b)=>a.ts-b.ts); save();
     afterPastSave(ts, L("기록 추가됨","Record added"));
@@ -3362,6 +3804,11 @@ document.querySelectorAll(".fsBtn").forEach(b=>b.onclick=()=>{
   db.settings.fontScale=+b.dataset.fs; save(); applyFontScale();
   toast(L("글씨 크기를 바꿨어요","Font size updated"));
 });
+document.querySelectorAll(".oiBtn").forEach(b=>{
+  const mark=()=>document.querySelectorAll(".oiBtn").forEach(x=>x.classList.toggle("sel", x.dataset.oi===outputInputMode()));
+  mark();
+  b.onclick=()=>{ db.settings.outputInput=b.dataset.oi; save(); mark(); toast(L("출력 입력 방식을 바꿨어요","Output input style changed")); };
+});
 /* ---- v0.9.20: 출력 점수 기준 안내 ---- */
 const OUTPUT_SCORE_GUIDE=[
   {r:"90~100", ko:"거의 평소처럼 움직이고 생활할 수 있음", en:"Can move and function almost as usual"},
@@ -3459,6 +3906,29 @@ function setHeadDate(){ const d=new Date();
   document.getElementById("headDate").textContent=`${d.getMonth()+1}.${d.getDate()} (${wd})`; }
 
 applyTheme(); applyI18nStatic(); renderLangToggle(); setHeadDate(); renderAll(); renderNotifyToggle(); setupVoice();
+/* v0.9.21: Medication Challenge 통합 */
+syncSharedProfile(); ingestChallengeEvents();
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden) ingestChallengeEvents(); }); /* 챌린지에서 돌아오면 편입 */
+const ENABLE_CHALLENGE=true; /* 정식 공개 전 시험 기간에는 false로 두면 시뮬 탭 진입 카드가 숨겨짐 */
+document.getElementById("topMedBtn").onclick=()=>openMedSheet();
+document.getElementById("simToChallengeBtn").onclick=()=>{
+  try{
+    const dayKey=document.getElementById("simDate").value||todayKey();
+    const plan=medsForDay(dayKey), virt=(_simVirtual&&_simVirtual.doses)||[];
+    if(!virt.length){ toast(L("가상안이 비어 있어요","Virtual plan is empty")); return; }
+    if(typeof SHARED!=="undefined"){
+      SHARED.write({pendingChallengePlan:{createdAt:new Date().toISOString(), dayKey,
+        baselinePlan:plan.map(d=>({name:d.name,dose:+d.dose||0,time:d.time||""})),
+        trialPlan:virt.map(d=>({name:d.name,dose:+d.dose||0,time:d.time||""})),
+        changeSummary:simDiffSummary(plan,virt).replace(/^변경 내용: /,"")}});
+    }
+    syncSharedProfile(); location.href="challenge/index.html#fromsim";
+  }catch(e){ toast("전달 실패"); }
+};
+document.getElementById("topPastBtn").onclick=()=>openAddPast();
+{ const b=document.getElementById("challengeEntryBtn");
+  if(b){ if(!ENABLE_CHALLENGE){ b.closest(".card").style.display="none"; }
+    b.onclick=()=>{ syncSharedProfile(); location.href="challenge/index.html"; }; } }
 
 /* alarm loop: check every 30s while app is open */
 setInterval(alarmLoop, 30000); alarmLoop();
@@ -3679,7 +4149,8 @@ function phsGenerate(){
   const analysis=PHS.analyze({events:db.events, startTs, endTs});
   if(!analysis.period.totalOutputRecords){ toast(L("이 기간에 출력 기록이 없어요","No output records in this period")); return; }
   const confidence=PHS.assessConfidence(analysis, obs.startSurvey);
-  const report=PHS.buildReport({profile:db.phs.profile, startSurvey:obs.startSurvey, endSurvey:obs.endSurvey, analysis, confidence, medsList:db.meds, lang:currentLang()});
+  const challengeData=(typeof SHARED!=="undefined")? (SHARED.read().challengeSummaries||[]) : [];
+  const report=PHS.buildReport({profile:db.phs.profile, startSurvey:obs.startSurvey, endSurvey:obs.endSurvey, analysis, confidence, medsList:db.meds, lang:currentLang(), challengeTests:challengeData});
   const safety=PHS.checkReportSafety(report);
   if(safety.length){ console.warn("PHS safety check", safety); toast(L("보고서 안전 검사에서 문구를 보정했어요","Report safety check adjusted some wording")); }
   phsRenderReport(report, analysis, note);
@@ -3727,6 +4198,9 @@ function phsRenderReport(report, analysis, note){
       <h1 style="font-size:16px">${L("상세 기록 및 모니터링","Detailed Records and Monitoring")}</h1>
       <h2>${L("현재 복용 약 (관찰기간 기록 기준)","Current Medication Schedule (from records)")}</h2>
       ${det.currentMedication.length? `<ul style="margin:4px 0 0 18px; padding:0">${det.currentMedication.map(k=>`<li>${escapeHtml(k)}</li>`).join("")}</ul>`:`<div class='phs-meta'>${L("복약 기록 없음","No medication records")}</div>`}
+      ${(det.medicationResponseTests)? `<h2>${escapeHtml(det.medicationResponseTests.title)}</h2>
+        <div class="phs-meta">${escapeHtml(det.medicationResponseTests.note)}</div>
+        <ul style="margin:4px 0 0 18px; padding:0">${det.medicationResponseTests.lines.map(l=>`<li style="white-space:pre-line">${escapeHtml(l)}</li>`).join("")}</ul>`:""}
       ${anchorRows.length? `<h2>${L("환자 정의 출력 기준","Patient-Defined Output Anchors")}</h2><table><thead><tr><th>${L("출력","Output")}</th><th>${L("환자에게의 의미","What it means to the patient")}</th></tr></thead><tbody>${anchorRows.map(([k,v])=>`<tr><td>${k}</td><td>${escapeHtml(v)}</td></tr>`).join("")}</tbody></table>`:""}
       <h2>${L("모니터링 요약","Monitoring Summary")} <span class="phs-conf">${L("신뢰도","Confidence")} ${CONF(conf.sectionConfidence.outputSummary)}</span></h2>
       <table><tbody>
@@ -3790,6 +4264,7 @@ function phsReportText(r){
     `Patient History Summary`,
     `${en?"Observation period":"관찰기간"} ${r.period.start} ~ ${r.period.end}`,
     ``,`[CC] ${one.cc}`,``,`[HPI] ${one.hpi}`,
+    ...(det.medicationResponseTests? [``,`[${det.medicationResponseTests.title}]`, det.medicationResponseTests.note, ...det.medicationResponseTests.lines.map(l=>"- "+l)]:[]),
     ``,`[${en?"Key Findings":"핵심 관찰 결과"}]`, one.keyResults.map(k=>`- ${k}`).join("\n"),
     ``,`[${en?"Main Daily Pattern":"주요 일중 패턴"}] ${one.mainDailyPattern}`,
     ``,`[${en?"Patient Questions":"환자 질문"}]`, q(one.patientQuestions)||(en?"- None":"- 없음"),
