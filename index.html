@@ -454,6 +454,24 @@ body{font-size:calc(15px*var(--app-font-scale))}
     <div class="disclaimer" style="margin:10px 0" data-i18n-html="simDisclaimer">
       <b>이 곡선은 실제 혈중 약물농도나 도파민 농도를 측정한 것이 아닙니다.</b> 복약 기록과 약물별 일반적인 흡수·반감기 특성을 바탕으로 계산한 추정치이며, 실제 약효를 보장하거나 처방 변경을 지시하지 않습니다. 화면은 현재안과 가상안의 예상 차이를 비교하는 참고 자료이며, 약물 조정은 반드시 주치의와 상의하세요.
     </div>
+
+    <!-- v1.0 Simulation Platform: 최대 3개 실험안 동시 비교 -->
+    <div class="chart-card" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px">
+      <div class="card-title"><span>실험안 비교 (최대 3개)</span></div>
+      <div class="hint">각 실험안은 현재안을 기준으로 서로 독립적으로 계산됩니다 — 실험 2가 실험 1의 결과를 이어받지 않습니다.</div>
+      <div id="scenarioList"></div>
+      <button class="btn ghost no-print" id="scenarioAddBtn" style="margin-top:8px">＋ 실험안 추가</button>
+      <div id="scenarioCombinedWrap" style="margin-top:14px; display:none">
+        <div class="card-title" style="margin-top:6px"><span>종합 비교 그래프</span></div>
+        <div id="scenarioCombinedChart"></div>
+        <div class="legend">
+          <span><i style="background:#E8663C"></i><span>실제 출력</span></span>
+          <span><i style="background:#5C93D6"></i><span>현재안</span></span>
+          <span id="scenarioCombinedLegendExtra"></span>
+        </div>
+        <div id="scenarioOverallText" style="font-size:12.5px; line-height:1.7; margin-top:10px; padding:8px 10px; background:var(--surface-2); border-radius:8px"></div>
+      </div>
+    </div>
   </section>
 
   <!-- REPORT -->
@@ -559,6 +577,10 @@ body{font-size:calc(15px*var(--app-font-scale))}
 <script src="shared-profile.js"></script>
 <script src="phs-engine.js"></script>
 <script src="phs-report.js"></script>
+<script src="simulation-engine.js"></script>
+<script src="simulation-compare.js"></script>
+<script src="simulation-interpret.js"></script>
+<script src="simulation-report.js"></script>
 <script>
 "use strict";
 /* ---------- i18n ---------- */
@@ -617,7 +639,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음 (INSUF)",
-    versionLabel:"약효일지 · 테스트판 0.9.22",
+    versionLabel:"약효일지 · 테스트판 0.9.23",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -676,7 +698,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests (INSUF)",
-    versionLabel:"Med Log · Test build 0.9.22",
+    versionLabel:"Med Log · Test build 0.9.23",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -2770,7 +2792,9 @@ function renderSimChart(){
 
   /* ---- ② 실제 출력 + 예상 출력 (0~100) ---- */
   function toMin(hmStr){ const [h,m]=hmStr.split(":").map(Number); let tm=h*60+m; if(tm<t0) tm+=1440; return tm; }
-  const actualSorted = actual.map(a=>({t:toMin(a.time), val:a.val*10})).sort((a,b)=>a.t-b.t);
+  /* outputsForDay()의 val은 이미 0~100 출력 점수다. (v0.9.23 수정: ×10 하면 범위가 350~800이 되어
+     예상 출력 곡선이 전부 100에 붙어버렸다 — v0.9.22에 있던 버그) */
+  const actualSorted = actual.map(a=>({t:toMin(a.time), val:a.val})).sort((a,b)=>a.t-b.t);
   const cal=simCalibration(actualSorted);
   const expPlan=simExpectedOutputCurve(planPts, pkMax, cal);
   const expVirt=simExpectedOutputCurve(virtPts, pkMax, cal);
@@ -2854,6 +2878,180 @@ function renderSim(){
   };
   renderSimVirtualRows();
   draw();
+  renderMultiScenario();
+}
+
+/* ============================================================
+   v1.0 Simulation Platform — 최대 3개 실험안 동시 비교
+   시나리오 편집기(scenario-editor) → simulation-engine.js → simulation-compare.js
+   → simulation-interpret.js → simulation-report.js. 모두 현재안을 기준으로 독립 계산.
+   ============================================================ */
+function loadScenarios(dayKey){
+  const saved=db.settings.simScenarios;
+  if(saved && saved.dayKey===dayKey && Array.isArray(saved.list)) return saved.list;
+  return [];
+}
+function saveScenarios(dayKey, list){
+  db.settings.simScenarios={dayKey, list};
+  save();
+}
+function scenarioBaselineDoses(dayKey){ return JSON.parse(JSON.stringify(medsForDay(dayKey))); }
+function scenarioActualSorted(dayKey, t0){
+  return outputsForDay(dayKey).map(a=>{ const [h,m]=a.time.split(":").map(Number); let t=h*60+m; if(t<t0) t+=1440; return {t, val:a.val}; }).sort((a,b)=>a.t-b.t);
+}
+function newScenarioTitle(list){ return `실험 ${list.length+1}`; }
+function renderMultiScenario(){
+  const dayKey=document.getElementById("simDate").value||todayKey();
+  const t0=0, t1=1440;
+  const baselineDoses=scenarioBaselineDoses(dayKey);
+  const actualSorted=scenarioActualSorted(dayKey, t0);
+  /* 검토 반영: 모든 실험안을 현재안의 pkMax 하나로 공통 정규화해야 용량 차이가 드러난다 */
+  const baselineRaw=SIMENG.computeRawPlan(baselineDoses, t0, t1);
+  const cal=SIMENG.calibrate(actualSorted, baselineDoses, t0);
+  const baseline=SIMENG.applyOutputModel(baselineRaw, baselineRaw.pkMax, cal);
+  let list=loadScenarios(dayKey);
+
+  document.getElementById("scenarioAddBtn").onclick=()=>{
+    if(list.length>=3){ toast("실험안은 최대 3개까지 만들 수 있어요"); return; }
+    list=list.concat([{id:"sc_"+Date.now(), title:newScenarioTitle(list), doses:JSON.parse(JSON.stringify(baselineDoses)), changes:[], open:true}]);
+    saveScenarios(dayKey, list); renderMultiScenario();
+  };
+
+  if(!list.length){
+    document.getElementById("scenarioList").innerHTML=`<div class="hint" style="padding:10px 0">실험안이 없습니다. [＋ 실험안 추가]를 눌러 현재안을 복사한 뒤 용량·시각·약을 바꿔보세요.</div>`;
+    document.getElementById("scenarioCombinedWrap").style.display="none";
+    return;
+  }
+
+  /* 각 실험안 독립 계산 (baseline 사본에서 출발 — 서로 영향 없음) */
+  const computedList=list.map(sc=>({
+    ...sc,
+    computed: SIMENG.applyOutputModel(SIMENG.computeRawPlan(sc.doses, t0, t1), baselineRaw.pkMax, cal),
+    actualSorted,
+  }));
+  const diffs=computedList.map(sc=>SIMCMP.diff(baseline, sc.computed));
+  const ranked=SIMCMP.rankScenarios(computedList.map((sc,i)=>({id:sc.id,title:sc.title,computed:sc.computed,changes:scenarioChangeParts(sc.doses, baselineDoses)})), baseline);
+  const overall=SIMCMP.overallComparison(ranked);
+  /* 검토 반영: 종합 숫자 점수는 처방 점수로 오해될 수 있어 표시하지 않고, 해당하는 항목만 배지로 보여준다 */
+  const badgeFor=(id)=>{
+    if(!overall) return "";
+    const b=[];
+    if(overall.fastestOnLatency===id) b.push("ON 도달 가장 빠름");
+    if(overall.longestTargetDuration===id) b.push("80 이상 유지 가장 김");
+    if(overall.lowestPeakBurden===id) b.push("피크 증가 가장 낮음");
+    return b.join(" · ");
+  };
+
+  document.getElementById("scenarioList").innerHTML = computedList.map((sc,i)=>{
+    const diff=diffs[i];
+    const effChanges=scenarioChangeParts(sc.doses, baselineDoses);
+    const effCategory=SIMCMP.detectScenarioCategory(effChanges);
+    const interp=SIMITP.interpretScenario({title:sc.title, changes:effChanges, category:effCategory}, diff,
+      {personal:baseline.cal.personal, reasons:baseline.cal.reasons||[], confidenceReasons:baseline.cal.reasons||[]});
+    const rk=ranked.find(r=>r.id===sc.id);
+    return `<div class="card" style="border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-top:10px">
+      <div style="display:flex; align-items:center; gap:8px">
+        <input type="text" data-sc-title="${sc.id}" value="${escapeHtml(sc.title)}" style="flex:1; border:none; background:transparent; font-weight:800; font-size:15px">
+        <span class="hint" style="white-space:nowrap" data-sc-badges="${sc.id}"></span>
+        <button class="btn ghost small" data-sc-toggle="${sc.id}" style="width:auto">${sc.open?"접기":"펼치기"}</button>
+        <button class="btn ghost small" data-sc-del="${sc.id}" style="width:auto; color:var(--danger)">삭제</button>
+      </div>
+      <div style="font-size:12px; color:var(--ink-2); margin-top:4px" data-sc-changesummary="${sc.id}">${escapeHtml(scenarioChangeSummary(sc.doses, baselineDoses))}</div>
+      <div class="chips" style="margin-top:6px">
+        <button type="button" class="chip" data-sc-op="${sc.id}|copy">현재안 복사</button>
+        <button type="button" class="chip" data-sc-op="${sc.id}|addmed">약 추가</button>
+      </div>
+      <div id="scDoses_${sc.id}"></div>
+      ${sc.open? SIMREP.scenarioDetailHtml({title:sc.title, changes:sc.changes, computed:sc.computed, actualSorted}, baseline, diff, interp) : ""}
+      ${sc.open? `<button class="btn primary no-print" data-sc-tochallenge="${sc.id}" style="margin-top:10px">🧪 이 실험안으로 비교 테스트 시작</button>`:""}
+    </div>`;
+  }).join("");
+
+  computedList.forEach(sc=>renderScenarioDoseRows(dayKey, sc.id, list));
+  document.querySelectorAll("[data-sc-badges]").forEach(el=>{ el.textContent=badgeFor(el.dataset.scBadges); });
+
+  document.querySelectorAll("[data-sc-title]").forEach(inp=>{
+    inp.onchange=()=>{ const it=list.find(x=>x.id===inp.dataset.scTitle); if(it){ it.title=inp.value||it.title; saveScenarios(dayKey,list); } };
+  });
+  document.querySelectorAll("[data-sc-toggle]").forEach(b=>{
+    b.onclick=()=>{ const it=list.find(x=>x.id===b.dataset.scToggle); if(it){ it.open=!it.open; saveScenarios(dayKey,list); renderMultiScenario(); } };
+  });
+  document.querySelectorAll("[data-sc-del]").forEach(b=>{
+    b.onclick=()=>{ if(!confirm("이 실험안을 삭제할까요?")) return; list=list.filter(x=>x.id!==b.dataset.scDel); saveScenarios(dayKey,list); renderMultiScenario(); };
+  });
+  document.querySelectorAll("[data-sc-op]").forEach(b=>{
+    b.onclick=()=>{ const [id,op]=b.dataset.scOp.split("|"); const it=list.find(x=>x.id===id); if(!it) return;
+      if(op==="copy") it.doses=JSON.parse(JSON.stringify(baselineDoses));
+      else if(op==="addmed") it.doses.push({name:MED_PRESETS[0]||"", dose:50, time:"08:00"});
+      saveScenarios(dayKey,list); renderMultiScenario(); };
+  });
+  document.querySelectorAll("[data-sc-tochallenge]").forEach(b=>{
+    b.onclick=()=>{
+      const id=b.dataset.scTochallenge; const it=list.find(x=>x.id===id); if(!it) return;
+      try{
+        if(typeof SHARED!=="undefined"){
+          SHARED.write({pendingChallengePlan:{createdAt:new Date().toISOString(), dayKey,
+            baselinePlan:baselineDoses.map(d=>({name:d.name,dose:+d.dose||0,time:d.time||""})),
+            trialPlan:it.doses.map(d=>({name:d.name,dose:+d.dose||0,time:d.time||""})),
+            changeSummary:scenarioChangeSummary(it.doses, baselineDoses)}});
+        }
+        syncSharedProfile(); location.href="challenge/index.html#fromsim";
+      }catch(e){ toast("전달 실패"); }
+    };
+  });
+
+  /* 종합 비교 그래프 + 종합 해석 */
+  const wrap=document.getElementById("scenarioCombinedWrap");
+  if(computedList.length){
+    wrap.style.display="block";
+    const colors=["#E0A030","#7B5CD6","#1FA971"];
+    document.getElementById("scenarioCombinedChart").innerHTML = SIMREP.combinedSvg({
+      t0, t1, actual:actualSorted, baselineExpected:baseline.expected,
+      scenarios:computedList.map(sc=>sc.computed.expected),
+    });
+    document.getElementById("scenarioCombinedLegendExtra").innerHTML = computedList.map((sc,i)=>
+      `<span style="margin-left:10px"><i style="background:${colors[i%3]}"></i>${escapeHtml(sc.title)}</span>`).join("");
+    const io=SIMITP.interpretOverall(ranked, overall, {personal:baseline.cal.personal, reasons:baseline.cal.reasons||[]});
+    document.getElementById("scenarioOverallText").textContent = io.text;
+  } else {
+    wrap.style.display="none";
+  }
+}
+/* 실험안 doses와 baseline doses를 비교해 "무엇을 바꿨는지" 한 줄로 요약 (기존 simDiffSummary와 동일 원리) */
+function scenarioChangeParts(scDoses, baseDoses){
+  const key=d=>`${d.name}|${d.time}`;
+  const bm=new Map(baseDoses.map(d=>[key(d),d])), sm=new Map(scDoses.map(d=>[key(d),d]));
+  const parts=[];
+  sm.forEach((v,k)=>{ const b=bm.get(k);
+    if(!b) parts.push({type:"add", desc:`추가: ${v.name} ${v.dose}mg ${v.time||""}`});
+    else if(+b.dose!==+v.dose) parts.push({type:"dose_change", desc:`${v.name} ${v.time||""} ${b.dose}→${v.dose}mg`}); });
+  bm.forEach((b,k)=>{ if(!sm.has(k)){
+    const moved=[...sm.values()].find(v=>v.name===b.name && +v.dose===+b.dose);
+    if(moved) parts.push({type:"time_change", desc:`${b.name} 시각 ${b.time}→${moved.time}`});
+    else parts.push({type:"remove", desc:`제외: ${b.name} ${b.dose}mg ${b.time||""}`}); } });
+  const seen=new Set(); return parts.filter(p=>!seen.has(p.desc)&&seen.add(p.desc));
+}
+function scenarioChangeSummary(scDoses, baseDoses){
+  const parts=scenarioChangeParts(scDoses, baseDoses);
+  return parts.length? parts.map(p=>p.desc).join(" · ") : "변경 없음 (현재안과 동일)";
+}
+/* 실험안의 개별 약 편집 행 (이름/용량/시각/삭제) — 기존 renderSimVirtualRows와 동일 패턴, 실험안별로 독립 */
+function renderScenarioDoseRows(dayKey, scId, list){
+  const wrap=document.getElementById("scDoses_"+scId); if(!wrap) return;
+  const it=list.find(x=>x.id===scId); if(!it) return;
+  wrap.innerHTML = it.doses.map((d,i)=>`
+    <div class="dose-row" style="display:flex; gap:4px; align-items:center; margin-top:4px">
+      <select data-f="name" style="flex:1.3">${MED_PRESETS.map(n=>`<option ${n===d.name?"selected":""}>${escapeHtml(n)}</option>`).join("")}</select>
+      <input data-f="dose" type="number" value="${d.dose||0}" style="width:56px" placeholder="mg">
+      <input data-f="time" type="time" value="${d.time||""}" style="width:88px">
+      <button data-del type="button" class="btn ghost small" style="width:auto">✕</button>
+    </div>`).join("");
+  [...wrap.querySelectorAll(".dose-row")].forEach((row,i)=>{
+    row.querySelector('[data-f="name"]').onchange=e=>{ it.doses[i].name=e.target.value; saveScenarios(dayKey,list); renderMultiScenario(); };
+    row.querySelector('[data-f="time"]').onchange=e=>{ it.doses[i].time=e.target.value; saveScenarios(dayKey,list); renderMultiScenario(); };
+    row.querySelector('[data-f="dose"]').oninput=e=>{ it.doses[i].dose=+e.target.value||0; saveScenarios(dayKey,list); renderMultiScenario(); };
+    row.querySelector('[data-del]').onclick=()=>{ it.doses.splice(i,1); saveScenarios(dayKey,list); renderMultiScenario(); };
+  });
 }
 
 /* ---------- render: REPORT ---------- */
