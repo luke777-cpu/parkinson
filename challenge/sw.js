@@ -1,5 +1,5 @@
 /* 약효 비교 테스트 전용 서비스워커 — 본체(yakhyo-*)와 캐시 완전 분리 */
-const CACHE_NAME = "medication-challenge-v4";
+const CACHE_NAME = "medication-challenge-v5";
 const ASSETS = ["./","./index.html","./challenge.css","./challenge-engine.js","./challenge-report.js","./challenge-sim.js","./challenge-timer.js","./manifest.json","./icon-192.png","./icon-512.png","../shared-profile.js"];
 self.addEventListener("install", e=>{ e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())); });
 self.addEventListener("activate", e=>{
