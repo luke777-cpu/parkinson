@@ -262,7 +262,10 @@ function viewSetup(){
   $("baseSel").onchange=renderSimPreview;
   if(simPlan){
     wiz.plannedDoses=simPlan.trialPlan.map(d=>({...d}));
-    $("chg_desc").value=simPlan.changeSummary||"";
+    /* v0.9.26: 시뮬레이터에서 고른 임상 문제(시험 목적)와 기간 분석 근거를 함께 받아온다 */
+    $("chg_desc").value=[simPlan.goalLabel? `[시험 목적] ${simPlan.goalLabel}`:"",
+                          simPlan.periodFindings? `[기간 분석] ${simPlan.periodFindings}`:"",
+                          simPlan.changeSummary||""].filter(Boolean).join("\n");
     /* 역할·종류 자동: 변경 후 시험 + 용량/시간 추정 */
     $("role_chips").querySelectorAll(".chip").forEach(x=>x.classList.toggle("sel", x.dataset.k==="changed"));
     $("baseSelWrap").style.display="block";
