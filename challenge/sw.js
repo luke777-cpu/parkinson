@@ -1,6 +1,6 @@
 /* 약효 비교 테스트 전용 서비스워커 — 본체(yakhyo-*)와 캐시 완전 분리 */
-const CACHE_NAME = "medication-challenge-v2";
-const ASSETS = ["./","./index.html","./challenge.css","./challenge-engine.js","./challenge-report.js","./challenge-sim.js","./challenge-timer.js","./manifest.json","./icon-192.png","./icon-512.png"];
+const CACHE_NAME = "medication-challenge-v4";
+const ASSETS = ["./","./index.html","./challenge.css","./challenge-engine.js","./challenge-report.js","./challenge-sim.js","./challenge-timer.js","./manifest.json","./icon-192.png","./icon-512.png","../shared-profile.js"];
 self.addEventListener("install", e=>{ e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())); });
 self.addEventListener("activate", e=>{
   e.waitUntil(caches.keys().then(ks=>Promise.all(
@@ -9,6 +9,6 @@ self.addEventListener("activate", e=>{
 });
 self.addEventListener("fetch", e=>{
   if(e.request.method!=="GET") return;
-  e.respondWith(fetch(e.request).then(r=>{ const cp=r.clone(); caches.open(CACHE_NAME).then(c=>c.put(e.request,cp)); return r; })
+  e.respondWith(fetch(e.request).then(r=>{ if(r && r.ok){ const cp=r.clone(); caches.open(CACHE_NAME).then(c=>c.put(e.request,cp)); } return r; })
     .catch(()=>caches.match(e.request)));
 });
