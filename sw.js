@@ -1,7 +1,8 @@
-const CACHE = "yakhyo-v28-egg920";
+const CACHE = "yakhyo-v30-sim922";
 const APP_SHELL = [
   "./",
   "./index.html",
+  "./shared-profile.js",
   "./phs-engine.js",
   "./phs-report.js",
   "./manifest.json",
@@ -30,6 +31,10 @@ self.addEventListener("activate", event => {
 
 self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;
+  { /* v0.9.21: 챌린지·이스터에그는 각자 SW/네트워크가 처리 — 본체 캐시가 가로채지 않음 */
+    const p=new URL(event.request.url).pathname;
+    if (p.includes("/challenge/") || p.includes("/easteregg/")) return;
+  }
 
   // HTML navigation is network-first so GitHub Pages updates do not remain stuck on an old version.
   if (event.request.mode === "navigate") {
