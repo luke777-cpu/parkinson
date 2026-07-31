@@ -194,6 +194,28 @@ ENG.leddDetail = function(doses){
   return {total, rows, excluded, notes:[...notes]};
 };
 
+/* ---- 기간 대표곡선 기반 보정 ----
+   검토 반영: 하루치 기록이 아니라 최근 N일의 대표(중앙) 반응을 시뮬레이션 기준으로 쓴다.
+   repCurve: [{rel, val, n}] — 복용 시각을 0분으로 한 상대 곡선 */
+ENG.calibrateFromPeriod = function(repCurve, opts){
+  const o=Object.assign({minPoints:4}, opts||{});
+  const pts=(repCurve||[]).filter(p=>p.val!=null);
+  const reasons=[];
+  if(pts.length<o.minPoints) reasons.push(`대표곡선 시점이 ${pts.length}개로 부족`);
+  const thin=pts.filter(p=>(p.n||0)<2).length;
+  if(pts.length && thin/pts.length>0.5) reasons.push("대표곡선 시점 절반 이상이 사례 1회");
+  if(!pts.length) return {base:30, top:85, personal:false, n:0, reasons:["기간 대표곡선 없음"], source:"period"};
+  const vals=pts.map(p=>p.val);
+  const base=Math.min(...vals), top=Math.max(...vals);
+  if(top-base<15) reasons.push("대표곡선의 최고·최저 차이가 15점 미만");
+  return {base, top, personal:reasons.length===0, n:pts.length, reasons, source:"period",
+          episodeCount: Math.max(0, ...pts.map(p=>p.n||0))};
+};
+/* 대표곡선을 절대 시각(분)으로 펼친다 — 그래프에 실제 반응으로 겹쳐 그리기 위함 */
+ENG.periodCurveToAbsolute = function(repCurve, doseTimeMin){
+  return (repCurve||[]).map(p=>({t:doseTimeMin+p.rel, val:p.val, n:p.n}));
+};
+
 /* ---- 1단계: 원시 계산 (PK만). 출력 변환은 하지 않는다 ---- */
 ENG.computeRawPlan = function(doses, t0, t1, step){
   step = step||10;
