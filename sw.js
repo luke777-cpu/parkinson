@@ -1,4 +1,4 @@
-const CACHE = "yakhyo-v32-scenario924";
+const CACHE = "yakhyo-v33-single925";
 const APP_SHELL = [
   "./",
   "./index.html",
