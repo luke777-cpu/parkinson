@@ -11,6 +11,7 @@
 <body>
 <div class="wrap" id="app"></div>
 <div class="toast" id="toast"></div>
+<script src="../shared-profile.js" onerror="/* 단독 배포 시 없음 — 무시 */"></script>
 <script src="challenge-engine.js"></script>
 <script src="challenge-sim.js"></script>
 <script src="challenge-timer.js"></script>
@@ -48,6 +49,32 @@ function save(){ try{ localStorage.setItem(CHG.STORAGE_KEY, JSON.stringify(db));
 function saveMeds(){ try{ localStorage.setItem(CHG.MEDLIST_KEY, JSON.stringify(medList)); }catch(e){ toast("저장 공간이 부족합니다"); } }
 loadAll(); if(migNote) save();
 
+/* v0.9.21: 본체 Shared Profile 적용 (글씨 크기·주증상·복용약 — 전부 사본, 본체 DB 무수정) */
+let sharedProfile=null, sharedPrimary=[];
+(function applyShared(){
+  try{
+    if(typeof SHARED==="undefined") return;
+    sharedProfile=SHARED.read();
+    if(sharedProfile.fontScale) document.documentElement.style.setProperty("--fs", String(sharedProfile.fontScale));
+    if(sharedProfile.language) db.settings.language=sharedProfile.language;
+    sharedPrimary=(sharedProfile.primarySymptoms||[]).map(x=>x.type);
+    /* 본체 복용약 → 내 약 목록: 이름이 같은 약이 없을 때만 사본 추가 */
+    let added=0;
+    (sharedProfile.medications||[]).forEach(m=>{
+      if(!m||!m.name) return;
+      if(medList.meds.some(x=>x.name===m.name)) return;
+      medList.meds.push(CHG.newMed({name:m.name,
+        unitDose:m.dose? m.dose+"mg":"", usualDose:m.dose? m.dose+"mg":"",
+        usualTimes:(m.sched||[]).slice(), memo:m.note? m.note+" (약효일지에서 가져옴)":"약효일지에서 가져옴"}));
+      added++;
+    });
+    if(added){ saveMeds(); migNote=(migNote? migNote+" · ":"")+`약효일지 복용약 ${added}개를 가져왔어요`; }
+  }catch(e){}
+})();
+/* 본체 주증상 코드 → 챌린지 증상 코드 매핑 (마법사에서 미리 선택) */
+const PRIMARY_TO_CHG={tremor:"tremor", rigidity:"rigidity", dystonia:"dystonia", foot_dragging:"foot_dragging",
+  freezing_of_gait:"freezing_of_gait", slow_hand:"hand_movement", gait_start_delay:"gait_start", voice:"speech"};
+
 const inProgress=()=>db.tests.find(t=>t.status==="in_progress")||null;
 const completedTests=()=>db.tests.filter(t=>t.status==="completed");
 const doneStages=t=>(t.assessments||[]).map(a=>a.stage);
@@ -78,6 +105,7 @@ function viewHome(){
       <button class="btn ghost" onclick="abandonTest()">중단(삭제)</button></div></div>`;
   }
   render(`
+    <div class="no-print" style="margin-bottom:6px"><a class="btn ghost small" style="display:inline-block; text-decoration:none; padding:8px 12px" href="../index.html">← 약효일지로 돌아가기</a></div>
     <h1>약효 비교 테스트 <span class="hint" style="font-weight:400">v2</span></h1>
     <div class="hint">내 약을 등록하고, 기준 시험과 처방 변경 후 시험을 같은 방식으로 기록해 예상 곡선·실제 반응을 비교하는 도구입니다.</div>
     ${SAFETY_HTML}
@@ -162,6 +190,15 @@ function parseDoseMg(usualDose, unitDose){
 let wiz=null;
 function viewSetup(){
   wiz={plannedDoses:[], symptoms:[]};
+  /* v0.9.22: 시뮬레이터에서 보낸 가상안 자동 프리필 (24시간 이내) */
+  let simPlan=null;
+  try{
+    if(typeof SHARED!=="undefined"){
+      const sp=SHARED.read();
+      const p=sp.pendingChallengePlan;
+      if(p&&p.trialPlan&&p.trialPlan.length && (Date.now()-new Date(p.createdAt).getTime())<24*3600000) simPlan=p;
+    }
+  }catch(e){}
   const recent=[...medList.meds].sort((a,b)=>String(b.lastUsedAt||"").localeCompare(String(a.lastUsedAt||""))).slice(0,8);
   render(`
     <div class="topbar no-print"><button class="btn ghost small" onclick="viewHome()">← 처음</button><h1 style="margin:0">새 테스트</h1></div>
@@ -210,6 +247,10 @@ function viewSetup(){
       wiz.plannedDoses.push({name:m.name, dose:parseDoseMg(m.usualDose,m.unitDose), time, medId:m.id});
     } else wiz.plannedDoses=wiz.plannedDoses.filter(d=>d.medId!==m.id);
     renderDoseRows(); });
+  /* Shared Profile 주증상 미리 선택 (최대 3개 — 총 6개 제한 내) */
+  sharedPrimary.map(k=>PRIMARY_TO_CHG[k]).filter(Boolean).slice(0,3).forEach(code=>{
+    const b=document.querySelector(`.sy_grp .chip[data-k="${code}"]`); if(b) b.classList.add("sel");
+  });
   document.querySelectorAll(".sy_grp").forEach(grp=>grp.addEventListener("click",e=>{
     const b=e.target.closest(".chip"); if(!b)return;
     const total=document.querySelectorAll(".sy_grp .chip.sel").length;
@@ -219,6 +260,17 @@ function viewSetup(){
     cw.style.display = grp.querySelector('.chip.sel[data-k$="_custom"]')? "block":"none";
   }));
   $("baseSel").onchange=renderSimPreview;
+  if(simPlan){
+    wiz.plannedDoses=simPlan.trialPlan.map(d=>({...d}));
+    $("chg_desc").value=simPlan.changeSummary||"";
+    /* 역할·종류 자동: 변경 후 시험 + 용량/시간 추정 */
+    $("role_chips").querySelectorAll(".chip").forEach(x=>x.classList.toggle("sel", x.dataset.k==="changed"));
+    $("baseSelWrap").style.display="block";
+    const guessType=/시각|앞당|늦춤|→\d{2}:/.test(simPlan.changeSummary||"")? "time_changed" : (/추가/.test(simPlan.changeSummary||"")? "medication_added":"dose_changed");
+    $("tt_chips").querySelectorAll(".chip").forEach(x=>x.classList.toggle("sel", x.dataset.k===guessType));
+    toast("시뮬레이터의 가상안을 불러왔어요 — 증상만 고르면 시작할 수 있어요");
+    try{ SHARED.write({pendingChallengePlan:null}); }catch(e){}
+  }
   renderDoseRows();
 }
 function addDoseRow(){ wiz.plannedDoses.push({name:"",dose:0,time:""}); renderDoseRows(); }
@@ -326,11 +378,9 @@ function viewStages(dueStage){
 function markDose(){
   const t=inProgress(); if(!t) return;
   t.doseTakenAt=new Date().toISOString(); save();
-  const startTimers=()=>CHGTIMER.schedule(t.doseTakenAt, doneStages(t), (st)=>{ if(inProgress()) viewStages(st); });
-  startTimers(); /* 복용 즉시 30·60·90·120분 예약 (viewStages 재예약과 중복 안전) */
+  CHGTIMER.schedule(t.doseTakenAt, doneStages(t), (st)=>{ if(inProgress()) viewStages(st); }); /* 복용 즉시 1회 예약 (schedule은 기존 타이머를 먼저 정리) */
   CHGTIMER.requestPermission().then(p=>{
     if(p==="denied") toast("알림이 꺼져 있어도 화면의 남은 시간 표시로 진행할 수 있어요");
-    startTimers();
   });
   viewStages();
 }
@@ -434,7 +484,59 @@ function saveFinal(){
   const ov=$("fe_overall").querySelector(".chip.sel"), ae=$("fe_ae").querySelector(".chip.sel");
   if(!ov||!ae){ toast("전체 효과와 부작용 종합을 선택해주세요"); return; }
   t.finalEvaluation={overallEffect:ov.dataset.k, adverseEffectSummary:ae.dataset.k, note:$("fe_note").value.trim()};
-  t.status="completed"; CHGTIMER.clear(); save(); viewResult(t.id);
+  t.status="completed"; CHGTIMER.clear(); save();
+  pushSharedSummary(t); /* PHS용 요약은 항상 갱신 */
+  if(typeof SHARED!=="undefined"){ viewSaveChoice(t.id); } else { viewResult(t.id); }
+}
+/* v0.9.21: 결과 요약을 어디에 남길지 선택 */
+function viewSaveChoice(id){
+  const t=db.tests.find(x=>x.id===id);
+  render(`
+    <div class="card">
+      <h1>결과 저장 위치</h1>
+      <div class="hint">${esc(t.title)} · 시험이 저장되었습니다. 요약을 약효일지 기록에도 남길까요?</div>
+      <button class="btn primary" style="margin-top:10px" id="saveBoth">약효일지에도 결과 요약 저장</button>
+      <button class="btn ghost" style="margin-top:8px" id="saveOnly">챌린지에만 저장</button>
+      <div class="hint" style="margin-top:8px">약효일지에는 기록 사실 요약만 추가되며, 본체 복용약·기록은 수정되지 않습니다.</div>
+    </div>`);
+  $("saveBoth").onclick=()=>{ pushDiaryEvent(t); toast("약효일지 기록에 추가했어요 (약효일지를 열면 표시됩니다)"); viewResult(id); };
+  $("saveOnly").onclick=()=>viewResult(id);
+}
+function summaryLinesFor(t){
+  const a=CHG.analyzeTest(t);
+  const lines=[];
+  (t.medications||[]).slice(0,2).forEach(m=>lines.push(`${m.name} ${m.doseText||""}`.trim()));
+  Object.entries(a.groupSummary).forEach(([g,s])=>{
+    if(s.firstChangeStage) lines.push(`${CHG.label("group",g)} ${s.firstChangeStage.minutes}분 변화`);
+    if(s.bestStage) lines.push(`${CHG.label("group",g)} ${s.bestStage.minutes}분 최저 (개선 ${s.maxImprovement}점)`);
+  });
+  if(a.worstAdverse) lines.push(`${CHG.label("adverse",a.worstAdverse.code)} ${a.worstAdverse.score}점`);
+  if(a.finalEvaluation) lines.push(CHG.label("overall",a.finalEvaluation.overallEffect));
+  return {analysis:a, lines:lines.slice(0,6)};
+}
+function pushDiaryEvent(t){
+  try{
+    const {lines}=summaryLinesFor(t);
+    const doseTs=t.doseTakenAt? new Date(t.doseTakenAt).getTime():Date.now();
+    SHARED.pushDiaryEvent({ ts:doseTs, /* 그래프 마커·정렬은 복용 시각 기준 */
+      doseTakenAt:t.doseTakenAt||null, completedAt:new Date().toISOString(),
+      challengeTestId:t.id, title:`Medication Challenge · ${t.title}`, lines });
+  }catch(e){}
+}
+function pushSharedSummary(t){
+  try{
+    if(typeof SHARED==="undefined") return;
+    const a=CHG.analyzeTest(t);
+    SHARED.putChallengeSummary({
+      id:t.id, date:fmtDate(t.createdAt), title:t.title,
+      typeCode:t.testType, roleCode:t.comparisonRole,
+      firstPerceivedMin:a.firstPerceivedStage? a.firstPerceivedStage.minutes:null,
+      firstClearMin:a.firstClearStage? a.firstClearStage.minutes:null,
+      maxImpByGroup:Object.fromEntries(Object.entries(a.groupSummary).map(([g,s])=>[g,s.maxImprovement])),
+      worstAdverse:a.worstAdverse? {code:a.worstAdverse.code, score:a.worstAdverse.score, minutes:a.worstAdverse.minutes}:null,
+      overallCode:a.finalEvaluation? a.finalEvaluation.overallEffect:null,
+    });
+  }catch(e){}
 }
 
 /* ========== 6. 결과 ========== */
@@ -646,7 +748,13 @@ function viewHelp(){
 }
 
 /* ---------- 시작 ---------- */
-viewHome();
+(function(){
+  if(location.hash==="#fromsim"){ history.replaceState(null,"",location.pathname); viewSetup(); return; }
+  const m=location.hash.match(/#test=([^&]+)/);
+  if(m){ const id=decodeURIComponent(m[1]);
+    if(db.tests.some(t=>t.id===id)){ viewResult(id); return; } }
+  viewHome();
+})();
 (function(){ const act=inProgress(); if(act&&act.doseTakenAt) CHGTIMER.schedule(act.doseTakenAt, doneStages(act), (st)=>{ if(inProgress()) viewStages(st); }); })();
 if("serviceWorker" in navigator){ try{ navigator.serviceWorker.register("sw.js"); }catch(e){} }
 </script>
