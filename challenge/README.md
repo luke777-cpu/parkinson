@@ -11,13 +11,20 @@
 - `challenge-timer.js` — 30·60·90·120분 타이머·알림 (네이티브 교체 가능하도록 분리)
 - `challenge-report.js` — 허용 해석 문장·보고서 텍스트
 - `challenge.css`, `manifest.json`, `sw.js`, `icon-192.png`, `icon-512.png` — PWA (캐시 `medication-challenge-v2`)
-- `tests/challenge.test.js` — 자동 테스트 79건
+- `tests/challenge.test.js` — 자동 테스트 87건
+
+## v0.9.21 통합
+- 본체 시뮬 탭 → "약효 비교 테스트 열기" / 챌린지 홈 → "약효일지로 돌아가기"
+- Shared Profile(`parkinsonSharedProfileV1`)로 언어·글씨 크기·주증상·복용약(사본)을 자동 적용
+- 완료 시 "챌린지에만 저장 / 약효일지에도 결과 요약 저장" 선택 → 본체 이벤트·곡선 🧪 마커·PHS "Medication Response Tests" 항목(한/영, INSUF·N/A)에 반영
+- 본체 DB(yakhyo_log_v1)와 챌린지 DB는 서로 직접 수정하지 않음
 
 ## 저장 키 (본체와 완전 분리)
 - `medicationChallengeDbV2` — 시험 기록
 - `medicationChallengeMedicationListV2` — 내 복용약 목록
 - `medicationChallengeDbV1` — v1 원본 (마이그레이션 후에도 보존)
 - `medicationChallengeDbV1Backup` — 마이그레이션 시 자동 백업 사본
+- `parkinsonSharedProfileV1` — 본체 ↔ 챌린지 공유 프로필 (전달 전용)
 
 ## v1 → v2 마이그레이션
 첫 실행 시 v1 데이터를 감지하면 백업 사본을 만든 뒤 자동 변환한다.
