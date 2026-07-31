@@ -322,7 +322,48 @@ function buildQuestions(startSurvey, endSurvey, analysis, lang){
 }
 
 /* ---------- 보고서 엔진 (총괄) ---------- */
-PHS.buildReport = function({profile, startSurvey, endSurvey, analysis, confidence, medsList, lang}){
+/* v0.9.21: Medication Challenge 결과 → PHS "Medication Response Tests" 항목 (코드값 → ko/en 라벨) */
+const CHG_LBL={
+  role:{ baseline:{ko:"기준 시험",en:"Baseline test"}, changed:{ko:"변경 후 시험",en:"Post-change test"}, standalone:{ko:"단독 시험",en:"Standalone test"} },
+  testType:{ current_regimen:{ko:"현재 복용약 반응 확인",en:"Current regimen response"}, dose_changed:{ko:"용량 변경 후 반응 확인",en:"Response after dose change"},
+    medication_added:{ko:"약 추가 후 반응 확인",en:"Response after adding a medication"}, regimen_changed:{ko:"약 조합 변경 후 반응 확인",en:"Response after regimen change"},
+    time_changed:{ko:"복용 시간 변경 후 반응 확인",en:"Response after timing change"}, other:{ko:"기타",en:"Other"} },
+  overall:{ marked_effect:{ko:"효과가 뚜렷했다",en:"Marked effect"}, moderate_effect:{ko:"어느 정도 효과가 있었다",en:"Moderate effect"},
+    small_effect:{ko:"효과가 적었다",en:"Small effect"}, no_effect:{ko:"효과가 없었다",en:"No effect"},
+    worse:{ko:"오히려 더 불편해졌다",en:"Felt worse"}, uncertain:{ko:"판단하기 어렵다",en:"Hard to judge"} },
+  adverse:{ dyskinesia:{ko:"이상운동증",en:"Dyskinesia"}, dizziness:{ko:"어지럼",en:"Dizziness"}, drowsiness:{ko:"졸림",en:"Drowsiness"},
+    nausea:{ko:"메스꺼움",en:"Nausea"}, headache:{ko:"두통",en:"Headache"}, palpitation:{ko:"두근거림",en:"Palpitations"},
+    low_bp:{ko:"혈압 저하 느낌",en:"Feeling of low blood pressure"}, anxiety:{ko:"불안·초조",en:"Anxiety/agitation"},
+    hallucination:{ko:"환시",en:"Visual hallucinations"}, confusion:{ko:"혼란",en:"Confusion"}, other:{ko:"기타",en:"Other"} },
+  group:{ motor:{ko:"운동",en:"motor"}, nonmotor:{ko:"비운동",en:"non-motor"}, autonomic:{ko:"자율신경",en:"autonomic"} },
+};
+function chgLbl(cat,code,lang){ const e=(CHG_LBL[cat]||{})[code]; return e? (lang==="en"?e.en:e.ko) : (code||""); }
+function buildChallengeSection(tests, lang){
+  const en=lang==="en";
+  const title=en? "Medication Response Tests (patient-run comparison)":"약효 반응 시험 (환자 자가 비교 기록)";
+  const note=en? "Patient-recorded structured response tests (pre-dose and 30/60/90/120 min). Summary of recorded facts only; not a levodopa challenge test result or treatment judgment."
+              : "환자가 복용 전과 30·60·90·120분 시점에 직접 기록한 구조화 시험 요약입니다. 기록 사실의 정리이며, 레보도파 반응 판정이나 치료 판단이 아닙니다.";
+  if(!tests||!tests.length) return {title, note, lines:[en? "No completed tests (INSUF)":"완료된 시험 없음 (INSUF)"]};
+  const NA=en? "N/A":"평가 불가";
+  const lines=tests.slice(-3).reverse().map(t=>{
+    const parts=[];
+    parts.push(`${t.date||""} · ${chgLbl("testType",t.typeCode,lang)} · ${chgLbl("role",t.roleCode,lang)} · ${t.title||""}`.trim());
+    parts.push(en? `First perceived effect: ${t.firstPerceivedMin!=null? t.firstPerceivedMin+" min":NA} / clear effect: ${t.firstClearMin!=null? t.firstClearMin+" min":NA}`
+                 : `최초 체감 ${t.firstPerceivedMin!=null? t.firstPerceivedMin+"분":NA} / 분명한 체감 ${t.firstClearMin!=null? t.firstClearMin+"분":NA}`);
+    const imps=Object.entries(t.maxImpByGroup||{}).filter(([,v])=>v!=null);
+    parts.push(imps.length? (en? "Max score decrease: ":"최대 점수 감소: ")+imps.map(([g,v])=>`${chgLbl("group",g,lang)} ${v}`).join(", ")
+                          : (en? "Max score decrease: INSUF":"최대 점수 감소: 기록 부족 (INSUF)"));
+    parts.push(t.worstAdverse? (en? `Max adverse: ${chgLbl("adverse",t.worstAdverse.code,lang)} ${t.worstAdverse.score}/4 at ${t.worstAdverse.minutes} min`
+                                  : `부작용 최고: ${chgLbl("adverse",t.worstAdverse.code,lang)} ${t.worstAdverse.score}/4 (${t.worstAdverse.minutes}분)`)
+                             : (en? "Max adverse: none recorded":"부작용 최고: 기록 없음"));
+    parts.push((en? "Patient overall: ":"환자 종합평가: ")+(t.overallCode? chgLbl("overall",t.overallCode,lang):NA));
+    return parts.join("\n  ");
+  });
+  return {title, note, lines};
+}
+PHS.buildChallengeSection = buildChallengeSection;
+
+PHS.buildReport = function({profile, startSurvey, endSurvey, analysis, confidence, medsList, lang, challengeTests}){
   lang = lang==="en"? "en":"ko";
   const T = lang==="en"? PHS.templatesEn : PHS.templatesKo;
   const cc=buildCC(startSurvey,lang);
@@ -373,6 +414,7 @@ PHS.buildReport = function({profile, startSurvey, endSurvey, analysis, confidenc
     detailedReport:{
       cc, hpi,
       currentMedication,
+      medicationResponseTests:buildChallengeSection(challengeTests, lang==="en"?"en":"ko"),
       monitoringSummary:{
         recordedDays:analysis.period.recordedDays,
         periodDays:analysis.period.periodDays,
