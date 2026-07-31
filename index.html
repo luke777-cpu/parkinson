@@ -177,6 +177,9 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
 .opk-val span{font-size:34px; font-weight:900; display:block; line-height:1}
 .opk-val small{font-size:11.5px; color:var(--ink-2); font-weight:700}
 .opk-info{min-width:44px; min-height:44px; border-radius:50%; border:1px solid var(--line); background:var(--surface); color:var(--ink-2); font-weight:800; cursor:pointer}
+/* v0.9.25: 실행 버튼은 카드 안에서 아래에 붙어 키보드·긴 목록에 가려지지 않게 한다 */
+.sc-run{position:sticky; bottom:8px; z-index:3; min-height:56px; font-size:16.5px; font-weight:800;
+  margin-top:10px; box-shadow:0 2px 10px rgba(0,0,0,.18)}
 .top-actions{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:10px 0}
 .top-actions .btn{min-height:56px; font-size:16.5px; font-weight:800}
 .slider-row{display:flex; align-items:center; gap:12px}
@@ -647,7 +650,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음 (INSUF)",
-    versionLabel:"약효일지 · 테스트판 0.9.24",
+    versionLabel:"약효일지 · 테스트판 0.9.25",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -706,7 +709,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests (INSUF)",
-    versionLabel:"Med Log · Test build 0.9.24",
+    versionLabel:"Med Log · Test build 0.9.25",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -3020,15 +3023,23 @@ function renderMultiScenario(){
 
   document.getElementById("scenarioAddBtn").onclick=()=>{
     if(list.length>=3){ toast("실험안은 최대 3개까지 만들 수 있어요"); return; }
-    list=list.concat([{id:"sc_"+Date.now(), title:newScenarioTitle(list), doses:JSON.parse(JSON.stringify(baselineDoses)), changes:[], open:true}]);
+    list=list.concat([{id:"sc_"+Date.now(), title:newScenarioTitle(list), doses:JSON.parse(JSON.stringify(baselineDoses)), changes:[], open:false}]);
     saveScenarios(dayKey, list); renderMultiScenario();
   };
 
+  /* v0.9.25: 기본은 실험안 1개. 없으면 현재안 사본으로 자동 생성해 바로 편집할 수 있게 한다.
+     복약 기록이 없는 날은 만들 것이 없으므로 안내만 표시한다. */
   if(!list.length){
-    document.getElementById("scenarioList").innerHTML=`<div class="hint" style="padding:10px 0">실험안이 없습니다. [＋ 실험안 추가]를 눌러 현재안을 복사한 뒤 용량·시각·약을 바꿔보세요.</div>`;
-    document.getElementById("scenarioCombinedWrap").style.display="none";
-    return;
+    if(!baselineDoses.length){
+      document.getElementById("scenarioList").innerHTML=`<div class="hint" style="padding:10px 0">이 날짜에는 복약 기록이 없어 실험안을 만들 수 없습니다.</div>`;
+      document.getElementById("scenarioCombinedWrap").style.display="none";
+      document.getElementById("scenarioAddBtn").style.display="none";
+      return;
+    }
+    list=[{id:"sc_"+Date.now(), title:"실험안 1", doses:JSON.parse(JSON.stringify(baselineDoses)), changes:[], open:false}];
+    saveScenarios(dayKey, list);
   }
+  document.getElementById("scenarioAddBtn").style.display="";
 
   /* 각 실험안 독립 계산 (baseline 사본에서 출발 — 서로 영향 없음) */
   const computedList=list.map(sc=>({
@@ -3056,12 +3067,12 @@ function renderMultiScenario(){
     const interp=SIMITP.interpretScenario({title:sc.title, changes:effChanges, category:effCategory}, diff,
       {personal:baseline.cal.personal, reasons:baseline.cal.reasons||[], confidenceReasons:baseline.cal.reasons||[]});
     const rk=ranked.find(r=>r.id===sc.id);
+    const multi=computedList.length>1;
     return `<div class="card" style="border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-top:10px">
       <div style="display:flex; align-items:center; gap:8px">
         <input type="text" data-sc-title="${sc.id}" value="${escapeHtml(sc.title)}" style="flex:1; border:none; background:transparent; font-weight:800; font-size:15px">
-        <span class="hint" style="white-space:nowrap" data-sc-badges="${sc.id}"></span>
-        <button class="btn ghost small" data-sc-toggle="${sc.id}" style="width:auto">${sc.open?"접기":"펼치기"}</button>
-        <button class="btn ghost small" data-sc-del="${sc.id}" style="width:auto; color:var(--danger)">삭제</button>
+        ${multi? `<span class="hint" style="white-space:nowrap" data-sc-badges="${sc.id}"></span>`:""}
+        ${multi? `<button class="btn ghost small" data-sc-del="${sc.id}" style="width:auto; color:var(--danger)">삭제</button>`:""}
       </div>
       <div style="font-size:12px; color:var(--ink-2); margin-top:4px" data-sc-changesummary="${sc.id}">${escapeHtml(scenarioChangeSummary(sc.doses, baselineDoses))}</div>
       <div class="chips" style="margin-top:6px">
@@ -3069,19 +3080,35 @@ function renderMultiScenario(){
         <button type="button" class="chip" data-sc-op="${sc.id}|addmed">약 추가</button>
       </div>
       <div id="scDoses_${sc.id}"></div>
+      <button class="btn primary no-print sc-run" data-sc-run="${sc.id}">${sc.open? "다시 계산하기" : "적용하고 결과 보기"}</button>
       ${sc.open? SIMREP.scenarioDetailHtml({title:sc.title, changes:sc.changes, computed:sc.computed, actualSorted}, baseline, diff, interp) : ""}
-      ${sc.open? `<button class="btn primary no-print" data-sc-tochallenge="${sc.id}" style="margin-top:10px">🧪 이 실험안으로 비교 테스트 시작</button>`:""}
+      ${sc.open? `<button class="btn ghost no-print" data-sc-tochallenge="${sc.id}" style="margin-top:10px">🧪 이 실험안으로 비교 테스트 시작</button>`:""}
+      ${sc.open? `<button class="btn ghost no-print" data-sc-toggle="${sc.id}" style="margin-top:6px">결과 접기</button>`:""}
     </div>`;
   }).join("");
 
   computedList.forEach(sc=>renderScenarioDoseRows(dayKey, sc.id, list));
   document.querySelectorAll("[data-sc-badges]").forEach(el=>{ el.textContent=badgeFor(el.dataset.scBadges); });
+  { /* 추가 버튼: 결과를 한 번 본 뒤에만, 3개 미만일 때만 노출 */
+    const addBtn=document.getElementById("scenarioAddBtn");
+    const anyOpen=computedList.some(sc=>sc.open);
+    addBtn.textContent=computedList.length>=2? "＋ 실험안 더 추가" : "＋ 다른 실험안 추가 비교";
+    addBtn.style.display=(anyOpen && computedList.length<3)? "" : "none";
+  }
 
   document.querySelectorAll("[data-sc-title]").forEach(inp=>{
     inp.onchange=()=>{ const it=list.find(x=>x.id===inp.dataset.scTitle); if(it){ it.title=inp.value||it.title; saveScenarios(dayKey,list); } };
   });
   document.querySelectorAll("[data-sc-toggle]").forEach(b=>{
     b.onclick=()=>{ const it=list.find(x=>x.id===b.dataset.scToggle); if(it){ it.open=!it.open; saveScenarios(dayKey,list); renderMultiScenario(); } };
+  });
+  /* v0.9.25: 저장과 계산을 한 번에 — 결과가 이 버튼 아래에 펼쳐진다 */
+  document.querySelectorAll("[data-sc-run]").forEach(b=>{
+    b.onclick=()=>{ const it=list.find(x=>x.id===b.dataset.scRun); if(!it) return;
+      it.open=true; saveScenarios(dayKey,list); renderMultiScenario();
+      const card=document.querySelector(`[data-sc-run="${it.id}"]`);
+      if(card&&card.scrollIntoView) card.scrollIntoView({block:"center"});
+    };
   });
   document.querySelectorAll("[data-sc-del]").forEach(b=>{
     b.onclick=()=>{ if(!confirm("이 실험안을 삭제할까요?")) return; list=list.filter(x=>x.id!==b.dataset.scDel); saveScenarios(dayKey,list); renderMultiScenario(); };
@@ -3109,7 +3136,8 @@ function renderMultiScenario(){
 
   /* 종합 비교 그래프 + 종합 해석 */
   const wrap=document.getElementById("scenarioCombinedWrap");
-  if(computedList.length){
+  /* v0.9.25: 실험안이 하나면 종합 비교·순위를 숨기고 그 실험안의 3개 곡선만 보여준다 */
+  if(computedList.length>1 && computedList.some(sc=>sc.open)){
     wrap.style.display="block";
     const colors=["#E0A030","#7B5CD6","#1FA971"];
     document.getElementById("scenarioCombinedChart").innerHTML = SIMREP.combinedSvg({
