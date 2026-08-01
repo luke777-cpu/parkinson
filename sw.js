@@ -1,4 +1,4 @@
-const CACHE = "yakhyo-v38-drugdict110";
+const CACHE = "yakhyo-v39-dictjson111";
 const APP_SHELL = [
   "./",
   "./index.html",
