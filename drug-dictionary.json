@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "note": "이 파일은 파킨슨 약물 사전의 정본 데이터입니다. simulation-drugmodel.js 안의 DM.CURVES/DM.DRUGS가 이 내용을 JS 객체로 그대로 반영합니다(런타임에는 브라우저에서 이 JSON을 다시 읽지 않습니다 — 두 파일이 일치하는지는 tests/drug-dictionary.test.js가 자동으로 검사합니다). 새 카피약을 추가할 때는 이 파일과 simulation-drugmodel.js의 DM.DRUGS를 함께 수정하세요.",
+
+  "curves": [
+    { "curveId": "LEVO_IR",   "role": "direct_curve", "onsetMin": 20, "peakMin": 55,  "durationMin": 180, "riseShape": "fast", "decayShape": "moderate" },
+    { "curveId": "LEVO_HBS",  "role": "direct_curve", "onsetMin": 45, "peakMin": 110, "durationMin": 300, "riseShape": "slow", "decayShape": "slow" },
+    { "curveId": "STALEVO",   "role": "direct_curve", "onsetMin": 25, "peakMin": 60,  "durationMin": 220, "riseShape": "fast", "decayShape": "slow" },
+    { "curveId": "COMT_MOD",  "role": "modifier", "durationMultiplier": 1.35, "coverageWindowMin": 720 },
+    { "curveId": "PRAMI_BG",  "role": "background", "riseTauMin": 150, "durationMin": 1440, "amp": 0.35 },
+    { "curveId": "ROPI_BG",   "role": "background", "riseTauMin": 150, "durationMin": 1440, "amp": 0.35 },
+    { "curveId": "ROTIGOTINE_BG", "role": "background", "riseTauMin": 240, "durationMin": 1440, "amp": 0.3 },
+    { "curveId": "ADJUNCT",   "role": "adjunct" }
+  ],
+
+  "drugs": [
+    {
+      "genericName": "levodopa/carbidopa (즉방형)",
+      "formulation": "immediate_release",
+      "curveId": "LEVO_IR",
+      "roleLabel": "빠른 레보도파 곡선",
+      "leddFactor": 1.0, "leddIncluded": true, "refDoseMg": 100,
+      "aliases": ["마도파", "시네메트", "퍼킨", "레보도파", "도파민정"]
+    },
+    {
+      "genericName": "levodopa/carbidopa (서방형/HBS/CR)",
+      "formulation": "extended_release",
+      "curveId": "LEVO_HBS",
+      "roleLabel": "지속형 레보도파 곡선",
+      "leddFactor": 0.75, "leddIncluded": true, "refDoseMg": 100,
+      "aliases": ["마도파 HBS", "시네메트 CR"]
+    },
+    {
+      "genericName": "levodopa/carbidopa/entacapone",
+      "formulation": "combination",
+      "curveId": "STALEVO",
+      "roleLabel": "빠른 레보도파 곡선 (콤트 억제제 포함)",
+      "leddFactor": 1.0, "leddIncluded": true, "refDoseMg": 100,
+      "note": "표기 용량을 레보도파 함량으로 간주한 근사치",
+      "aliases": ["스타레보", "트리레보"],
+      "source": "식약처 의약품통합정보시스템: 트리레보정(레보도파/카르비도파/엔타카폰) — 스타레보와 동일 성분·동일 용량비로 1:1 대체 가능"
+    },
+    {
+      "genericName": "entacapone / opicapone (COMT 억제제)",
+      "formulation": "tablet",
+      "curveId": "COMT_MOD",
+      "roleLabel": "레보도파 지속 보정 (COMT 억제제)",
+      "leddFactor": 0.5, "leddIncluded": false, "refDoseMg": 100,
+      "note": "COMT 억제제는 자체 mg 환산이 확립되지 않아 LEDD 합계에서 제외",
+      "aliases": ["온젠티스", "오피카폰", "엔타카폰", "컴탄", "콤탄"]
+    },
+    {
+      "genericName": "pramipexole",
+      "formulation": "tablet",
+      "curveId": "PRAMI_BG",
+      "roleLabel": "도파민 작용제 배경효과",
+      "leddFactor": 100, "leddIncluded": false, "refDoseMg": 0.375,
+      "note": "도파민 작용제는 LEDD 합계에서 제외 (배경효과로만 표시)",
+      "aliases": ["미라펙스", "미라팩스", "피디팩솔", "피디펙솔", "프라미펙솔"],
+      "source": "식약처 의약품통합정보시스템: 피디펙솔정(프라미펙솔염산염일수화물) — 미라펙스와 동일 성분"
+    },
+    {
+      "genericName": "ropinirole",
+      "formulation": "tablet",
+      "curveId": "ROPI_BG",
+      "roleLabel": "도파민 작용제 배경효과",
+      "leddFactor": 20, "leddIncluded": false, "refDoseMg": 2,
+      "note": "도파민 작용제는 LEDD 합계에서 제외 (배경효과로만 표시)",
+      "aliases": ["리큅", "로피니롤"]
+    },
+    {
+      "genericName": "rotigotine",
+      "formulation": "patch",
+      "curveId": "ROTIGOTINE_BG",
+      "roleLabel": "도파민 작용제 배경효과 (패치)",
+      "leddFactor": 30, "leddIncluded": false, "refDoseMg": 4,
+      "note": "도파민 작용제는 LEDD 합계에서 제외 (배경효과로만 표시)",
+      "aliases": ["뉴프로", "로티고틴"]
+    },
+    {
+      "genericName": "amantadine",
+      "formulation": "tablet",
+      "curveId": "ADJUNCT",
+      "roleLabel": "보조약 (곡선 미포함)",
+      "leddFactor": 1.0, "leddIncluded": false, "refDoseMg": 100,
+      "note": "아만타딘은 등록된 보정값이 없어 복합 약효 추정곡선 계산에는 포함하지 않습니다",
+      "aliases": ["아만타딘"]
+    },
+    {
+      "genericName": "MAO-B 억제제 (rasagiline/selegiline)",
+      "formulation": "tablet",
+      "curveId": "ADJUNCT",
+      "roleLabel": "보조약 (곡선 미포함)",
+      "leddFactor": 100, "leddIncluded": false, "refDoseMg": 1,
+      "note": "MAO-B 억제제는 등록된 보정값이 없어 복합 약효 추정곡선 계산에는 포함하지 않습니다",
+      "aliases": ["아질렉트", "라사길린", "셀레길린"]
+    }
+  ]
+}
