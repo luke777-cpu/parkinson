@@ -629,7 +629,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음 (INSUF)",
-    versionLabel:"약효일지 · 테스트판 1.0.1",
+    versionLabel:"약효일지 · 테스트판 1.1.0",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -688,7 +688,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests (INSUF)",
-    versionLabel:"Med Log · Test build 1.0.1",
+    versionLabel:"Med Log · Test build 1.1.0",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -2640,7 +2640,16 @@ function simApplyChange(kind, arg){
   else if(kind==="add"){ _simVirtual.doses.push({name:arg||MED_PRESETS[0]||"", dose:null, time:b? b.time : "08:00"}); }
   else if(kind==="replace"){ if(!b) return;
     const target=_simVirtual.doses[i] || (_simVirtual.doses[i]=JSON.parse(JSON.stringify(b)));
-    target.name=arg; target.dose=null; target.time=b.time; }
+    /* 약물 사전: 약 교체는 기존 복용 시간·용량을 유지하는 것이 원칙이다.
+       새 약의 표준 용량 단위가 크게 다를 때만(예: 레보도파100mg대→프라미펙솔0.375mg대)
+       자동 계산하지 않고 용량 재입력을 요구한다. */
+    const oldModel=SIMDRUG.classify(b.name), newModel=SIMDRUG.classify(arg);
+    const compatible=SIMDRUG.doseCompatible(oldModel, newModel);
+    target.name=arg;
+    target.time=b.time; /* 시간은 항상 유지 */
+    target.dose=compatible? b.dose : null;
+    if(!compatible) toast("제형·표준 용량이 달라 용량을 다시 입력해주세요");
+  }
   saveSimVariant(); renderSim();
 }
 
@@ -2711,18 +2720,46 @@ function renderSimVariantBuilder(dayKey){
       <div class="hint">현재안 ${escapeHtml(b.time)} 기준으로 계산됩니다.</div>`;
     ctl.querySelectorAll("[data-min]").forEach(x=>x.onclick=()=>simApplyChange("time", x.dataset.min));
   } else if(_simChangeKind==="add"){
-    ctl.innerHTML=`<select id="simAddPick" style="width:100%; min-height:48px">${MED_PRESETS.map(n=>`<option>${escapeHtml(n)}</option>`).join("")}</select>
-      <button class="btn ghost" id="simAddGo" style="margin-top:6px">이 약을 변경안에 추가</button>`;
+    ctl.innerHTML=simDrugSearchHtml("simAddPick", "");
     document.getElementById("simAddGo").onclick=()=>simApplyChange("add", document.getElementById("simAddPick").value);
+    bindSimDrugSearch("simAddPick");
   } else if(_simChangeKind==="remove"){
     ctl.innerHTML=`<button class="btn ghost" id="simRemoveGo">${escapeHtml(b.time)} ${escapeHtml(b.name)} 을(를) 변경안에서 빼기</button>`;
     document.getElementById("simRemoveGo").onclick=()=>simApplyChange("remove");
   } else if(_simChangeKind==="replace"){
-    ctl.innerHTML=`<select id="simReplacePick" style="width:100%; min-height:48px">${MED_PRESETS.map(n=>`<option ${n===b.name?"selected":""}>${escapeHtml(n)}</option>`).join("")}</select>
-      <button class="btn ghost" id="simReplaceGo" style="margin-top:6px">이 약으로 교체</button>
-      <div class="hint">제형·약물이 다르면 곡선의 모양도 달라집니다.</div>`;
+    ctl.innerHTML=simDrugSearchHtml("simReplacePick", b.name, "이 약으로 교체");
     document.getElementById("simReplaceGo").onclick=()=>simApplyChange("replace", document.getElementById("simReplacePick").value);
+    bindSimDrugSearch("simReplacePick");
+    const note=document.getElementById("simReplacePickNote");
+    if(note) note.textContent="제형·약물이 다르면 곡선의 모양도 달라집니다. 용량 단위가 크게 다르면 다시 입력해야 합니다.";
   }
+}
+/* 약물 사전 검색 입력 — 상품명·성분명·별칭 어디로 검색해도 찾을 수 있게 한다(datalist).
+   목록에 없는 이름을 입력하면 "약물 사전에 등록되지 않은 약" 안내를 보여준다(임의 곡선 생성 금지). */
+function simDrugSearchHtml(id, initialValue, goLabel){
+  const dl=id+"_dl";
+  const allAliases=[...new Set(SIMDRUG.DRUGS.flatMap(d=>d.aliases))];
+  return `<input list="${dl}" id="${id}" value="${escapeHtml(initialValue||"")}" placeholder="약 이름 검색 (상품명·성분명 모두 가능)" style="width:100%; min-height:48px; box-sizing:border-box">
+    <datalist id="${dl}">${allAliases.map(a=>`<option value="${escapeHtml(a)}">`).join("")}</datalist>
+    <div id="${id}Note" style="font-size:12px; color:var(--ink-2); margin-top:4px"></div>
+    <button class="btn ghost" id="${id==="simAddPick"?"simAddGo":"simReplaceGo"}" style="margin-top:6px">${escapeHtml(goLabel||"이 약을 변경안에 추가")}</button>
+    <div id="${id}PickNote" style="font-size:12px; color:var(--ink-2); margin-top:4px"></div>`;
+}
+function bindSimDrugSearch(id){
+  const el=document.getElementById(id); if(!el) return;
+  const note=document.getElementById(id+"Note");
+  const check=()=>{
+    const v=el.value.trim();
+    if(!v){ note.textContent=""; return; }
+    const found=SIMDRUG.classify(v);
+    if(found){ note.innerHTML=`<span style="color:var(--ink-2)">인식됨: ${escapeHtml(found.genericName)} · ${escapeHtml(found.roleLabel)}</span>`; }
+    else {
+      const suggestions=SIMDRUG.searchDictionary(v).slice(0,5);
+      note.innerHTML = `<span style="color:var(--danger)">${escapeHtml(SIMDRUG.NOT_FOUND_GUIDANCE)}</span>` +
+        (suggestions.length? `<div style="margin-top:2px">비슷한 성분: ${suggestions.map(s=>`<button type="button" class="chip" style="margin:2px" onclick="document.getElementById('${id}').value='${escapeHtml(s.alias)}'; document.getElementById('${id}').dispatchEvent(new Event('input'))">${escapeHtml(s.alias)}</button>`).join("")}</div>` : "");
+    }
+  };
+  el.addEventListener("input", check); check();
 }
 
 /* ---- 그래프 그리기 (SVG) ---- */
