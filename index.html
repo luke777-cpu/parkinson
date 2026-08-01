@@ -629,7 +629,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음 (INSUF)",
-    versionLabel:"약효일지 · 테스트판 1.1.0",
+    versionLabel:"약효일지 · 테스트판 1.1.1",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -688,7 +688,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests (INSUF)",
-    versionLabel:"Med Log · Test build 1.1.0",
+    versionLabel:"Med Log · Test build 1.1.1",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -3939,6 +3939,14 @@ syncSharedProfile(); ingestChallengeEvents();
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden) ingestChallengeEvents(); }); /* 챌린지에서 돌아오면 편입 */
 document.getElementById("topMedBtn").onclick=()=>openMedSheet();
 document.getElementById("topPastBtn").onclick=()=>openAddPast();
+
+/* v1.1.1: 약물 사전을 파일에서 읽어온다 — 새 카피약은 drug-dictionary.json의 aliases에만 추가하면 된다.
+   실패해도(오프라인 등) 내장 기본값으로 정상 동작하며, 성공 시 시뮬 탭이 열려 있으면 다시 그린다. */
+if(typeof SIMDRUG!=="undefined" && SIMDRUG.loadDictionary){
+  SIMDRUG.loadDictionary().then(res=>{
+    if(res && res.ok && document.getElementById("tab-sim").classList.contains("active")) renderSim();
+  });
+}
 
 /* alarm loop: check every 30s while app is open */
 setInterval(alarmLoop, 30000); alarmLoop();
