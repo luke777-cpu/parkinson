@@ -1,9 +1,10 @@
-const CACHE = "yakhyo-v37-redesign101";
+const CACHE = "yakhyo-v38-drugdict110";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./shared-profile.js",
   "./simulation-drugmodel.js",
+  "./drug-dictionary.json",
   "./phs-engine.js",
   "./phs-report.js",
   "./manifest.json",
