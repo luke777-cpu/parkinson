@@ -1,7 +1,12 @@
 /* ============================================================
-   simulation-drugmodel.js — 약물 모델 + 복합 약효 추정곡선 엔진 (전면 재설계 v1.0)
-   책임: 약물군·제형별 특성으로 개별 곡선을 만들고, 역할(직접/보정/배경/보조)에 따라
-   하나의 "복합 도파민성 약효 추정곡선"으로 합친다.
+   simulation-drugmodel.js — 파킨슨 약물 사전 + 복합 약효 추정곡선 엔진 (v1.1)
+   책임: 상품명이 아니라 "성분·제형(curveId)" 중심으로 약을 관리한다.
+   같은 성분의 여러 상품명(오리지널·제네릭)은 별칭(aliases)으로 하나의 curveId에 연결되므로,
+   새 카피약이 나와도 곡선을 새로 만들 필요 없이 별칭만 추가하면 된다.
+
+   구조: DM.CURVES(곡선 계산 파라미터, curveId 기준) + DM.DRUGS(상품명·별칭→curveId 매핑).
+   정본 데이터는 drug-dictionary.json에도 동일하게 문서화되어 있고,
+   tests/drug-dictionary.test.js가 이 파일의 내용과 JSON이 일치하는지 자동 검사한다.
 
    절대 하지 않는 것:
    - 실제 혈중농도·개인 반응·치료 결과를 예측하지 않는다.
@@ -13,50 +18,118 @@
 "use strict";
 const DM = {};
 
-/* ---- 약물 모델 레지스트리 ----
-   role: "direct_curve"(독립 곡선) | "modifier"(다른 곡선 보정) | "background"(배경효과) | "adjunct"(보조, 곡선 없음)
-   이름 매칭은 하드코딩된 약 하나하나가 아니라 약물군·제형 단위로 묶는다. */
-DM.MODELS = [
-  { match:["마도파 HBS","시네메트 CR","서방","HBS","CR"], id:"levodopa_er", category:"levodopa", formulation:"extended_release",
-    role:"direct_curve", roleLabel:"지속형 레보도파 곡선", onsetMin:45, peakMin:110, durationMin:300,
-    riseShape:"slow", decayShape:"slow", leddFactor:0.75, leddIncluded:true, refDoseMg:100 },
-  { match:["스타레보"], id:"levodopa_combo", category:"levodopa", formulation:"combination",
-    role:"direct_curve", roleLabel:"빠른 레보도파 곡선 (콤트 억제제 포함)", onsetMin:25, peakMin:60, durationMin:220,
-    riseShape:"fast", decayShape:"slow", leddFactor:1.0, leddIncluded:true, refDoseMg:100,
-    note:"표기 용량을 레보도파 함량으로 간주한 근사치" },
-  { match:["마도파","시네메트","퍼킨","레보도파","도파민정"], id:"levodopa_ir", category:"levodopa", formulation:"immediate_release",
-    role:"direct_curve", roleLabel:"빠른 레보도파 곡선", onsetMin:20, peakMin:55, durationMin:180,
-    riseShape:"fast", decayShape:"moderate", leddFactor:1.0, leddIncluded:true, refDoseMg:100 },
-  { match:["온젠티스","오피카폰","엔타카폰","컴탄","콤탄"], id:"comt_modifier", category:"comt", formulation:"tablet",
-    role:"modifier", roleLabel:"레보도파 지속 보정 (COMT 억제제)", durationMultiplier:1.35, coverageWindowMin:720,
-    leddFactor:0.5, leddIncluded:false, refDoseMg:100,
-    note:"COMT 억제제는 자체 mg 환산이 확립되지 않아 LEDD 합계에서 제외" },
-  { match:["미라펙스","프라미펙솔"], id:"agonist_pramipexole", category:"dopamine_agonist", formulation:"extended_release",
-    role:"background", roleLabel:"도파민 작용제 배경효과", riseTauMin:150, durationMin:1440, amp:0.35,
-    leddFactor:100, leddIncluded:false, refDoseMg:0.375,
-    note:"도파민 작용제는 LEDD 합계에서 제외 (배경효과로만 표시)" },
-  { match:["리큅","로피니롤"], id:"agonist_ropinirole", category:"dopamine_agonist", formulation:"extended_release",
-    role:"background", roleLabel:"도파민 작용제 배경효과", riseTauMin:150, durationMin:1440, amp:0.35,
-    leddFactor:20, leddIncluded:false, refDoseMg:2,
-    note:"도파민 작용제는 LEDD 합계에서 제외 (배경효과로만 표시)" },
-  { match:["뉴프로","로티고틴"], id:"agonist_rotigotine", category:"dopamine_agonist", formulation:"patch",
-    role:"background", roleLabel:"도파민 작용제 배경효과 (패치)", riseTauMin:240, durationMin:1440, amp:0.3,
-    leddFactor:30, leddIncluded:false, refDoseMg:4,
-    note:"도파민 작용제는 LEDD 합계에서 제외 (배경효과로만 표시)" },
-  { match:["아만타딘"], id:"amantadine_adjunct", category:"amantadine", formulation:"tablet",
-    role:"adjunct", roleLabel:"보조약 (곡선 미포함)", leddFactor:1.0, leddIncluded:false, refDoseMg:100,
-    note:"아만타딘은 등록된 보정값이 없어 복합 약효 추정곡선 계산에는 포함하지 않습니다" },
-  { match:["아질렉트","라사길린","셀레길린"], id:"mao_b_adjunct", category:"mao_b", formulation:"tablet",
-    role:"adjunct", roleLabel:"보조약 (곡선 미포함)", leddFactor:100, leddIncluded:false, refDoseMg:1,
-    note:"MAO-B 억제제는 등록된 보정값이 없어 복합 약효 추정곡선 계산에는 포함하지 않습니다" },
+/* ---- 곡선 정의 (curveId 기준 — 상품명과 무관, 하나만 관리) ---- */
+DM.CURVES = {
+  LEVO_IR:      { role:"direct_curve", onsetMin:20, peakMin:55,  durationMin:180, riseShape:"fast", decayShape:"moderate" },
+  LEVO_HBS:     { role:"direct_curve", onsetMin:45, peakMin:110, durationMin:300, riseShape:"slow", decayShape:"slow" },
+  STALEVO:      { role:"direct_curve", onsetMin:25, peakMin:60,  durationMin:220, riseShape:"fast", decayShape:"slow" },
+  COMT_MOD:     { role:"modifier", durationMultiplier:1.35, coverageWindowMin:720 },
+  PRAMI_BG:     { role:"background", riseTauMin:150, durationMin:1440, amp:0.35 },
+  ROPI_BG:      { role:"background", riseTauMin:150, durationMin:1440, amp:0.35 },
+  ROTIGOTINE_BG:{ role:"background", riseTauMin:240, durationMin:1440, amp:0.3 },
+  ADJUNCT:      { role:"adjunct" },
+};
+
+/* ---- 약물 사전 (상품명·별칭 → curveId). 검색·표시용 정보(genericName·formulation·roleLabel)와
+   계산용 정보(leddFactor·leddIncluded·refDoseMg)를 함께 가진다.
+   같은 성분의 다른 상품명은 aliases 배열에 추가하기만 하면 된다 — 곡선은 새로 만들지 않는다. ---- */
+DM.DRUGS = [
+  { genericName:"levodopa/carbidopa (즉방형)", formulation:"immediate_release", curveId:"LEVO_IR",
+    roleLabel:"빠른 레보도파 곡선", leddFactor:1.0, leddIncluded:true, refDoseMg:100,
+    aliases:["마도파","시네메트","퍼킨","레보도파","도파민정"] },
+  { genericName:"levodopa/carbidopa (서방형/HBS/CR)", formulation:"extended_release", curveId:"LEVO_HBS",
+    roleLabel:"지속형 레보도파 곡선", leddFactor:0.75, leddIncluded:true, refDoseMg:100,
+    aliases:["마도파 HBS","시네메트 CR"] },
+  { genericName:"levodopa/carbidopa/entacapone", formulation:"combination", curveId:"STALEVO",
+    roleLabel:"빠른 레보도파 곡선 (콤트 억제제 포함)", leddFactor:1.0, leddIncluded:true, refDoseMg:100,
+    note:"표기 용량을 레보도파 함량으로 간주한 근사치",
+    aliases:["스타레보","트리레보"] },
+  { genericName:"entacapone / opicapone (COMT 억제제)", formulation:"tablet", curveId:"COMT_MOD",
+    roleLabel:"레보도파 지속 보정 (COMT 억제제)", leddFactor:0.5, leddIncluded:false, refDoseMg:100,
+    note:"COMT 억제제는 자체 mg 환산이 확립되지 않아 LEDD 합계에서 제외",
+    aliases:["온젠티스","오피카폰","엔타카폰","컴탄","콤탄"] },
+  { genericName:"pramipexole", formulation:"tablet", curveId:"PRAMI_BG",
+    roleLabel:"도파민 작용제 배경효과", leddFactor:100, leddIncluded:false, refDoseMg:0.375,
+    note:"도파민 작용제는 LEDD 합계에서 제외 (배경효과로만 표시)",
+    aliases:["미라펙스","미라팩스","피디팩솔","피디펙솔","프라미펙솔"] },
+  { genericName:"ropinirole", formulation:"tablet", curveId:"ROPI_BG",
+    roleLabel:"도파민 작용제 배경효과", leddFactor:20, leddIncluded:false, refDoseMg:2,
+    note:"도파민 작용제는 LEDD 합계에서 제외 (배경효과로만 표시)",
+    aliases:["리큅","로피니롤"] },
+  { genericName:"rotigotine", formulation:"patch", curveId:"ROTIGOTINE_BG",
+    roleLabel:"도파민 작용제 배경효과 (패치)", leddFactor:30, leddIncluded:false, refDoseMg:4,
+    note:"도파민 작용제는 LEDD 합계에서 제외 (배경효과로만 표시)",
+    aliases:["뉴프로","로티고틴"] },
+  { genericName:"amantadine", formulation:"tablet", curveId:"ADJUNCT",
+    roleLabel:"보조약 (곡선 미포함)", leddFactor:1.0, leddIncluded:false, refDoseMg:100,
+    note:"아만타딘은 등록된 보정값이 없어 복합 약효 추정곡선 계산에는 포함하지 않습니다",
+    aliases:["아만타딘"] },
+  { genericName:"MAO-B 억제제 (rasagiline/selegiline)", formulation:"tablet", curveId:"ADJUNCT",
+    roleLabel:"보조약 (곡선 미포함)", leddFactor:100, leddIncluded:false, refDoseMg:1,
+    note:"MAO-B 억제제는 등록된 보정값이 없어 복합 약효 추정곡선 계산에는 포함하지 않습니다",
+    aliases:["아질렉트","라사길린","셀레길린"] },
 ];
 
 DM.UNREGISTERED_NOTE = "이 약물은 현재 곡선 모델이 등록되어 있지 않습니다. 실제 복용 기록에는 표시되지만 복합 약효 추정곡선 계산에는 포함되지 않습니다.";
+DM.NOT_FOUND_GUIDANCE = "현재 약물 사전에 등록되지 않은 약입니다. 성분이 동일한 약이 있는지 확인하시겠습니까?";
 
-DM.classify = function(name){
+/* 별칭 인덱스 — 여러 약에 걸쳐 가장 긴 별칭부터 매칭해야 "마도파"가 "마도파 HBS"를
+   가로채는 오분류를 막는다. 최초 1회 계산 후 캐시. */
+let _aliasIndex=null;
+DM.buildAliasIndex = function(){
+  const flat=[];
+  DM.DRUGS.forEach(drug=>{ (drug.aliases||[]).forEach(alias=>flat.push({alias, drug})); });
+  flat.sort((a,b)=>b.alias.length-a.alias.length);
+  return flat;
+};
+function aliasIndex(){ if(!_aliasIndex) _aliasIndex=DM.buildAliasIndex(); return _aliasIndex; }
+
+/* 상품명(오타·부분 문자열 포함) → 약물 사전 항목 */
+DM.findDrug = function(name){
   const n=String(name||"");
-  for(const m of DM.MODELS){ if(m.match.some(k=>n.includes(k))) return m; }
-  return null; /* 미등록 — 절대 임의 곡선을 만들지 않는다 */
+  const hit=aliasIndex().find(x=>n.includes(x.alias));
+  return hit? hit.drug : null;
+};
+
+/* 상품명 → 계산에 쓰는 통합 모델 객체 (곡선 파라미터 + 사전 정보를 합침).
+   등록되지 않은 약은 절대 임의 곡선을 만들지 않고 null을 반환한다. */
+DM.classify = function(name){
+  const drug=DM.findDrug(name);
+  if(!drug) return null;
+  const curve=DM.CURVES[drug.curveId] || {};
+  return Object.assign({}, curve, {
+    curveId:drug.curveId, genericName:drug.genericName, formulation:drug.formulation,
+    roleLabel:drug.roleLabel, leddFactor:drug.leddFactor, leddIncluded:drug.leddIncluded,
+    refDoseMg:drug.refDoseMg, note:drug.note,
+    category: drug.curveId==="LEVO_IR"||drug.curveId==="LEVO_HBS"||drug.curveId==="STALEVO" ? "levodopa"
+            : (curve.role==="background" ? "dopamine_agonist"
+            : (drug.curveId==="ADJUNCT" ? (drug.genericName==="amantadine"?"amantadine":"mao_b") : "comt")),
+  });
+};
+
+/* 검색 — 상품명·성분명·별칭 어디에 매칭돼도 찾을 수 있게 한다 (작업지시서 §6). */
+DM.searchDictionary = function(query){
+  const q=String(query||"").trim().toLowerCase();
+  if(!q) return [];
+  const seen=new Set(), out=[];
+  DM.DRUGS.forEach(drug=>{
+    const hitAlias=(drug.aliases||[]).find(a=>a.toLowerCase().includes(q));
+    const hitGeneric=drug.genericName.toLowerCase().includes(q);
+    if(hitAlias || hitGeneric){
+      (drug.aliases||[]).forEach(a=>{ if(!seen.has(a)){ seen.add(a); out.push({alias:a, genericName:drug.genericName, curveId:drug.curveId}); } });
+    }
+  });
+  return out;
+};
+
+/* 두 상품명이 서로 다른 curveId일 때, 기존 용량 숫자를 그대로 옮겨도 되는지 판단.
+   표준 용량 단위(refDoseMg)가 크게 다르면(예: 100mg대 레보도파 ↔ 0.375mg대 프라미펙솔)
+   그대로 옮기면 위험하므로 false를 반환해 사용자에게 재입력을 요구한다. */
+DM.doseCompatible = function(modelA, modelB){
+  if(!modelA || !modelB) return false;
+  const a=modelA.refDoseMg||1, b=modelB.refDoseMg||1;
+  const ratio=Math.max(a,b)/Math.max(Math.min(a,b), 1e-9);
+  return ratio<=10;
 };
 
 /* ---- 곡선 도형 함수 ---- */
@@ -65,7 +138,6 @@ function decayTauFrom(peakMin, durationMin, shape){
   const base=Math.max(durationMin-peakMin, 20);
   return shape==="slow"? base*1.5 : base;
 }
-/* 직접곡선형 1회 복용의 상대값(0~약1) — onset 이전은 0, 이후 상승·하강 */
 DM.directDoseValue = function(model, sinceMin, durationOverrideMin){
   if(sinceMin<0) return 0;
   const { onsetMin, peakMin } = model;
@@ -79,7 +151,6 @@ DM.directDoseValue = function(model, sinceMin, durationOverrideMin){
   const peakVal=1-Math.exp(-riseFactor(model.riseShape)*1);
   return peakVal*Math.exp(-(sinceMin-peakMin)/tau);
 };
-/* 배경효과형 1회 복용의 상대값 — 완만한 상승, 뾰족한 봉우리 없이 오래 지속 */
 DM.backgroundDoseValue = function(model, sinceMin){
   if(sinceMin<0) return 0;
   const { riseTauMin, durationMin, amp } = model;
@@ -89,9 +160,8 @@ DM.backgroundDoseValue = function(model, sinceMin){
 };
 
 /* ---- 복합곡선 계산 ----
-   doses: [{name, dose, time:"HH:MM"}] — 하루 기준. t0/t1/step: 분 단위 계산 구간.
-   반환: {points:[{t,val}], perDrug:[{name,role,points}], unregistered:[{name,dose,time}],
-          adjuncts:[{name,dose,time,note}], modifiersApplied:[{name,affects:[...]}], leddTotal, leddBreakdown} */
+   doses: [{name, dose, time:"HH:MM", dayOffset?}] — dayOffset 0=계산 대상일, -1=전날(이월분) 등.
+   반환: {points, perDrug, unregistered, adjuncts, modifiersApplied, leddTotal, leddBreakdown} */
 DM.compositeCurve = function(doses, t0, t1, step){
   step = step||10;
   const list=(doses||[]).filter(d=>d && d.time);
@@ -103,20 +173,14 @@ DM.compositeCurve = function(doses, t0, t1, step){
   const modifiers=classified.filter(x=>x.model && x.model.role==="modifier");
   const backgrounds=classified.filter(x=>x.model && x.model.role==="background");
 
-  /* 보정형: 같은 날 커버리지 안에 있는 직접곡선의 durationMin을 늘린다 (자체 봉우리는 만들지 않음) */
   const timeMin=t=>{ const [h,m]=String(t).split(":").map(Number); return h*60+m; };
-  /* dose.dayOffset: 0=계산 대상일, -1=전날 등. 절대시간 = dayOffset*1440 + 시:분.
-     검토 반영: 전날 밤 복용한 보정형(COMT)·배경형(도파민 작용제) 약이 다음날 곡선에
-     반영되도록, UI가 medsForSimulationDay()로 전날분을 dayOffset:-1로 함께 넘겨준다.
-     dayOffset이 없는 기존 호출(단일 목록 안에서 시각만으로 비교)도 그대로 동작해야 하므로,
-     절대시간 차이가 음수면 "보정약이 이전 주기에 복용됐다"고 보고 1440분을 더해 감싼다. */
   const absTime=x=>((x.dayOffset||0)*1440)+timeMin(x.time);
   const modifiersApplied=[];
   directs.forEach(dx=>{
     const dTime=absTime(dx.dose);
     const hit=modifiers.find(mx=>{
       const mTime=absTime(mx.dose);
-      let fwd=dTime-mTime; if(fwd<0) fwd+=1440; /* 자정을 넘는 보정 커버리지 */
+      let fwd=dTime-mTime; if(fwd<0) fwd+=1440;
       return fwd>=0 && fwd<=mx.model.coverageWindowMin;
     });
     dx.durationOverrideMin = hit? Math.round(dx.model.durationMin*hit.model.durationMultiplier) : null;
@@ -151,11 +215,9 @@ DM.compositeCurve = function(doses, t0, t1, step){
     });
   }
 
-  /* 포화함수: 무한 합산 방지, 0~100으로 정규화 (절대값 예측이 목적이 아니라 상대 비교가 목적) */
   const SCALE=DM.SATURATION_SCALE||1.6;
   const points=pts.map(p=>({t:p.t, val: 100*(1-Math.exp(-p.raw/SCALE))}));
 
-  /* LEDD (참고용 크기 비교 — 곡선 모양과는 별도) */
   let leddTotal=0; const leddBreakdown=[];
   classified.forEach(x=>{
     if(!x.model || !x.model.leddIncluded) return;
