@@ -489,10 +489,10 @@ body{font-size:calc(15px*var(--app-font-scale))}
       <div style="padding:10px 12px 12px">
         <div class="btn-row" style="margin-bottom:8px">
           <button class="btn ghost" id="phsProfileBtn" data-i18n="phsBtnProfile">1. 기본 정보</button>
-          <button class="btn ghost" id="phsStartBtn" data-i18n="phsBtnStart">2. 관찰 시작</button>
+          <button class="btn ghost" id="phsRangeBtn" data-i18n="phsBtnRange">2. 기간 선택</button>
         </div>
         <div class="btn-row">
-          <button class="btn ghost" id="phsEndBtn" data-i18n="phsBtnEnd">3. 관찰 종료</button>
+          <button class="btn ghost" id="phsSurveyBtn" data-i18n="phsBtnSurvey">3. 설문 (선택)</button>
           <button class="btn primary" id="phsGenBtn" data-i18n="phsBtnGen">나의 병력 요약 만들기</button>
         </div>
       </div>
@@ -619,7 +619,7 @@ const I18N = {
     quickOutputTitle:"지금 내 출력 기록하기", qoLabel:"현재 출력", qoReset:"오늘 기준점 다시 설정", qoGuide:"출력 점수 기준 보기",
     fontSize:"글씨 크기", fontSizeDesc:"기본 · 크게 · 매우 크게", fsNormal:"기본", fsLarge:"크게", fsXLarge:"매우 크게",
     primarySym:"주증상 (최대 3개)", primarySymDesc:"집중 기록할 증상을 골라두면 다음 버전 기능에 사용돼요",
-    phsCardName:"🩺 진료용 요약 보고서", phsBtnProfile:"1. 기본 정보", phsBtnStart:"2. 관찰 시작", phsBtnEnd:"3. 관찰 종료", phsBtnGen:"나의 병력 요약 만들기",
+    phsCardName:"🩺 진료용 요약 보고서", phsBtnProfile:"1. 기본 정보", phsBtnRange:"2. 기간 선택", phsBtnSurvey:"3. 설문 (선택)", phsBtnGen:"나의 병력 요약 만들기",
     outputGraphTitle:"출력 변화 그래프", todayInterpretTitle:"오늘 해석", qoCheckBtn:"출력 기준 확인하기",
     qoTrendPrompt:"지금 몸 상태의 방향은?", trendRising:"상승 중", trendStable:"유지 중", trendFalling:"하강 중",
     trendPickAlert:"현재 몸 상태가 상승 중인지, 유지 중인지, 하강 중인지 선택해 주세요.",
@@ -629,7 +629,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음 (INSUF)",
-    versionLabel:"약효일지 · 테스트판 1.1.1",
+    versionLabel:"약효일지 · 테스트판 1.2.0",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -678,7 +678,7 @@ const I18N = {
     quickOutputTitle:"Log my output now", qoLabel:"Current output", qoReset:"Reset today's baseline", qoGuide:"View output score guide",
     fontSize:"Font size", fontSizeDesc:"Normal · Large · Extra large", fsNormal:"Normal", fsLarge:"Large", fsXLarge:"Extra large",
     primarySym:"Main symptoms (up to 3)", primarySymDesc:"Pick symptoms to focus on — used by upcoming features",
-    phsCardName:"🩺 Patient History Summary", phsBtnProfile:"1. Basic Information", phsBtnStart:"2. Start Observation", phsBtnEnd:"3. End Observation", phsBtnGen:"Create My Patient History Summary",
+    phsCardName:"🩺 Patient History Summary", phsBtnProfile:"1. Basic Information", phsBtnRange:"2. Select Period", phsBtnSurvey:"3. Survey (optional)", phsBtnGen:"Create My Patient History Summary",
     outputGraphTitle:"Output trend", todayInterpretTitle:"Today's interpretation", qoCheckBtn:"Check my output baseline",
     qoTrendPrompt:"Which way is your body heading right now?", trendRising:"Rising", trendStable:"Stable", trendFalling:"Falling",
     trendPickAlert:"Please choose whether your body is currently rising, stable, or falling.",
@@ -688,7 +688,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests (INSUF)",
-    versionLabel:"Med Log · Test build 1.1.1",
+    versionLabel:"Med Log · Test build 1.2.0",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -1103,7 +1103,7 @@ function load(){
     if(typeof PHS!=="undefined") PHS.migrate(d); /* v0.9.19: db.phs 네임스페이스 추가 (기존 키 무변경·가역적) */
     d.primarySymptoms = d.primarySymptoms||[]; /* v0.9.20: 주증상 폴더 구조 준비 (기존 키 무변경) */
     return d; } }catch(e){}
-  return { events:[], meds:[], questions:defaultQuestions(), settings:{theme:"light",notify:false}, outputChecks:[], dayMemos:{}, phs:{v:(typeof PHS!=="undefined"?PHS.SCHEMA_VERSION:1), profile:null, observations:[]}, primarySymptoms:[] };
+  return { events:[], meds:[], questions:defaultQuestions(), settings:{theme:"light",notify:false}, outputChecks:[], dayMemos:{}, phs:{v:(typeof PHS!=="undefined"?PHS.SCHEMA_VERSION:1), profile:null, observations:[], range:null, survey:null}, primarySymptoms:[] };
 }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){ toast(L("저장 공간이 부족합니다","Storage space is full")); }
   syncSharedProfile(); }
@@ -4034,8 +4034,12 @@ function phsLatestObs(){ const os=(db.phs&&db.phs.observations)||[]; return os[o
 function phsStatus(){
   const el=document.getElementById("phsStatusLine"); if(!el) return;
   const act=phsActiveObs(), latest=phsLatestObs();
-  if(act) el.textContent=L(`관찰 진행 중 · ${act.startDate}부터 기록을 모으고 있어요. 진료 전에 "관찰 종료" 후 보고서를 만드세요.`,`Observation in progress since ${act.startDate}. Before your visit, tap "End Observation" and create the report.`);
-  else if(latest&&latest.endDate) el.textContent=L(`최근 관찰: ${latest.startDate} ~ ${latest.endDate}. 보고서를 다시 만들 수 있어요.`,`Last observation: ${latest.startDate} – ${latest.endDate}. You can create the report again.`);
+  const rng=(db.phs&&db.phs.range)||null;
+  if(rng&&rng.startDate&&rng.endDate){
+    const c=phsCountInRange(rng.startDate,rng.endDate);
+    el.textContent=L(`보고서 기간: ${rng.startDate} ~ ${rng.endDate} · 출력 기록 ${c.outputs}건 (${c.dayCount}일)`,`Report period: ${rng.startDate} – ${rng.endDate} · ${c.outputs} output records (${c.dayCount} days)`);
+  }
+  else if(latest&&latest.startDate) el.textContent=L(`이전 버전 관찰 기록: ${latest.startDate} ~ ${latest.endDate||"진행 중"}. '기간 선택'에서 날짜를 정하면 그 기간으로 만들어요.`,`Earlier observation: ${latest.startDate} – ${latest.endDate||"ongoing"}. Choose dates in 'Select Period' to use a different range.`);
   else el.textContent=L(`설문과 기록을 결합해 진료용 요약을 만들어요. 모든 처리는 이 기기 안에서만 이뤄져요.`,`Combines surveys and records into a clinic-ready summary. Everything stays on this device.`);
 }
 /* ---- 1. 기본 정보 설문 (한 번 작성, 언제든 수정) ---- */
@@ -4078,87 +4082,169 @@ function phsOpenProfile(){
     save(); closeSheet(); phsStatus(); toast(L("기본 정보를 저장했어요","Basic information saved"));
   };
 }
-/* ---- 2. 관찰 시작 설문 ---- */
-function phsOpenStart(){
-  const act=phsActiveObs();
-  const sv=(act&&act.startSurvey)||{};
+/* ---- 2. 기간 선택 (v1.2: 미래형 "관찰 시작/종료" → 이미 쌓인 기록의 날짜 구간 지정) ---- */
+function phsRange(){
+  const r=(db.phs&&db.phs.range)||null;
+  if(r&&r.startDate&&r.endDate) return r;
+  /* 기본값: 최근 30일 */
+  const e=todayKey(); const s0=new Date(); s0.setDate(s0.getDate()-29);
+  return {startDate:dkey(s0), endDate:e};
+}
+function phsRecordedDayKeys(){
+  return Object.keys(byDay()).filter(k=>(byDay()[k]||[]).some(e=>e.type==="state"&&e.output!=null)).sort();
+}
+function phsCountInRange(sd, ed){
+  const days=byDay(); let outputs=0, meds=0, dayCount=0;
+  Object.keys(days).forEach(k=>{
+    if(k<sd||k>ed) return;
+    const o=(days[k]||[]).filter(e=>e.type==="state"&&e.output!=null).length;
+    if(o) dayCount++;
+    outputs+=o; meds+=(days[k]||[]).filter(e=>e.type==="med").length;
+  });
+  return {outputs, meds, dayCount};
+}
+function phsOpenRange(){
+  const cur=phsRange();
   openSheet(`
-    <h2>${act? L("관찰 시작 설문 수정","Edit Start Survey"):L("관찰 시작","Start Observation")} <span class="phs-conf">2/3</span></h2>
-    <div class="hint">${L("이번 관찰기간에 확인하고 싶은 것을 알려주세요. <b>가장 큰 어려움</b>만 필수이고 나머지는 건너뛰어도 돼요.","Tell us what you want to check this period. Only <b>the biggest difficulty</b> is required — skip the rest if you like.")}</div>
+    <h2>${L("보고서 기간 선택","Select report period")} <span class="phs-conf">2/3</span></h2>
+    <div class="hint">${L("이미 기록해 둔 날짜 중에서 보고서로 만들 구간을 고르세요. 미리 \"관찰 시작\"을 눌러둘 필요가 없어요.","Choose the range of days you have already recorded. There is no need to start an observation in advance.")}</div>
+    <div class="chips" id="pr_quick" style="margin:8px 0">
+      <button type="button" class="chip" data-q="7">${L("최근 7일","Last 7 days")}</button>
+      <button type="button" class="chip" data-q="14">${L("최근 14일","Last 14 days")}</button>
+      <button type="button" class="chip" data-q="30">${L("최근 30일","Last 30 days")}</button>
+      <button type="button" class="chip" data-q="lastmonth">${L("지난달","Last month")}</button>
+      <button type="button" class="chip" data-q="all">${L("기록 전체","All records")}</button>
+    </div>
+    <div class="field"><label>${L("시작일","Start date")}</label><input id="pr_start" type="date" value="${cur.startDate}"></div>
+    <div class="field"><label>${L("종료일","End date")}</label><input id="pr_end" type="date" value="${cur.endDate}"></div>
+    <div id="pr_preview" style="font-size:12.5px; margin:6px 0"></div>
+    <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="pr_save">${L("이 기간으로 저장","Save this period")}</button></div>`);
+
+  const sEl=document.getElementById("pr_start"), eEl=document.getElementById("pr_end");
+  const preview=()=>{
+    const sd=sEl.value, ed=eEl.value;
+    const box=document.getElementById("pr_preview");
+    if(!sd||!ed){ box.textContent=""; return; }
+    if(sd>ed){ box.innerHTML=`<span style="color:var(--danger)">${L("시작일이 종료일보다 늦어요","Start date is after end date")}</span>`; return; }
+    const c=phsCountInRange(sd,ed);
+    box.innerHTML = c.outputs
+      ? `${L("이 기간","This period")}: <b>${L(`출력 기록 ${c.outputs}건 · 기록한 날 ${c.dayCount}일 · 복약 기록 ${c.meds}건`,`${c.outputs} output records · ${c.dayCount} days with records · ${c.meds} medication records`)}</b>`
+      : `<span style="color:var(--danger)">${L("이 기간에는 출력 기록이 없어요","No output records in this period")}</span>`;
+  };
+  sEl.oninput=preview; eEl.oninput=preview; preview();
+
+  document.getElementById("pr_quick").addEventListener("click",ev=>{
+    const b=ev.target.closest(".chip"); if(!b) return;
+    const q=b.dataset.q;
+    if(q==="all"){
+      const ks=phsRecordedDayKeys();
+      if(!ks.length){ toast(L("기록이 없어요","No records yet")); return; }
+      sEl.value=ks[0]; eEl.value=ks[ks.length-1];
+    } else if(q==="lastmonth"){
+      const now=new Date();
+      const first=new Date(now.getFullYear(), now.getMonth()-1, 1);
+      const last=new Date(now.getFullYear(), now.getMonth(), 0);
+      sEl.value=dkey(first); eEl.value=dkey(last);
+    } else {
+      const n=+q; const s0=new Date(); s0.setDate(s0.getDate()-(n-1));
+      sEl.value=dkey(s0); eEl.value=todayKey();
+    }
+    document.querySelectorAll("#pr_quick .chip").forEach(x=>x.classList.remove("sel"));
+    b.classList.add("sel");
+    preview();
+  });
+
+  document.getElementById("pr_save").onclick=()=>{
+    const sd=sEl.value, ed=eEl.value;
+    if(!sd||!ed){ toast(L("시작일과 종료일을 고르세요","Choose both dates")); return; }
+    if(sd>ed){ toast(L("시작일이 종료일보다 늦어요","Start date is after end date")); return; }
+    if(ed>todayKey()){ toast(L("종료일은 오늘 이전이어야 해요","End date must be today or earlier")); return; }
+    if(!db.phs.range) db.phs.range={};
+    db.phs.range={startDate:sd, endDate:ed};
+    save(); closeSheet(); phsStatus();
+    toast(L("보고서 기간을 저장했어요","Report period saved"));
+  };
+}
+
+/* ---- 3. 설문 (선택) — 기존 시작/종료 설문을 하나로 합침 ---- */
+function phsOpenSurvey(){
+  const sv=(db.phs&&db.phs.survey&&db.phs.survey.start)||{};
+  const ev=(db.phs&&db.phs.survey&&db.phs.survey.end)||{};
+  const r=phsRange();
+  openSheet(`
+    <h2>${L("설문 (모두 선택 사항)","Survey (all optional)")} <span class="phs-conf">3/3</span></h2>
+    <div class="hint">${L(`${r.startDate} ~ ${r.endDate} 기간에 대해 알려주세요. 비워두어도 보고서는 만들어지지만, 채우면 CC/HPI가 더 정확해져요.`,`Tell us about ${r.startDate} – ${r.endDate}. The report works without this, but filling it in improves CC/HPI.`)}</div>
+
+    <div style="font-weight:800; margin:10px 0 4px">${L("증상과 질문","Symptoms and questions")}</div>
     <div class="field"><label>${L("요즘 어려움 (해당되는 것 모두)","Current difficulties (all that apply)")}</label>${phsChips("ps_chief",PHS_PROBLEMS,sv.chiefProblems)}</div>
-    <div class="field"><label>${L("그중 가장 큰 어려움 (하나만) *","The biggest difficulty (choose one) *")}</label>${phsChips("ps_primary",PHS_PROBLEMS,sv.primaryProblem?[sv.primaryProblem]:[])}</div>
+    <div class="field"><label>${L("그중 가장 큰 어려움 (하나만)","The biggest difficulty (choose one)")}</label>${phsChips("ps_primary",PHS_PROBLEMS,sv.primaryProblem?[sv.primaryProblem]:[])}</div>
     <div class="field"><label>${L("최근에 더 나빠졌나요?","Has it worsened recently?")}</label>${phsChips("ps_worse",[{k:"yes",ko:"예",en:"Yes"},{k:"no",ko:"아니오",en:"No"}],sv.recentWorsening===true?["yes"]:(sv.recentWorsening===false?["no"]:[]))}</div>
     <div class="field"><label>${L("나빠진 기간","For how long")}</label>${phsChips("ps_wdur",[{k:"under_1m",ko:"1개월 이내",en:"Under 1 month"},{k:"1_to_3m",ko:"1~3개월",en:"1–3 months"},{k:"over_3m",ko:"3개월 이상",en:"Over 3 months"}],sv.worseningDuration?[sv.worseningDuration]:[])}</div>
     <div class="field"><label>${L("아침 첫 약 먹고 좋아지기까지 (체감)","Perceived time to feel better after first morning dose")}</label>${phsChips("ps_morn",[{k:"under_30",ko:"30분 이내",en:"Under 30 min"},{k:"30_to_60",ko:"30~60분",en:"30–60 min"},{k:"60_to_90_min",ko:"60~90분",en:"60–90 min"},{k:"over_90",ko:"90분 이상/모름",en:"Over 90 min / unsure"}],sv.perceivedMorningResponse?[sv.perceivedMorningResponse]:[])}</div>
     <div class="field"><label>${L("힘든 시간대 (복수)","Difficult times of day (multi)")}</label>${phsChips("ps_times",PHS_TIMES,sv.difficultTimes)}</div>
     <div class="field"><label>${L("영향을 주는 것 같은 요인 (복수)","Factors that seem to matter (multi)")}</label>${phsChips("ps_factors",PHS_FACTORS,sv.suspectedFactors)}</div>
     <div class="field"><label>${L("진료 때 묻고 싶은 것 (복수)","Questions for the clinic visit (multi)")}</label>${phsChips("ps_qs",PHS_QPRESET,sv.selectedPatientQuestions)}</div>
-    <div class="field"><label>${L("관찰 시작일","Observation start date")}</label><input id="ps_date" type="date"><div class="hint" style="margin-top:2px">${L("이미 기록해 둔 날부터 포함하려면 지난 날짜를 고르세요.","Pick a past date to include days you have already recorded.")}</div></div>
-    <div class="field"><label>${L("직접 묻고 싶은 질문 (선택)","Your own question (optional)")}</label><textarea id="ps_freeq" placeholder="${L("예: 오후 약을 더 일찍 먹는 것이 좋습니까?","e.g. Should I take the afternoon dose earlier?")}">${escapeHtml(sv.freeQuestion||"")}</textarea></div>
-    <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="ps_save">${act? L("수정 저장","Save Changes"):L("관찰 시작","Start Observation")}</button></div>`);
-  document.getElementById("ps_date").value=(act&&act.startDate)||todayKey();
-  phsChipMulti("ps_chief"); phsChipSingle("ps_primary"); phsChipSingle("ps_worse"); phsChipSingle("ps_wdur"); phsChipSingle("ps_morn"); phsChipMulti("ps_times"); phsChipMulti("ps_factors"); phsChipMulti("ps_qs");
-  document.getElementById("ps_save").onclick=()=>{
-    const primary=phsChipVals("ps_primary")[0]||null;
-    if(!primary){ toast(L("가장 큰 어려움을 하나 골라주세요","Please choose the biggest difficulty")); return; }
+    <div class="field"><label>${L("직접 묻고 싶은 질문","Your own question")}</label><textarea id="ps_freeq" placeholder="${L("예: 오후 약을 더 일찍 먹는 것이 좋습니까?","e.g. Should I take the afternoon dose earlier?")}">${escapeHtml(sv.freeQuestion||"")}</textarea></div>
+
+    <div style="font-weight:800; margin:14px 0 4px">${L("이 기간을 돌아보면","Looking back on this period")}</div>
+    <div class="field"><label>${L("전반적으로","Overall")}</label>${phsChips("pe_overall",[{k:"better",ko:"좋아짐",en:"Better"},{k:"same",ko:"비슷",en:"About the same"},{k:"worse",ko:"나빠짐",en:"Worse"},{k:"varied",ko:"기복이 큼",en:"Very variable"}],ev.overallChange?[ev.overallChange]:[])}</div>
+    <div class="field"><label>${L("가장 좋았던 날","Best day")}</label><input id="pe_best" type="date" value="${ev.bestDay||""}"></div>
+    <div class="field"><label>${L("가장 힘들었던 날","Hardest day")}</label><input id="pe_worst" type="date" value="${ev.worstDay||""}"></div>
+    <div class="field"><label>${L("특별한 일 (여행·감기·약 변경 등)","Special events (travel, illness, med change)")}</label><textarea id="pe_events">${escapeHtml(ev.specialEvents||"")}</textarea></div>
+    <div class="field"><label>${L("스스로 느낀 점","Your own reflections")}</label><textarea id="pe_refl">${escapeHtml(ev.patientReflection||"")}</textarea></div>
+    <div class="field"><label>${L("추가로 묻고 싶은 질문","Additional question")}</label><textarea id="pe_q">${escapeHtml(ev.additionalClinicianQuestion||"")}</textarea></div>
+
+    <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="psv_save">${L("저장","Save")}</button></div>`);
+
+  phsChipMulti("ps_chief"); phsChipSingle("ps_primary"); phsChipSingle("ps_worse"); phsChipSingle("ps_wdur");
+  phsChipSingle("ps_morn"); phsChipMulti("ps_times"); phsChipMulti("ps_factors"); phsChipMulti("ps_qs"); phsChipSingle("pe_overall");
+
+  document.getElementById("psv_save").onclick=()=>{
     const worse=phsChipVals("ps_worse")[0];
-    const survey={
-      chiefProblems:phsChipVals("ps_chief"), primaryProblem:primary,
-      recentWorsening:worse==="yes"?true:(worse==="no"?false:null),
-      worseningDuration:phsChipVals("ps_wdur")[0]||null,
-      perceivedMorningResponse:phsChipVals("ps_morn")[0]||null,
-      difficultTimes:phsChipVals("ps_times"),
-      suspectedFactors:phsChipVals("ps_factors"),
-      selectedPatientQuestions:phsChipVals("ps_qs"),
-      freeQuestion:document.getElementById("ps_freeq").value.trim(),
+    db.phs.survey={
+      start:{
+        chiefProblems:phsChipVals("ps_chief"), primaryProblem:phsChipVals("ps_primary")[0]||null,
+        recentWorsening:worse==="yes"?true:(worse==="no"?false:null),
+        worseningDuration:phsChipVals("ps_wdur")[0]||null,
+        perceivedMorningResponse:phsChipVals("ps_morn")[0]||null,
+        difficultTimes:phsChipVals("ps_times"),
+        suspectedFactors:phsChipVals("ps_factors"),
+        selectedPatientQuestions:phsChipVals("ps_qs"),
+        freeQuestion:document.getElementById("ps_freeq").value.trim(),
+      },
+      end:{
+        overallChange:phsChipVals("pe_overall")[0]||null,
+        bestDay:document.getElementById("pe_best").value||null,
+        worstDay:document.getElementById("pe_worst").value||null,
+        specialEvents:document.getElementById("pe_events").value.trim(),
+        patientReflection:document.getElementById("pe_refl").value.trim(),
+        additionalClinicianQuestion:document.getElementById("pe_q").value.trim(),
+      },
     };
-    const sd=document.getElementById("ps_date").value||todayKey();
-    if(sd>todayKey()){ toast(L("시작일은 오늘 이전이어야 해요","Start date must be today or earlier")); return; }
-    if(act){ act.startSurvey=survey; act.startDate=sd; }
-    else db.phs.observations.push({id:"obs_"+sd.replace(/-/g,""), startDate:sd, endDate:null, startSurvey:survey, endSurvey:null});
-    save(); closeSheet(); phsStatus(); toast(act? L("설문을 수정했어요","Survey updated"):L("관찰을 시작했어요 — 평소처럼 기록만 하면 돼요","Observation started — just keep recording as usual"));
-  };
-}
-/* ---- 3. 관찰 종료 설문 ---- */
-function phsOpenEnd(){
-  const act=phsActiveObs();
-  if(!act){ toast(L("진행 중인 관찰이 없어요 — 먼저 '관찰 시작'을 해주세요","No observation in progress — tap 'Start Observation' first")); return; }
-  const sv=act.endSurvey||{};
-  openSheet(`
-    <h2>${L("관찰 종료","End Observation")} <span class="phs-conf">3/3</span></h2>
-    <div class="hint">${L(`${act.startDate}부터 오늘까지의 기록으로 보고서를 만들 준비를 해요. 모두 선택 사항이에요.`,`Prepares the report from ${act.startDate} to today. All items optional.`)}</div>
-    <div class="field"><label>${L("관찰기간 동안 전반적으로","Overall during this period")}</label>${phsChips("pe_overall",[{k:"better",ko:"좋아짐",en:"Better"},{k:"same",ko:"비슷",en:"About the same"},{k:"worse",ko:"나빠짐",en:"Worse"},{k:"varied",ko:"기복이 큼",en:"Very variable"}],sv.overallChange?[sv.overallChange]:[])}</div>
-    <div class="field"><label>${L("가장 좋았던 날 (선택)","Best day (optional)")}</label><input id="pe_best" type="date" value="${sv.bestDay||""}"></div>
-    <div class="field"><label>${L("가장 힘들었던 날 (선택)","Hardest day (optional)")}</label><input id="pe_worst" type="date" value="${sv.worstDay||""}"></div>
-    <div class="field"><label>${L("특별한 일 (여행·감기·약 변경 등, 선택)","Special events (travel, illness, med change — optional)")}</label><textarea id="pe_events">${escapeHtml(sv.specialEvents||"")}</textarea></div>
-    <div class="field"><label>${L("스스로 느낀 점 (선택)","Your own reflections (optional)")}</label><textarea id="pe_refl">${escapeHtml(sv.patientReflection||"")}</textarea></div>
-    <div class="field"><label>${L("추가로 묻고 싶은 질문 (선택)","Additional question (optional)")}</label><textarea id="pe_q">${escapeHtml(sv.additionalClinicianQuestion||"")}</textarea></div>
-    <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="pe_save">${L("관찰 종료","End Observation")}</button></div>`);
-  phsChipSingle("pe_overall");
-  document.getElementById("pe_save").onclick=()=>{
-    act.endSurvey={
-      overallChange:phsChipVals("pe_overall")[0]||null,
-      bestDay:document.getElementById("pe_best").value||null,
-      worstDay:document.getElementById("pe_worst").value||null,
-      specialEvents:document.getElementById("pe_events").value.trim(),
-      patientReflection:document.getElementById("pe_refl").value.trim(),
-      additionalClinicianQuestion:document.getElementById("pe_q").value.trim(),
-    };
-    act.endDate=todayKey();
-    save(); closeSheet(); phsStatus(); toast(L("관찰을 종료했어요 — 이제 보고서를 만들 수 있어요","Observation ended — you can now create the report"));
+    save(); closeSheet(); phsStatus(); toast(L("설문을 저장했어요","Survey saved"));
   };
 }
 /* ---- 보고서 생성 ---- */
 function phsGenerate(){
-  const act=phsActiveObs(), latest=phsLatestObs();
+  /* v1.2: 선택한 날짜 구간의 기록으로 생성한다 (미래형 관찰 시작/종료 불필요).
+     예전 버전에서 만든 observations 데이터가 있으면 기간이 지정되지 않았을 때만 참고한다. */
+  const r=(db.phs&&db.phs.range)||null;
+  const sv=(db.phs&&db.phs.survey)||null;
   let obs=null, note="";
-  if(act){ obs={...act, endDate:todayKey()}; note=L("(관찰 진행 중 — 오늘까지의 기록으로 생성)","(Observation in progress — generated up to today)"); }
-  else if(latest&&latest.endDate) obs=latest;
-  else {
-    /* 설문 없이도 최근 14일로 생성 가능 (설문 항목은 비워 둠) */
-    const end=todayKey(); const s=new Date(); s.setDate(s.getDate()-13);
-    obs={id:"obs_quick", startDate:dkey(s), endDate:end, startSurvey:null, endSurvey:null};
-    note=L("(설문 없이 최근 14일 기록으로 생성 — 설문을 작성하면 CC/HPI가 더 정확해져요)","(Generated from the last 14 days without surveys — completing the surveys improves CC/HPI)");
+  if(r&&r.startDate&&r.endDate){
+    obs={id:"range", startDate:r.startDate, endDate:r.endDate,
+         startSurvey:(sv&&sv.start)||null, endSurvey:(sv&&sv.end)||null};
+    if(!sv) note=L("(설문 없이 기록만으로 생성 — 설문을 작성하면 CC/HPI가 더 정확해져요)","(Generated from records only — completing the survey improves CC/HPI)");
+  } else {
+    const legacy=phsLatestObs();
+    if(legacy&&legacy.startDate){
+      obs={...legacy, endDate:legacy.endDate||todayKey()};
+      note=L("(이전 버전에서 만든 관찰 기록으로 생성 — '기간 선택'에서 날짜를 바꿀 수 있어요)","(Generated from an observation created in an earlier version — you can change the dates in 'Select Period')");
+    } else {
+      const end=todayKey(); const s2=new Date(); s2.setDate(s2.getDate()-29);
+      obs={id:"obs_quick", startDate:dkey(s2), endDate:end, startSurvey:null, endSurvey:null};
+      note=L("(기간을 고르지 않아 최근 30일 기록으로 생성했어요)","(No period selected — generated from the last 30 days)");
+    }
   }
   const [sy,sm,sd_]=obs.startDate.split("-").map(Number);
   const [ey,em,ed]=obs.endDate.split("-").map(Number);
@@ -4328,8 +4414,8 @@ function phsDaySvg(dayKey){
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%; height:auto; display:block">${svg}</svg>`;
 }
 document.getElementById("phsProfileBtn").onclick=phsOpenProfile;
-document.getElementById("phsStartBtn").onclick=phsOpenStart;
-document.getElementById("phsEndBtn").onclick=phsOpenEnd;
+document.getElementById("phsRangeBtn").onclick=phsOpenRange;
+document.getElementById("phsSurveyBtn").onclick=phsOpenSurvey;
 document.getElementById("phsGenBtn").onclick=phsGenerate;
 phsStatus();
 /* ================= /Patient History Summary UI ================= */
