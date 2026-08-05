@@ -429,6 +429,7 @@ body{font-size:calc(15px*var(--app-font-scale))}
         <select id="anGroup" class="btn" style="font-weight:700; flex:1.4"></select>
       </div>
       <div id="anSummary"></div>
+      <div id="anContext"></div>
       <div id="anTable" style="overflow-x:auto; margin-top:10px"></div>
     </div>
   </section>
@@ -669,7 +670,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음 (INSUF)",
-    versionLabel:"약효일지 · 비공개 시험판 2.0.1-phase0",
+    versionLabel:"약효일지 · 비공개 시험판 2.0.2-phase0",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -730,7 +731,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests (INSUF)",
-    versionLabel:"Med Log · Test build 2.0.1-phase0",
+    versionLabel:"Med Log · Test build 2.0.2-phase0",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -2995,35 +2996,58 @@ function renderSim(){
    ============================================================ */
 function anCollectDoses(dayKeys){
   const days=byDay();
-  const doses=[], byKeyOutputs={};
+  const doses=[], byKeyOutputs={}, byKeyEvents={};
   dayKeys.forEach(k=>{
     const evs=days[k]||[];
     byKeyOutputs[k]=evs.filter(e=>e.type==="state"&&e.output!=null)
       .map(e=>({timeMin:new Date(e.ts).getHours()*60+new Date(e.ts).getMinutes(), val:e.output, ts:e.ts}))
       .sort((a,b)=>a.timeMin-b.timeMin);
+    /* 동반 변수 비교(식사·단백질)를 위해 생활 기록도 함께 모은다.
+       analyzeEpisode가 kind:"meal"|"protein" 이벤트를 받아 mealNearby/proteinNearby를 채운다. */
+    byKeyEvents[k]=evs.filter(e=>e.type==="life"&&e.kind==="meal").map(e=>{
+      const timeMin=new Date(e.ts).getHours()*60+new Date(e.ts).getMinutes();
+      const isProtein = e.mealType && /육류|고기|단백/.test(e.mealType);
+      return {kind: isProtein? "protein":"meal", timeMin};
+    });
     evs.filter(e=>e.type==="med").forEach(e=>{
       doses.push({dayKey:k, name:e.drug, dose:(e.dose==null||e.dose==="")?null:+e.dose,
         timeMin:new Date(e.ts).getHours()*60+new Date(e.ts).getMinutes(), ts:e.ts});
     });
   });
-  return {doses, byKeyOutputs};
+  return {doses, byKeyOutputs, byKeyEvents};
+}
+/* 이 화면(ON 도달 분석)은 "복용 후 뚜렷한 봉우리가 생기는가"를 전제로 한다.
+   배경형(도파민 작용제)·보조형(아만타딘·MAO-B) 약은 애초에 봉우리를 만들지 않으므로
+   여기서 "미도달"이 쏟아지는 게 오히려 정상이다 — 약이 안 듣는 게 아니라 질문이 안 맞는 것.
+   실사용 확인(2026-08-05): 아만타딘이 거의 전부 미도달/판정불가로 나온 것을 보고 반영. */
+function anGroupRole(name){
+  const model = (typeof SIMDRUG!=="undefined" && SIMDRUG.classify)? SIMDRUG.classify(name) : null;
+  return model? model.role : null; /* "direct_curve" | "modifier" | "background" | "adjunct" | null(미등록) */
 }
 function anAnalyze(periodDays, groupId){
   const period=SIMCLIN.calendarPeriod(Object.keys(byDay()), periodDays);
-  const {doses, byKeyOutputs}=anCollectDoses(period.keys);
+  const {doses, byKeyOutputs, byKeyEvents}=anCollectDoses(period.keys);
   const groups=SIMCLIN.groupDoses(doses);
   if(!groups.length) return {groups:[], group:null, period};
   const group=groups.find(g=>g.id===groupId)||groups[0];
+  const role=anGroupRole(group.name);
+  const unfit = role==="background" || role==="adjunct";
+  if(unfit) return {groups, group, period, role, unfit, episodes:[], repro:null, baseline:null};
   const episodes=group.items.map(item=>{
     const outs=byKeyOutputs[item.dayKey]||[];
     const sameDay=doses.filter(d=>d.dayKey===item.dayKey && d.timeMin>item.timeMin).sort((a,b)=>a.timeMin-b.timeMin);
     const next=sameDay.length? sameDay[0].timeMin : null;
-    return SIMCLIN.analyzeEpisode(item, outs, null, next, []);
+    return SIMCLIN.analyzeEpisode(item, outs, null, next, byKeyEvents[item.dayKey]||[]);
   });
   const repro=SIMCLIN.reproducibility(episodes);
   const baseline=SIMCLIN.personalBaseline(episodes);
   const classified=episodes.map(e=>SIMCLIN.classifyEpisode(e, baseline));
-  return {groups, group, period, episodes:classified, repro, baseline};
+  /* 동반 변수 비교: 가장 많이 관찰된 문제 유형을 기준으로 식사·단백질 연관을 본다 */
+  const counts={};
+  classified.forEach(c=>{ counts[c.classification]=(counts[c.classification]||0)+1; });
+  const topProblem=["delayed_on","incomplete_on","on_failure"].filter(k=>counts[k]>0).sort((a,b)=>counts[b]-counts[a])[0]||null;
+  const context = topProblem? SIMCLIN.contextComparison(classified, topProblem) : null;
+  return {groups, group, period, role, unfit:false, episodes:classified, repro, baseline, topProblem, context};
 }
 function renderAnalysis(){
   const psel=document.getElementById("anPeriod");
@@ -3038,8 +3062,29 @@ function renderAnalysis(){
     document.getElementById("anTable").innerHTML="";
     return;
   }
-  gsel.innerHTML=r.groups.map(g=>`<option value="${escapeHtml(g.id)}" ${g.id===r.group.id?"selected":""}>${escapeHtml(g.timeLabel)} ${escapeHtml(g.name)} · ${g.occurrences}${L("회","x")}</option>`).join("");
+  const ROLE_TAG={background:L(" (배경형)"," (background)"), adjunct:L(" (보조형)"," (adjunct)")};
+  gsel.innerHTML=r.groups.map(g=>{
+    const role=anGroupRole(g.name);
+    const tag=ROLE_TAG[role]||"";
+    return `<option value="${escapeHtml(g.id)}" ${g.id===r.group.id?"selected":""}>${escapeHtml(g.timeLabel)} ${escapeHtml(g.name)}${tag} · ${g.occurrences}${L("회","x")}</option>`;
+  }).join("");
   gsel.onchange=()=>{ _anGroupId=gsel.value; renderAnalysis(); };
+
+  /* 배경형·보조형 약: ON 도달 분석 자체가 안 맞는 약이므로 통계를 내지 않고 이유를 설명한다 */
+  if(r.unfit){
+    const ROLE_LABEL={background:L("배경효과형 (도파민 작용제 등)","background-effect type (dopamine agonists, etc.)"),
+      adjunct:L("보조형 (곡선을 만들지 않는 약)","adjunct type (does not form a curve)")};
+    document.getElementById("anSummary").innerHTML=`
+      <div style="font-size:12.5px; margin-bottom:8px">
+        ${L(`분석 대상: ${r.group.timeLabel} ${r.group.name} ${doseLabel(r.group.dose)}`,`Target: ${r.group.timeLabel} ${r.group.name} ${doseLabel(r.group.dose)}`)}
+      </div>
+      <div class="hint" style="padding:10px 12px; background:var(--surface-2); border-radius:10px">
+        ${L(`이 약은 ${ROLE_LABEL[r.role]}이라 뚜렷한 봉우리를 만들지 않습니다. 이 화면의 "ON 도달" 분석은 봉우리가 생기는 약(레보도파 계열)에 맞는 방식이라, 이 약에는 "미도달"이 많이 나오는 것이 오히려 정상입니다.`,
+             `This medication is ${ROLE_LABEL[r.role]} and does not form a sharp peak. The "ON latency" analysis here is designed for medications that do form a peak (levodopa-type), so frequent "not reached" results are expected and normal for this medication.`)}
+      </div>`;
+    document.getElementById("anTable").innerHTML="";
+    return;
+  }
 
   const s=r.repro;
   const LV={good:L("양호","Good"), moderate:L("보통","Moderate"), poor:L("낮음","Low"), insufficient:L("판정 불가","Not enough data")};
@@ -3086,6 +3131,16 @@ function renderAnalysis(){
   `;
 
   function median(a){ const s2=a.slice().sort((x,y)=>x-y); const m=Math.floor(s2.length/2); return s2.length%2? s2[m] : (s2[m-1]+s2[m])/2; }
+
+  /* 동반 변수 비교: 지연/미도달/무반응이 식사·단백질 섭취와 겹치는 비율을 보여준다.
+     인과관계를 단정하지 않는다 — SIMCLIN.contextComparison이 이미 그 원칙을 지킨다. */
+  const PROBLEM_LABEL={delayed_on:L("지연","Delayed"), incomplete_on:L("미도달","Incomplete"), on_failure:L("무반응","No response")};
+  document.getElementById("anContext").innerHTML = r.context? `
+    <div style="background:var(--surface-2); border-radius:10px; padding:10px 12px; margin-top:10px">
+      <div style="font-weight:800; font-size:13px; margin-bottom:4px">${L("동반 변수 비교","Associated factors")} — ${PROBLEM_LABEL[r.topProblem]||r.topProblem}</div>
+      ${r.context.items.map(it=>`<div style="font-size:12.5px; margin-top:3px">· ${escapeHtml(it.label)} — ${escapeHtml(it.note)}</div>`).join("")}
+      <div class="hint" style="margin-top:4px">${escapeHtml(r.context.caution)}</div>
+    </div>` : "";
 
   const LABELS={delayed_on:L("지연","Delayed"), incomplete_on:L("미도달","Incomplete"), on_failure:L("무반응","No response"),
     adequate:L("충분","Adequate"), insufficient_data:L("판정 불가","N/A")};
