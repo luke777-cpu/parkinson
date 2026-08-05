@@ -680,7 +680,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음 (INSUF)",
-    versionLabel:"약효일지 · 비공개 시험판 2.2.0-phase2",
+    versionLabel:"약효일지 · 비공개 시험판 2.3.0-phase2",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -743,7 +743,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests (INSUF)",
-    versionLabel:"Med Log · Test build 2.2.0-phase2",
+    versionLabel:"Med Log · Test build 2.3.0-phase2",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -1818,6 +1818,11 @@ function symptomZonePattern(rangeEvents){
 }
 /* ---------- 증상 빠른 기록 (시작/종료 토글) ---------- */
 const SYMPTOM_QUICK = [
+  /* v2.3(치료구간 설계도, Phase 2 보완): OFF를 사용자가 직접 시작/종료로 표시할 수 있게 함.
+     출력<=20 자동 감지만으로는 "힘들다"고 느끼는 시점을 놓치는 경우가 있어(개인 문턱이 다름)
+     실측 역치 추정(analysis-threshold.js)의 표본이 부족했음 — 기존 이상운동증 타이머와
+     완전히 같은 메커니즘(start/end, outputAtStart/outputAtEnd)을 그대로 재사용한다. */
+  {key:"off",    ko:"OFF",       en:"OFF",        ic:"⚫"},
   {key:"dysk",   ko:"이상운동증", en:"Dyskinesia", ic:"⚠"},
   {key:"freeze", ko:"동결",       en:"Freezing",   ic:"🧊"},
   {key:"dyst",   ko:"근긴장이상", en:"Dystonia",   ic:"🔗"},
@@ -3190,15 +3195,21 @@ function anGatherThresholdSamples(period){
     const outs=evs.filter(e=>e.type==="state"&&e.output!=null)
       .map(e=>({timeMin:new Date(e.ts).getHours()*60+new Date(e.ts).getMinutes(), val:e.output}))
       .sort((a,b)=>a.timeMin-b.timeMin);
-    /* OFF 시각: 그 날 출력이 처음으로 20 이하로 떨어진 시각 (기존 OFF_존 기준 재사용) */
+    /* v2.3 수정: 이상운동증은 type:"symptom", key:"dysk", phase:"start"로 저장된다
+       (toggleSymptomTimer 참조) — 이전엔 type:"state"&&state==="dysk"를 찾고 있어 실제
+       기록과 맞지 않았다(항상 0건이었을 버그). OFF도 이제 같은 방식(key:"off")으로
+       사용자가 직접 표시할 수 있다 — 있으면 그걸 우선 쓰고, 없으면 기존 출력<=20
+       자동 감지로 보완한다(둘 다 없는 날은 그냥 표본에서 빠진다). */
+    const offTag=evs.find(e=>e.type==="symptom" && e.key==="off" && e.phase==="start");
     const offPt=outs.find(o=>o.val<=20 && o.timeMin>=360); /* 새벽 시간대 잡음 방지로 06:00 이후만 */
-    /* 이상운동증 시각: state:"dysk" 또는 symptoms에 dysk 포함된 이벤트의 시작 시각 */
-    const dyskEvs=evs.filter(e=>e.type==="state" && (e.state==="dysk" || (e.symptoms&&e.symptoms.includes("dysk"))));
+    const offTimeMin = offTag? (new Date(offTag.ts).getHours()*60+new Date(offTag.ts).getMinutes())
+                              : (offPt? offPt.timeMin : null);
+    const dyskEvs=evs.filter(e=>e.type==="symptom" && e.key==="dysk" && e.phase==="start");
     const {today, carry}=medsForSimulationDay(k);
     const doses=carry.concat(today);
     if(!doses.length) return;
     const composite=SIMDRUG.compositeCurve(doses, 0, 1440, 10);
-    if(offPt) offSamples.push({dayKey:k, offTimeMin:offPt.timeMin, rawPoints:composite.rawPoints});
+    if(offTimeMin!=null) offSamples.push({dayKey:k, offTimeMin, rawPoints:composite.rawPoints});
     dyskEvs.forEach(e=>{
       const t=new Date(e.ts).getHours()*60+new Date(e.ts).getMinutes();
       dyskSamples.push({dayKey:k, dyskOnsetTimeMin:t, rawPoints:composite.rawPoints});
