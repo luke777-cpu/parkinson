@@ -44,14 +44,14 @@ DM.DRUGS = [
   {"genericName": "apomorphine", "formulation": "주사", "curveId": "APOMORPHINE", "roleLabel": "속효성 구제 요법 곡선", "leddFactor": 10, "leddIncluded": true, "refDoseMg": 3, "note": "피하주사 구제 요법 — 발현이 매우 빠르고 지속이 짧음", "aliases": ["아포모르핀", "아포카인"]},
   {"genericName": "opicapone", "formulation": "1일 1회", "curveId": "ONGENTYS", "roleLabel": "레보도파 지속 보정 (COMT 억제제, 1일 1회)", "leddFactor": 0.5, "leddIncluded": false, "refDoseMg": 50, "note": "COMT 억제제는 자체 mg 환산이 확립되지 않아 LEDD 합계에서 제외", "aliases": ["온젠티스", "오피카폰"]},
   {"genericName": "entacapone", "formulation": "레보도파 병용", "curveId": "ENTACAPONE", "roleLabel": "레보도파 지속 보정 (COMT 억제제, 매 복용 병용)", "leddFactor": 0.5, "leddIncluded": false, "refDoseMg": 200, "note": "COMT 억제제는 자체 mg 환산이 확립되지 않아 LEDD 합계에서 제외", "aliases": ["엔타카폰", "컴탄", "콤탄"]},
-  {"genericName": "pramipexole (즉방형)", "formulation": "IR", "curveId": "PRAMI_IR", "roleLabel": "도파민 작용제 배경효과 (즉방형)", "leddFactor": 100, "leddIncluded": false, "refDoseMg": 0.375, "note": "도파민 작용제는 LEDD 합계에서 제외 (배경효과로만 표시)", "aliases": ["미라펙스", "미라팩스", "피디팩솔", "피디펙솔", "프라미펙솔", "프라펙솔", "미라프"], "source": "식약처: 피디펙솔정(프라미펙솔염산염일수화물) — 미라펙스와 동일 성분"},
-  {"genericName": "pramipexole (서방형)", "formulation": "ER", "curveId": "PRAMI_ER", "roleLabel": "도파민 작용제 배경효과 (서방형)", "leddFactor": 100, "leddIncluded": false, "refDoseMg": 0.375, "note": "도파민 작용제는 LEDD 합계에서 제외 (배경효과로만 표시)", "aliases": ["미라펙스 ER", "미라펙스ER", "프라미펙솔 ER", "피디펙솔 ER"]},
-  {"genericName": "ropinirole (즉방형)", "formulation": "IR", "curveId": "ROPI_IR", "roleLabel": "도파민 작용제 배경효과 (즉방형)", "leddFactor": 20, "leddIncluded": false, "refDoseMg": 2, "note": "도파민 작용제는 LEDD 합계에서 제외 (배경효과로만 표시)", "aliases": ["리큅", "로피니롤"]},
-  {"genericName": "ropinirole (서방형)", "formulation": "XL/ER", "curveId": "ROPI_ER", "roleLabel": "도파민 작용제 배경효과 (서방형)", "leddFactor": 20, "leddIncluded": false, "refDoseMg": 2, "note": "도파민 작용제는 LEDD 합계에서 제외 (배경효과로만 표시)", "aliases": ["리큅 PD", "리큅PD", "리큅 XL", "로피니롤 서방"]},
-  {"genericName": "rotigotine", "formulation": "패치", "curveId": "ROTIGOTINE", "roleLabel": "도파민 작용제 배경효과 (패치)", "leddFactor": 30, "leddIncluded": false, "refDoseMg": 4, "note": "도파민 작용제는 LEDD 합계에서 제외 (배경효과로만 표시)", "aliases": ["뉴프로", "로티고틴"]},
-  {"genericName": "amantadine", "formulation": "정", "curveId": "ADJUNCT", "roleLabel": "보조약 (곡선 미포함)", "leddFactor": 1.0, "leddIncluded": false, "refDoseMg": 100, "note": "아만타딘은 등록된 보정값이 없어 복합 약효 추정곡선 계산에는 포함하지 않습니다", "aliases": ["아만타딘", "피케이멜즈"]},
-  {"genericName": "rasagiline / selegiline (MAO-B 억제제)", "formulation": "정", "curveId": "ADJUNCT", "roleLabel": "보조약 (곡선 미포함)", "leddFactor": 100, "leddIncluded": false, "refDoseMg": 1, "note": "MAO-B 억제제는 등록된 보정값이 없어 복합 약효 추정곡선 계산에는 포함하지 않습니다", "aliases": ["아질렉트", "라사길린", "셀레길린", "마오비"]},
-  {"genericName": "safinamide (MAO-B 억제제)", "formulation": "정", "curveId": "ADJUNCT", "roleLabel": "보조약 (곡선 미포함)", "leddFactor": 100, "leddIncluded": false, "refDoseMg": 50, "note": "MAO-B 억제제는 등록된 보정값이 없어 복합 약효 추정곡선 계산에는 포함하지 않습니다", "aliases": ["사피나미드", "엑스어답션", "자디아고"]},
+  {"genericName": "pramipexole (즉방형)", "formulation": "IR", "curveId": "PRAMI_IR", "roleLabel": "도파민 작용제 배경효과 (즉방형)", "leddFactor": 100, "leddIncluded": true, "refDoseMg": 0.375, "note": "도파민 작용제는 곡선 모양에서는 완만한 배경효과로만 표시하지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "aliases": ["미라펙스", "미라팩스", "피디팩솔", "피디펙솔", "프라미펙솔", "프라펙솔", "미라프"], "source": "식약처: 피디펙솔정(프라미펙솔염산염일수화물) — 미라펙스와 동일 성분"},
+  {"genericName": "pramipexole (서방형)", "formulation": "ER", "curveId": "PRAMI_ER", "roleLabel": "도파민 작용제 배경효과 (서방형)", "leddFactor": 100, "leddIncluded": true, "refDoseMg": 0.375, "note": "도파민 작용제는 곡선 모양에서는 완만한 배경효과로만 표시하지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "aliases": ["미라펙스 ER", "미라펙스ER", "프라미펙솔 ER", "피디펙솔 ER"]},
+  {"genericName": "ropinirole (즉방형)", "formulation": "IR", "curveId": "ROPI_IR", "roleLabel": "도파민 작용제 배경효과 (즉방형)", "leddFactor": 20, "leddIncluded": true, "refDoseMg": 2, "note": "도파민 작용제는 곡선 모양에서는 완만한 배경효과로만 표시하지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "aliases": ["리큅", "로피니롤"]},
+  {"genericName": "ropinirole (서방형)", "formulation": "XL/ER", "curveId": "ROPI_ER", "roleLabel": "도파민 작용제 배경효과 (서방형)", "leddFactor": 20, "leddIncluded": true, "refDoseMg": 2, "note": "도파민 작용제는 곡선 모양에서는 완만한 배경효과로만 표시하지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "aliases": ["리큅 PD", "리큅PD", "리큅 XL", "로피니롤 서방"]},
+  {"genericName": "rotigotine", "formulation": "패치", "curveId": "ROTIGOTINE", "roleLabel": "도파민 작용제 배경효과 (패치)", "leddFactor": 30, "leddIncluded": true, "refDoseMg": 4, "note": "도파민 작용제는 곡선 모양에서는 완만한 배경효과로만 표시하지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "aliases": ["뉴프로", "로티고틴"]},
+  {"genericName": "amantadine", "formulation": "정", "curveId": "ADJUNCT", "roleLabel": "보조약 (곡선 미포함)", "leddFactor": 1.0, "leddIncluded": true, "refDoseMg": 100, "note": "아만타딘은 등록된 보정값이 없어 복합 약효 추정곡선(곡선 모양)에는 포함하지 않지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "aliases": ["아만타딘", "피케이멜즈"]},
+  {"genericName": "rasagiline / selegiline (MAO-B 억제제)", "formulation": "정", "curveId": "ADJUNCT", "roleLabel": "보조약 (곡선 미포함)", "leddFactor": 100, "leddIncluded": true, "refDoseMg": 1, "note": "MAO-B 억제제는 등록된 보정값이 없어 복합 약효 추정곡선(곡선 모양)에는 포함하지 않지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "aliases": ["아질렉트", "라사길린", "셀레길린", "마오비"]},
+  {"genericName": "safinamide (MAO-B 억제제)", "formulation": "정", "curveId": "ADJUNCT", "roleLabel": "보조약 (곡선 미포함)", "leddFactor": 100, "leddIncluded": true, "refDoseMg": 50, "note": "MAO-B 억제제는 등록된 보정값이 없어 복합 약효 추정곡선(곡선 모양)에는 포함하지 않지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "aliases": ["사피나미드", "엑스어답션", "자디아고"]},
 ];
 
 DM.UNREGISTERED_NOTE = "이 약물은 현재 곡선 모델이 등록되어 있지 않습니다. 실제 복용 기록에는 표시되지만 복합 약효 추정곡선 계산에는 포함되지 않습니다.";
@@ -231,6 +231,10 @@ DM.compositeCurve = function(doses, t0, t1, step){
 
   const SCALE=DM.SATURATION_SCALE||1.6;
   const points=pts.map(p=>({t:p.t, val: 100*(1-Math.exp(-p.raw/SCALE))}));
+  /* Phase 1(치료구간 설계도): 표시용 points(0~100 정규화)는 그대로 두고,
+     LED 원단위(raw)를 rawPoints로 별도 보존한다. "부족분 20 LED" 같은 계산에는
+     정규화된 0~100 값이 아니라 이 원단위가 필요하다. 기존 호출부는 points만 쓰므로 영향 없음. */
+  const rawPoints=pts.map(p=>({t:p.t, led:p.raw}));
 
   let leddTotal=0; const leddBreakdown=[];
   classified.forEach(x=>{
@@ -239,7 +243,7 @@ DM.compositeCurve = function(doses, t0, t1, step){
     leddTotal+=led; leddBreakdown.push({name:x.dose.name, dose:x.dose.dose, ledd:Math.round(led)});
   });
 
-  return { points, perDrug, unregistered, adjuncts, modifiersApplied, leddTotal:Math.round(leddTotal), leddBreakdown };
+  return { points, rawPoints, perDrug, unregistered, adjuncts, modifiersApplied, leddTotal:Math.round(leddTotal), leddBreakdown };
 };
 
 if(typeof module!=="undefined"&&module.exports) module.exports=DM;
