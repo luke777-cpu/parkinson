@@ -1,10 +1,10 @@
 {
   "name": "yakhyo-ilji",
-  "version": "2.4.1-phase3",
+  "version": "2.5.0-phase4",
   "private": true,
   "description": "약효일지 — 파킨슨 출력 중심 복약 일지 PWA",
   "scripts": {
-    "test": "node tests/phs-engine.test.js && node tests/phs-integration.test.js && node tests/phs-range.test.js && node tests/integration-0921.test.js && node tests/ui-0922.test.js && node tests/today-simplify.test.js && node tests/survey-fixes.test.js && node tests/first-screen-v13.test.js && node tests/analysis-phase0.test.js && node tests/analysis-phase0-ui.test.js && node tests/simulator-redesign.test.js && node tests/simulation-drugmodel.test.js && node tests/phase1.test.js && node tests/phase2.test.js && node tests/phase2-ui.test.js && node tests/phase3.test.js && node tests/phase3-ui.test.js && node tests/drug-dictionary.test.js && node tests/simulation-platform.test.js && node tests/simulation-clinical.test.js",
+    "test": "node tests/phs-engine.test.js && node tests/phs-integration.test.js && node tests/phs-range.test.js && node tests/integration-0921.test.js && node tests/ui-0922.test.js && node tests/today-simplify.test.js && node tests/survey-fixes.test.js && node tests/first-screen-v13.test.js && node tests/analysis-phase0.test.js && node tests/analysis-phase0-ui.test.js && node tests/simulator-redesign.test.js && node tests/simulation-drugmodel.test.js && node tests/phase1.test.js && node tests/phase2.test.js && node tests/phase2-ui.test.js && node tests/phase3.test.js && node tests/phase3-ui.test.js && node tests/phase4.test.js && node tests/phase4-ui.test.js && node tests/drug-dictionary.test.js && node tests/simulation-platform.test.js && node tests/simulation-clinical.test.js",
     "test:challenge": "cd challenge && npm test",
     "test:all": "npm test && npm run test:challenge"
   },
