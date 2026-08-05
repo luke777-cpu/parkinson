@@ -1,0 +1,106 @@
+/* ============================================================
+   analysis-coverage.js — 치료구간 설계도 Phase 3: 과부족 분석 엔진
+   책임: Phase 2에서 추정한 치료 구간(하한·상한)을 기준으로, 하루 곡선이
+   그 구간 안에 머문 시간과 구간 밖(낮음·높음)에서 보낸 시간·크기를 계산한다.
+
+   설계 원칙 (치료구간_과다과소_설계도 §3):
+   - 목표는 "부족분을 채우는 것"이 아니라 "구간 내 체류시간을 늘리는 것"이다.
+     이 파일은 그 판단에 필요한 사실(시간·크기)만 계산하고, 무엇을 하라고 말하지 않는다.
+   - 상한이 없어도(이상운동증 기록이 아직 없어도) 하한만으로 "낮은 구간" 분석은 가능하다.
+     이때 "높은 구간"은 계산하지 않는다 — 임의로 상한을 추정하지 않는다는 Phase 2 원칙을 잇는다.
+   - 하한을 추정할 수 없으면(표본 부족 등) 이 파일은 아무 계산도 하지 않는다.
+   - 결론·추천·처방 문구를 만들지 않는다. 숫자만 낸다.
+   - DOM·localStorage에 의존하지 않는다 (Node 단독 테스트 가능).
+   ============================================================ */
+(function(root){
+"use strict";
+const COV = {};
+
+/* 연속 구간을 하나의 세그먼트로 묶고, 그 구간의 평균/최고 차이와 면적(시간×크기)을 계산한다. */
+function finalizeSegment(seg, step){
+  const n=seg._diffs.length;
+  seg.meanDeltaLed = n? seg._diffs.reduce((a,b)=>a+b,0)/n : 0;
+  seg.areaLedMin = n? seg._diffs.reduce((a,b)=>a+b,0)*step : 0;
+  delete seg._diffs;
+  return seg;
+}
+
+/* ---- 과부족 분석 ----
+   rawPoints: [{t, led}] — 하루(또는 임의 구간)의 복합 약효 추정곡선 원단위(Phase 1).
+   window: {lower, upper} — Phase 2에서 추정한 치료 구간. upper는 null일 수 있다(이상운동증 기록 없음).
+   opts.step: rawPoints의 시점 간격(분). 기본 10분. */
+COV.analyze = function(rawPoints, window, opts){
+  const o=Object.assign({step:10}, opts||{});
+  const reasons=[];
+  if(!rawPoints || !rawPoints.length){
+    reasons.push("곡선 데이터가 없어 과부족을 계산할 수 없습니다");
+    return {valid:false, reasons};
+  }
+  if(!window || window.lower==null){
+    reasons.push("하한(OFF 역치)을 추정할 수 없어 과부족을 계산할 수 없습니다");
+    return {valid:false, reasons};
+  }
+  const lower=window.lower;
+  const hasUpper = window.upper!=null;
+  const upper = hasUpper? window.upper : null;
+  const step=o.step;
+
+  let inWindowMin=0, underMin=0, overMin=0;
+  const underSegments=[], overSegments=[];
+  let curUnder=null, curOver=null;
+
+  rawPoints.forEach(p=>{
+    const led=p.led;
+    const isUnder = led<lower;
+    const isOver = hasUpper && led>upper;
+
+    if(isUnder){
+      underMin+=step;
+      const deficit=lower-led;
+      if(!curUnder) curUnder={startMin:p.t, endMin:p.t+step, maxDeficitLed:deficit, _diffs:[deficit]};
+      else { curUnder.endMin=p.t+step; curUnder.maxDeficitLed=Math.max(curUnder.maxDeficitLed,deficit); curUnder._diffs.push(deficit); }
+    } else if(curUnder){ underSegments.push(finalizeSegment(curUnder, step)); curUnder=null; }
+
+    if(isOver){
+      overMin+=step;
+      const excess=led-upper;
+      if(!curOver) curOver={startMin:p.t, endMin:p.t+step, maxExcessLed:excess, _diffs:[excess]};
+      else { curOver.endMin=p.t+step; curOver.maxExcessLed=Math.max(curOver.maxExcessLed,excess); curOver._diffs.push(excess); }
+    } else if(curOver){ overSegments.push(finalizeSegment(curOver, step)); curOver=null; }
+
+    if(!isUnder && !isOver) inWindowMin+=step;
+  });
+  if(curUnder) underSegments.push(finalizeSegment(curUnder, step));
+  if(curOver) overSegments.push(finalizeSegment(curOver, step));
+
+  const worst=(segs)=> segs.length? segs.reduce((a,b)=> b.areaLedMin>a.areaLedMin? b:a) : null;
+  if(!hasUpper) reasons.push("상한(이상운동증 역치)을 추정할 수 없어 높은 구간은 계산하지 않았습니다 — 낮은 구간만 계산했습니다");
+
+  return {
+    valid:true, hasUpper, reasons,
+    inWindowMin, underMin, overMin,
+    underSegments, overSegments,
+    worstUnder: worst(underSegments), worstOver: worst(overSegments),
+  };
+};
+
+/* 여러 날의 결과를 하나로 합친다 (기간 전체 관점의 요약).
+   dayResults: [{dayKey, ...COV.analyze 결과}] */
+COV.aggregate = function(dayResults){
+  const valid=(dayResults||[]).filter(d=>d && d.valid);
+  if(!valid.length) return {valid:false, reasons:["과부족을 계산할 수 있는 날이 없습니다"]};
+  let inWindowMin=0, underMin=0, overMin=0, worstUnder=null, worstOver=null, hasUpper=false;
+  valid.forEach(d=>{
+    inWindowMin+=d.inWindowMin; underMin+=d.underMin; overMin+=d.overMin;
+    if(d.hasUpper) hasUpper=true;
+    if(d.worstUnder && (!worstUnder || d.worstUnder.areaLedMin>worstUnder.areaLedMin))
+      worstUnder=Object.assign({dayKey:d.dayKey}, d.worstUnder);
+    if(d.worstOver && (!worstOver || d.worstOver.areaLedMin>worstOver.areaLedMin))
+      worstOver=Object.assign({dayKey:d.dayKey}, d.worstOver);
+  });
+  return {valid:true, dayCount:valid.length, inWindowMin, underMin, overMin, hasUpper, worstUnder, worstOver, reasons:[]};
+};
+
+if(typeof module!=="undefined"&&module.exports) module.exports=COV;
+root.SIMCOV = COV;
+})(typeof window!=="undefined"?window:globalThis);
