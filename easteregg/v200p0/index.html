@@ -670,7 +670,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음 (INSUF)",
-    versionLabel:"약효일지 · 비공개 시험판 2.0.2-phase0",
+    versionLabel:"약효일지 · 비공개 시험판 2.1.0-phase1",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -731,7 +731,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests (INSUF)",
-    versionLabel:"Med Log · Test build 2.0.2-phase0",
+    versionLabel:"Med Log · Test build 2.1.0-phase1",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -2922,9 +2922,11 @@ function renderSimCompareChart(dayKey, planDoses, virtDoses, curPlan, virtPlan){
 }
 
 /* ---- LEDD 요약 카드 (크기 비교 전용 — 곡선 모양은 결정하지 않음) ---- */
-/* 검토 반영: 온젠티스·도파민 작용제·아만타딘 등은 leddIncluded:false라 이 합계에서
-   빠진다. "총 LEDD"라고 하면 전체를 다 더한 것처럼 오해할 수 있어 "계산 포함 LEDD"로 표기하고,
-   제외된 약이 있으면 그 목록을 함께 보여준다. */
+/* 치료구간 설계도 Phase 1(2026-08-05) 반영: 도파민 작용제·아만타딘·MAO-B는 이제 표준
+   환산표 기준으로 총 LEDD에 포함된다(leddIncluded:true로 정정, 보내주신 LEDD 계산기의
+   4단계 값 150/225/325/425와 대조 검증됨). 남은 제외 대상은 COMT 억제제(온젠티스·엔타카폰)
+   뿐이다 — 자체 mg 환산이 아직 확립되지 않아서다. 그래서 "총 LEDD"로 표기를 되돌리고,
+   COMT가 있을 때만 제외 사실을 각주로 남긴다. */
 function simLeddCompareHtml(curPlan, virtPlan, planWithCarry, virtWithCarry){
   const diff=virtPlan.leddTotal-curPlan.leddTotal;
   const rows=(bd)=>bd.length? bd.map(x=>`${x.name} ${x.ledd}`).join(" · ") : "—";
@@ -2934,11 +2936,11 @@ function simLeddCompareHtml(curPlan, virtPlan, planWithCarry, virtWithCarry){
     return [...s];
   };
   const excluded=[...new Set(excludedNames(planWithCarry).concat(excludedNames(virtWithCarry)))];
-  return `<b>계산 포함 LEDD</b> <span style="color:var(--ink-2); font-weight:400">(레보도파 계열 환산량 — 전체 LEDD가 아닙니다)</span><br>
-    현재 계산 포함 LEDD: ${curPlan.leddTotal} · 변경안 계산 포함 LEDD: ${virtPlan.leddTotal} · 변화: ${diff>=0?"+":""}${diff}${curPlan.leddTotal? ` (${diff>=0?"+":""}${Math.round(diff/curPlan.leddTotal*100)}%)`:""}
+  return `<b>총 LEDD</b><br>
+    현재 총 LEDD: ${curPlan.leddTotal} · 변경안 총 LEDD: ${virtPlan.leddTotal} · 변화: ${diff>=0?"+":""}${diff}${curPlan.leddTotal? ` (${diff>=0?"+":""}${Math.round(diff/curPlan.leddTotal*100)}%)`:""}
     <details style="margin-top:4px"><summary style="cursor:pointer; color:var(--ink-2)">약물별 기여도</summary>
       <div style="color:var(--ink-2); margin-top:4px">현재안: ${rows(curPlan.leddBreakdown)}<br>변경안: ${rows(virtPlan.leddBreakdown)}</div></details>
-    ${excluded.length? `<div class="hint" style="margin-top:4px">일부 보조약과 도파민 작용제(${escapeHtml(excluded.join(", "))})는 현재 이 합계에서 제외됩니다.</div>`:""}`;
+    ${excluded.length? `<div class="hint" style="margin-top:4px">COMT 억제제(${escapeHtml(excluded.join(", "))})는 자체 mg 환산이 확립되지 않아 이 합계에서 제외됩니다.</div>`:""}`;
 }
 /* 약효 추정 중첩 구간 — 위험 판정이 아니라 사실 표시 */
 function simOverlapNote(curPlan){
