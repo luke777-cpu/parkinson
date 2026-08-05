@@ -363,7 +363,41 @@ function buildChallengeSection(tests, lang){
 }
 PHS.buildChallengeSection = buildChallengeSection;
 
-PHS.buildReport = function({profile, startSurvey, endSurvey, analysis, confidence, medsList, lang, challengeTests}){
+/* v2.5(치료구간 설계도 Phase 4): 부족 구간을 채우는 후보안 비교.
+   comparison: analysis-candidates.js의 CAND.evaluate() 결과.
+   window: {lower, upper} — Phase 2에서 추정한 치료 구간.
+   이 섹션은 detailedReport(의료진용)에만 들어간다 — 환자 화면(오늘/분석 탭)에는 절대 안 보인다.
+   "추천"·"1위" 표현을 쓰지 않고, 정렬 기준(체류시간 증가량)을 매 줄 함께 밝힌다. */
+function buildTherapeuticWindowSection(comparison, window, lang){
+  const en=lang==="en";
+  const title=en? "Therapeutic Window — Deficit Candidate Comparison" : "치료 구간 — 부족분 채우기 후보안 비교";
+  const note=en? "Simulated comparison only, based on the estimated therapeutic window and effect-estimate curve. Not a prescription recommendation. Candidates are ranked by estimated time-within-window gain, not by how much of the deficit each fills — filling a deficit can overshoot the upper bound. Verify with a medication response test before any change."
+              : "추정된 치료 구간과 약효 추정곡선을 비교한 시뮬레이션 결과입니다. 처방 권고가 아닙니다. 후보는 부족분을 얼마나 채우는지가 아니라 '구간 내 체류시간이 얼마나 느는지'로 정렬했습니다 — 부족분을 채우면 상한을 넘길 수 있습니다. 실제 적용 전 약효 반응 시험으로 확인하세요.";
+  if(!comparison || !comparison.valid){
+    const reason=(comparison&&comparison.reasons&&comparison.reasons[0]) || (en?"Not enough data":"자료 부족");
+    return {title, note, lines:[en? `Not calculated (${reason})` : `계산되지 않음 (${reason})`]};
+  }
+  const fmtH=(min)=>{ min=Math.round(min); const h=Math.floor(Math.abs(min)/60), m=Math.abs(min)%60;
+    const sign=min<0?"-":"+"; return `${sign}${h}${en?"h":"시간"}${m}${en?"m":"분"}`; };
+  const winLine=en? `Estimated window: ${Math.round(window.lower*100)/100} ~ ${window.upper!=null?Math.round(window.upper*100)/100:"N/A"}`
+                   : `추정 구간: ${Math.round(window.lower*100)/100} ~ ${window.upper!=null?Math.round(window.upper*100)/100:"판정 불가"}`;
+  const baseLine=en? `Baseline time within window: ${Math.round(comparison.baseline.inWindowMin/60*10)/10}h`
+                    : `현재안 구간 내 체류시간: ${Math.round(comparison.baseline.inWindowMin/60*10)/10}시간`;
+  const lines=[winLine, baseLine];
+  if(!comparison.candidates.length){
+    lines.push(en? "No candidates could be generated from the current regimen (unregistered drugs, or no applicable pattern)."
+                  : "현재 복약 구성으로는 만들 수 있는 후보안이 없습니다(미등록 약이거나 해당 유형이 없음).");
+  }
+  comparison.candidates.forEach(c=>{
+    if(!c.valid){ lines.push(`${c.label} — ${en?"could not be calculated":"계산할 수 없음"}`); return; }
+    const warn=c.crossesUpper? (en?" ⚠ increases time above upper bound":" ⚠ 상한 초과 시간이 늘어남") : "";
+    lines.push(`${c.label} — ${en?"time within window":"구간 내 체류시간"} ${fmtH(c.deltaMin)}${warn}`);
+  });
+  return {title, note, lines};
+}
+PHS.buildTherapeuticWindowSection = buildTherapeuticWindowSection;
+
+PHS.buildReport = function({profile, startSurvey, endSurvey, analysis, confidence, medsList, lang, challengeTests, therapeuticWindow}){
   lang = lang==="en"? "en":"ko";
   const T = lang==="en"? PHS.templatesEn : PHS.templatesKo;
   const cc=buildCC(startSurvey,lang);
@@ -415,6 +449,8 @@ PHS.buildReport = function({profile, startSurvey, endSurvey, analysis, confidenc
       cc, hpi,
       currentMedication,
       medicationResponseTests:buildChallengeSection(challengeTests, lang==="en"?"en":"ko"),
+      /* v2.5 Phase 4: therapeuticWindow가 있을 때만(선택적) 후보안 비교 섹션 삽입 — 없으면 생략(하위 호환) */
+      therapeuticWindowAnalysis: therapeuticWindow? buildTherapeuticWindowSection(therapeuticWindow.comparison, therapeuticWindow.window, lang==="en"?"en":"ko") : null,
       monitoringSummary:{
         recordedDays:analysis.period.recordedDays,
         periodDays:analysis.period.periodDays,
