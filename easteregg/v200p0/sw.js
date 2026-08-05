@@ -1,4 +1,4 @@
-const CACHE = "yakhyo-eggbeta-phase2-v1";
+const CACHE = "yakhyo-eggbeta-offbtn-v1";
 const APP_SHELL = [
   "./",
   "./index.html",
