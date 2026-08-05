@@ -63,21 +63,34 @@ CLIN.calendarPeriod = function(allDayKeys, periodDays, endDate){
 /* ---- 1) 복용 그룹화 ----
    doses: [{dayKey, name, dose, timeMin, ts}]
    같은 약 + 같은 용량 + 비슷한 시각(±tolerance)을 하나의 그룹으로 묶는다. */
+/* 버그 수정(2026-08-05, 실사용 피드백): 그룹을 "약 이름+정확한 용량"으로 나누고 있어서,
+   같은 시각(예: 06:03과 06:04)이라도 용량이 한 번이라도 다르게 기록되거나(오타·조정)
+   용량을 안 넣은 회차가 섞이면 "16회"가 "11회+5회"로 쪼개졌다.
+   그룹은 "약 이름 + 시각 근접성"만으로 나누고, 용량은 그룹 안의 참고 정보(최빈값·분포)로 둔다.
+   같은 시간대의 같은 약은 용량 표기가 들쭉날쭉해도 임상적으로는 같은 복용 사건이기 때문이다. */
 CLIN.groupDoses = function(doses, opts){
   const o=Object.assign({}, CLIN.DEFAULTS, opts||{});
   const buckets=[];
   (doses||[]).slice().sort((a,b)=>a.timeMin-b.timeMin).forEach(d=>{
-    const key=`${d.name}|${d.dose==null?"?":d.dose}`;
-    let b=buckets.find(x=>x.key===key && Math.abs(median(x.items.map(i=>i.timeMin))-d.timeMin)<=o.timeGroupToleranceMin);
-    if(!b){ b={key, name:d.name, dose:d.dose, items:[]}; buckets.push(b); }
+    let b=buckets.find(x=>x.name===d.name && Math.abs(median(x.items.map(i=>i.timeMin))-d.timeMin)<=o.timeGroupToleranceMin);
+    if(!b){ b={name:d.name, items:[]}; buckets.push(b); }
     b.items.push(d);
   });
   return buckets.map(b=>{
     const times=b.items.map(i=>i.timeMin);
     const med=median(times);
+    /* 용량 분포: 최빈값을 대표값으로, 여러 용량이 섞여 있으면 그 사실을 함께 남긴다 */
+    const doseCounts=new Map();
+    b.items.forEach(i=>{ const k=(i.dose==null)? "?" : i.dose;
+      doseCounts.set(k, (doseCounts.get(k)||0)+1); });
+    let modeDose=null, modeCount=-1;
+    doseCounts.forEach((cnt,k)=>{ if(cnt>modeCount){ modeCount=cnt; modeDose=k; } });
+    const distinctDoses=[...doseCounts.keys()].filter(k=>k!=="?");
     return {
-      id:`${b.name}|${b.dose==null?"?":b.dose}|${Math.round(med)}`,
-      name:b.name, dose:b.dose,
+      id:`${b.name}|${Math.round(med)}`,
+      name:b.name, dose: modeDose==="?"? null : modeDose,
+      mixedDose: doseCounts.size>1,
+      doseVariants:[...doseCounts.entries()].map(([k,cnt])=>({dose:k==="?"?null:k, count:cnt})),
       medianTimeMin:med, timeLabel:minToHhmm(med),
       windowLabel:`${minToHhmm(Math.min(...times))}~${minToHhmm(Math.max(...times))}`,
       occurrences:b.items.length,
