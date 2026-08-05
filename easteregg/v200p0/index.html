@@ -627,6 +627,7 @@ body{font-size:calc(15px*var(--app-font-scale))}
 <script src="analysis-threshold.js"></script>
 <script src="analysis-coverage.js"></script>
 <script src="analysis-candidates.js"></script>
+<script src="analysis-validation.js"></script>
 <script>
 "use strict";
 /* ---------- i18n ---------- */
@@ -677,6 +678,8 @@ const I18N = {
     anWindowDisclaimer:"이 구간은 회원님이 실제로 기록한 OFF 시각·이상운동증 시각을 근거로 추정한 값이며, 절대 기준이 아닙니다. 표본이 부족하면 추정하지 않습니다.",
     anCoverageTitle:"치료 구간 안에 머문 시간",
     anCoverageDisclaimer:"이 계산은 추정된 치료 구간과 약효 추정곡선을 비교한 것으로, 처방을 권고하지 않습니다. 약물 조정은 담당 의료진과 상의하세요.",
+    anValidationTitle:"예측 vs 실제",
+    anValidationDisclaimer:"보고서에서 제안했던 후보안을 실제로 복용한 날의 기록과, 그때 예측했던 값을 비교합니다. 예측과 다르다고 해서 잘못된 것이 아니며, 그 차이가 다음 추정을 더 정확하게 만드는 데 쓰입니다.",
     quickOutputTitle:"지금 몸이 어떠세요?", qoLabel:"현재 출력",
     qoStep90:"아주 잘 움직여요", qoStep70:"지낼 만해요", qoStep50:"불편하지만 움직여요", qoStep30:"많이 느리고 힘들어요", qoStep10:"거의 못 움직여요", qoHelpBtn:"ⓘ 도움말 · 기준 설정", qoReset:"오늘 기준점 다시 설정", qoGuide:"출력 점수 기준 보기",
     fontSize:"글씨 크기", fontSizeDesc:"기본 · 크게 · 매우 크게", fsNormal:"기본", fsLarge:"크게", fsXLarge:"매우 크게",
@@ -691,7 +694,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음 (INSUF)",
-    versionLabel:"약효일지 · 비공개 시험판 2.5.0-phase4",
+    versionLabel:"약효일지 · 비공개 시험판 2.6.0-phase5",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -742,6 +745,8 @@ const I18N = {
     anWindowDisclaimer:"This window is estimated from your own recorded OFF times and dyskinesia times — it is not an absolute standard. It is not estimated when there isn't enough data.",
     anCoverageTitle:"Time within the therapeutic window",
     anCoverageDisclaimer:"This is a comparison of your estimated window against the effect-estimate curve. It does not recommend a prescription. Discuss medication changes with your clinician.",
+    anValidationTitle:"Predicted vs Actual",
+    anValidationDisclaimer:"Compares a candidate suggested in a past report against records from a day it was actually taken. A mismatch isn't a failure — the difference helps refine future estimates.",
     quickOutputTitle:"How is your body right now?", qoLabel:"Current output",
     qoStep90:"Moving very well", qoStep70:"Manageable", qoStep50:"Uncomfortable but moving", qoStep30:"Very slow and hard", qoStep10:"Can barely move", qoHelpBtn:"ⓘ Help & baseline", qoReset:"Reset today's baseline", qoGuide:"View output score guide",
     fontSize:"Font size", fontSizeDesc:"Normal · Large · Extra large", fsNormal:"Normal", fsLarge:"Large", fsXLarge:"Extra large",
@@ -756,7 +761,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests (INSUF)",
-    versionLabel:"Med Log · Test build 2.5.0-phase4",
+    versionLabel:"Med Log · Test build 2.6.0-phase5",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -4776,7 +4781,8 @@ function phsGenerate(){
   const confidence=PHS.assessConfidence(analysis, obs.startSurvey);
   const challengeData=(typeof SHARED!=="undefined")? (SHARED.read().challengeSummaries||[]) : [];
   const therapeuticWindow=phsGatherTherapeuticWindow(obs);
-  const report=PHS.buildReport({profile:db.phs.profile, startSurvey:obs.startSurvey, endSurvey:obs.endSurvey, analysis, confidence, medsList:db.meds, lang:currentLang(), challengeTests:challengeData, therapeuticWindow});
+  const validation=(typeof SIMVAL!=="undefined")? anGatherValidationResults() : null;
+  const report=PHS.buildReport({profile:db.phs.profile, startSurvey:obs.startSurvey, endSurvey:obs.endSurvey, analysis, confidence, medsList:db.meds, lang:currentLang(), challengeTests:challengeData, therapeuticWindow, validation});
   const safety=PHS.checkReportSafety(report);
   if(safety.length){ console.warn("PHS safety check", safety); toast(L("보고서 안전 검사에서 문구를 보정했어요","Report safety check adjusted some wording")); }
   phsRenderReport(report, analysis, note);
@@ -4807,9 +4813,57 @@ function phsGatherTherapeuticWindow(obs){
 
     const {candidates}=SIMCAND.buildCandidates(baselineDoses, agg.worstUnder);
     const comparison=SIMCAND.evaluate(baselineDoses, candidates, window);
+    phsSavePrediction(agg.worstUnder.dayKey, window, comparison, candidates);
     return {comparison, window};
   }catch(e){ console.warn("phsGatherTherapeuticWindow", e); return null; }
 }
+/* v2.6 Phase 5: 후보안 비교를 만들 때마다 "그때 예측한 값"을 남겨 둔다.
+   나중에 실제로 그 조합을 복용한 날이 기록되면 그 결과와 비교할 수 있다.
+   최근 20건만 보관(무한정 쌓이지 않게). */
+function phsSavePrediction(baselineDayKey, window, comparison, candidatesWithDoses){
+  if(!comparison || !comparison.valid || !comparison.candidates.length) return;
+  if(!db.phs) db.phs={};
+  if(!Array.isArray(db.phs.predictions)) db.phs.predictions=[];
+  const merged=candidatesWithDoses.map(c=>{
+    const row=comparison.candidates.find(r=>r.id===c.id);
+    return {id:c.id, label:c.label, doses:c.doses, predictedDeltaMin: (row&&row.valid)? row.deltaMin : null};
+  }).filter(c=>c.predictedDeltaMin!=null);
+  if(!merged.length) return;
+  db.phs.predictions.push({ts:Date.now(), baselineDayKey, window,
+    baselineInWindowMin:comparison.baseline.inWindowMin, candidates:merged});
+  if(db.phs.predictions.length>20) db.phs.predictions=db.phs.predictions.slice(-20);
+  save();
+}
+/* 저장된 예측들을 스캔해서, 그 후보안대로 실제 복용한 날을 찾으면 실측 결과와 비교한다.
+   아직 아무도 그 조합을 복용한 적이 없으면 그 예측은 조용히 건너뛴다(소음 방지). */
+function anGatherValidationResults(){
+  if(typeof SIMVAL==="undefined") return {results:[], pendingCount:0};
+  const preds=(db.phs&&db.phs.predictions)||[];
+  const days=byDay(); const allKeys=Object.keys(days).sort();
+  const results=[]; let pendingCount=0;
+  preds.forEach(p=>{
+    let matchedDay=null;
+    for(const k of allKeys){
+      if(k<=p.baselineDayKey) continue;
+      const {today, carry}=medsForSimulationDay(k);
+      const actualDoses=carry.concat(today);
+      for(const c of p.candidates){
+        const m=SIMVAL.dosesMatchCandidate(actualDoses, c.doses);
+        if(m.matches){ matchedDay={dayKey:k, candidate:c, actualDoses}; break; }
+      }
+      if(matchedDay) break;
+    }
+    if(!matchedDay){ pendingCount++; return; }
+    const composite=SIMDRUG.compositeCurve(matchedDay.actualDoses, 0, 1440, 10);
+    const cov=SIMCOV.analyze(composite.rawPoints, p.window, {step:10});
+    if(!cov.valid) return;
+    const actualDeltaMin=cov.inWindowMin-p.baselineInWindowMin;
+    const cmp=SIMVAL.compareOutcome(matchedDay.candidate.predictedDeltaMin, actualDeltaMin);
+    if(cmp.valid) results.push(Object.assign({label:matchedDay.candidate.label, appliedDayKey:matchedDay.dayKey, baselineDayKey:p.baselineDayKey}, cmp));
+  });
+  return {results, pendingCount};
+}
+
 /* ---- 보고서 렌더 ---- */
 function phsQHtml(q){
   const tag=q.type==="free"?L("환자 질문","Patient question"):(q.type==="selected"?L("선택 질문","Selected question"):L("제안 질문","Suggested question"));
@@ -4859,6 +4913,9 @@ function phsRenderReport(report, analysis, note){
       ${(det.therapeuticWindowAnalysis)? `<h2>${escapeHtml(det.therapeuticWindowAnalysis.title)}</h2>
         <div class="phs-meta">${escapeHtml(det.therapeuticWindowAnalysis.note)}</div>
         <ul style="margin:4px 0 0 18px; padding:0">${det.therapeuticWindowAnalysis.lines.map(l=>`<li style="white-space:pre-line">${escapeHtml(l)}</li>`).join("")}</ul>`:""}
+      ${(det.predictionValidation)? `<h2>${escapeHtml(det.predictionValidation.title)}</h2>
+        <div class="phs-meta">${escapeHtml(det.predictionValidation.note)}</div>
+        <ul style="margin:4px 0 0 18px; padding:0">${det.predictionValidation.lines.map(l=>`<li style="white-space:pre-line">${escapeHtml(l)}</li>`).join("")}</ul>`:""}
       ${anchorRows.length? `<h2>${L("환자 정의 출력 기준","Patient-Defined Output Anchors")}</h2><table><thead><tr><th>${L("출력","Output")}</th><th>${L("환자에게의 의미","What it means to the patient")}</th></tr></thead><tbody>${anchorRows.map(([k,v])=>`<tr><td>${k}</td><td>${escapeHtml(v)}</td></tr>`).join("")}</tbody></table>`:""}
       <h2>${L("모니터링 요약","Monitoring Summary")} <span class="phs-conf">${L("신뢰도","Confidence")} ${CONF(conf.sectionConfidence.outputSummary)}</span></h2>
       <table><tbody>
@@ -4924,6 +4981,7 @@ function phsReportText(r){
     ``,`[CC] ${one.cc}`,``,`[HPI] ${one.hpi}`,
     ...(det.medicationResponseTests? [``,`[${det.medicationResponseTests.title}]`, det.medicationResponseTests.note, ...det.medicationResponseTests.lines.map(l=>"- "+l)]:[]),
     ...(det.therapeuticWindowAnalysis? [``,`[${det.therapeuticWindowAnalysis.title}]`, det.therapeuticWindowAnalysis.note, ...det.therapeuticWindowAnalysis.lines.map(l=>"- "+l)]:[]),
+    ...(det.predictionValidation? [``,`[${det.predictionValidation.title}]`, det.predictionValidation.note, ...det.predictionValidation.lines.map(l=>"- "+l)]:[]),
     ``,`[${en?"Key Findings":"핵심 관찰 결과"}]`, one.keyResults.map(k=>`- ${k}`).join("\n"),
     ``,`[${en?"Main Daily Pattern":"주요 일중 패턴"}] ${one.mainDailyPattern}`,
     ``,`[${en?"Patient Questions":"환자 질문"}]`, q(one.patientQuestions)||(en?"- None":"- 없음"),
