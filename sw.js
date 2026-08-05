@@ -1,4 +1,4 @@
-const CACHE = "yakhyo-v40-phsrange120";
+const CACHE = "yakhyo-v42-survey130";
 const APP_SHELL = [
   "./",
   "./index.html",
