@@ -397,7 +397,32 @@ function buildTherapeuticWindowSection(comparison, window, lang){
 }
 PHS.buildTherapeuticWindowSection = buildTherapeuticWindowSection;
 
-PHS.buildReport = function({profile, startSurvey, endSurvey, analysis, confidence, medsList, lang, challengeTests, therapeuticWindow}){
+/* v2.6(치료구간 설계도 Phase 5): 과거 보고서에서 제안했던 후보안을 실제로 복용한 뒤의
+   결과와, 그때의 예측을 비교한다. 이 섹션도 detailedReport(의료진용)에만 들어간다 —
+   환자 화면(오늘/분석 탭)에는 어떤 형태로도 노출하지 않는다.
+   validation: {results:[{label,predictedDeltaMin,actualDeltaMin,errorMin,direction,
+   baselineDayKey,appliedDayKey}], pendingCount} — index.html의 anGatherValidationResults()가 만든다. */
+function buildValidationSection(validation, lang){
+  const en=lang==="en";
+  const title=en? "Prediction vs Actual (Applied Candidates)" : "예측 vs 실제 (적용된 후보안)";
+  const note=en? "Compares a candidate suggested in a past report against records from a day it was actually taken. A mismatch is not a failure — the difference is used to refine future estimates. Not a treatment judgment."
+              : "과거 보고서에서 제안했던 후보안을 실제로 복용한 날의 기록과, 그때 예측했던 값을 비교합니다. 예측과 다르다고 잘못된 것이 아니며, 그 차이가 다음 추정을 더 정확하게 만드는 데 쓰입니다. 치료 판단이 아닙니다.";
+  if(!validation || (!validation.results.length && !validation.pendingCount)){
+    return {title, note, lines:[en? "No applied candidates to compare yet." : "아직 실제로 적용해 비교할 수 있는 후보안이 없습니다."]};
+  }
+  const DIR=en? {close:"close to prediction", exceeded:"better than predicted", fell_short:"below prediction"}
+              : {close:"예측과 비슷함", exceeded:"예측보다 좋았음", fell_short:"예측에 못 미침"};
+  const fmtH=(min)=>{ const sign=min<0?"-":"+"; min=Math.round(Math.abs(min));
+    return `${sign}${Math.floor(min/60)}${en?"h":"시간"} ${min%60}${en?"m":"분"}`; };
+  const lines=(validation.results||[]).map(r=>
+    `${r.label} (${r.baselineDayKey}→${r.appliedDayKey}) — ${en?"predicted":"예측"} ${fmtH(r.predictedDeltaMin)} / ${en?"actual":"실제"} ${fmtH(r.actualDeltaMin)} · ${DIR[r.direction]}`);
+  if(validation.pendingCount) lines.push(en? `${validation.pendingCount} more suggested candidate(s) not yet observed in the records.`
+                                            : `아직 기록에서 확인되지 않은 후보안이 ${validation.pendingCount}건 더 있습니다.`);
+  return {title, note, lines};
+}
+PHS.buildValidationSection = buildValidationSection;
+
+PHS.buildReport = function({profile, startSurvey, endSurvey, analysis, confidence, medsList, lang, challengeTests, therapeuticWindow, validation}){
   lang = lang==="en"? "en":"ko";
   const T = lang==="en"? PHS.templatesEn : PHS.templatesKo;
   const cc=buildCC(startSurvey,lang);
@@ -451,6 +476,8 @@ PHS.buildReport = function({profile, startSurvey, endSurvey, analysis, confidenc
       medicationResponseTests:buildChallengeSection(challengeTests, lang==="en"?"en":"ko"),
       /* v2.5 Phase 4: therapeuticWindow가 있을 때만(선택적) 후보안 비교 섹션 삽입 — 없으면 생략(하위 호환) */
       therapeuticWindowAnalysis: therapeuticWindow? buildTherapeuticWindowSection(therapeuticWindow.comparison, therapeuticWindow.window, lang==="en"?"en":"ko") : null,
+      /* v2.6 Phase 5: validation이 있을 때만(선택적) 예측 검증 섹션 삽입 — 없으면 생략(하위 호환) */
+      predictionValidation: validation? buildValidationSection(validation, lang==="en"?"en":"ko") : null,
       monitoringSummary:{
         recordedDays:analysis.period.recordedDays,
         periodDays:analysis.period.periodDays,
