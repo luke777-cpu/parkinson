@@ -669,7 +669,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음 (INSUF)",
-    versionLabel:"약효일지 · 비공개 시험판 2.0.0-phase0",
+    versionLabel:"약효일지 · 비공개 시험판 2.0.1-phase0",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -730,7 +730,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests (INSUF)",
-    versionLabel:"Med Log · Test build 2.0.0-phase0",
+    versionLabel:"Med Log · Test build 2.0.1-phase0",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -3055,6 +3055,10 @@ function renderAnalysis(){
           `Period: ${r.period.startKey} – ${r.period.endKey} · ${r.period.recordedDays} days with records`)}<br>
       ${L("분석 대상","Target")}: <b>${escapeHtml(r.group.timeLabel)} ${escapeHtml(r.group.name)} ${doseLabel(r.group.dose)}</b>
       · ${L("분석 가능","analyzable")} <b>${s.n}${L("회","x")}</b>
+      ${r.group.mixedDose? `<div class="hint" style="margin-top:2px">${L(
+        `이 시간대 기록 중 용량 표기가 달랐던 경우가 있어요 (${r.group.doseVariants.map(v=>`${doseLabel(v.dose)} ${v.count}${L("회","x")}`).join(", ")}). 같은 복용으로 보고 함께 분석했습니다.`,
+        `Some entries at this time had different recorded doses (${r.group.doseVariants.map(v=>`${doseLabel(v.dose)} ${v.count}x`).join(", ")}). Treated as the same dose event.`
+      )}</div>`:""}
     </div>
     <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px">
       <div style="background:var(--surface-2); border-radius:10px; padding:10px 12px">
