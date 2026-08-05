@@ -1,4 +1,4 @@
-const CACHE = "yakhyo-eggbeta-phase3-v2";
+const CACHE = "yakhyo-eggbeta-phase4-v1";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -7,6 +7,7 @@ const APP_SHELL = [
   "./analysis-clinical.js",
   "./analysis-threshold.js",
   "./analysis-coverage.js",
+  "./analysis-candidates.js",
   "./drug-dictionary.json",
   "./phs-engine.js",
   "./phs-report.js",
