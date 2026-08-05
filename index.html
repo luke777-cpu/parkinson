@@ -180,8 +180,19 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
 /* v0.9.25: 실행 버튼은 카드 안에서 아래에 붙어 키보드·긴 목록에 가려지지 않게 한다 */
 .sc-run{position:sticky; bottom:8px; z-index:3; min-height:56px; font-size:16.5px; font-weight:800;
   margin-top:10px; box-shadow:0 2px 10px rgba(0,0,0,.18)}
-.top-actions{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:10px 0}
-.top-actions .btn{min-height:56px; font-size:16.5px; font-weight:800}
+/* v1.3: 일상어 단계 버튼 — 손 떨림에도 누르기 쉽게 크게 */
+.qo-steps{display:flex; flex-direction:column; gap:7px; margin:8px 0 4px}
+.qo-step{display:flex; align-items:center; gap:11px; min-height:62px; padding:10px 13px;
+  border:2px solid var(--line); border-radius:13px; background:var(--surface);
+  font-family:inherit; color:inherit; text-align:left; cursor:pointer; transition:none}
+.qo-step .bar{width:7px; height:30px; border-radius:4px; flex:0 0 auto}
+.qo-step .lab{font-size:calc(16px*var(--app-font-scale,1)); font-weight:800; line-height:1.25}
+.qo-step .num{margin-left:auto; font-size:20px; font-weight:800; color:var(--ink-2); font-variant-numeric:tabular-nums}
+.qo-step.sel{border-color:var(--accent); background:var(--accent-weak, #F0FAF5)}
+.qo-step.sel .num{color:var(--accent)}
+/* v1.3: 주요 동작 버튼을 더 크게 (설문 C안 선호 이유 = 버튼이 커서 누르기 쉬움) */
+.top-actions{display:grid; grid-template-columns:1fr 1fr; gap:9px; margin:12px 0}
+.top-actions .btn{min-height:72px; font-size:17px; font-weight:800; border-radius:15px}
 .slider-row{display:flex; align-items:center; gap:12px}
 .slider-row input[type=range]{flex:1; accent-color:var(--accent)}
 .slider-row .v{width:46px; text-align:right; font-weight:800; font-variant-numeric:tabular-nums}
@@ -283,27 +294,33 @@ body{font-size:calc(15px*var(--app-font-scale))}
   <!-- TODAY -->
   <section class="tab active" id="tab-today">
     <div class="daysum-card" id="quickOutputCard" style="display:none">
-      <div class="card-title"><span data-i18n="quickOutputTitle">지금 내 출력 기록하기</span></div>
+      <div class="card-title"><span data-i18n="quickOutputTitle">지금 몸이 어떠세요?</span></div>
       <div id="qoStateLine" style="text-align:center; font-size:12.5px; color:var(--ink-2); margin-bottom:2px" data-i18n="tapToStart">아침 기준점을 입력하면 시작돼요</div>
-      <div style="display:flex; align-items:center; justify-content:center; gap:20px; margin:10px 0">
-        <button class="btn ghost" id="qoMinus" style="font-size:22px; font-weight:800; width:76px; height:76px; border-radius:50%; flex:0 0 auto; transition:none">−10</button>
+      <!-- v1.3: 설문 결과 반영 — 일상어 단계 버튼(A안) + 큰 터치 영역(C안) -->
+      <div class="qo-steps" id="qoSteps">
+        <button type="button" class="qo-step" data-v="90"><span class="bar" style="background:#1FA971"></span><span class="lab" data-i18n="qoStep90">아주 잘 움직여요</span><span class="num">90</span></button>
+        <button type="button" class="qo-step" data-v="70"><span class="bar" style="background:#5C93D6"></span><span class="lab" data-i18n="qoStep70">지낼 만해요</span><span class="num">70</span></button>
+        <button type="button" class="qo-step" data-v="50"><span class="bar" style="background:#E0A030"></span><span class="lab" data-i18n="qoStep50">불편하지만 움직여요</span><span class="num">50</span></button>
+        <button type="button" class="qo-step" data-v="30"><span class="bar" style="background:#C98A4B"></span><span class="lab" data-i18n="qoStep30">많이 느리고 힘들어요</span><span class="num">30</span></button>
+        <button type="button" class="qo-step" data-v="10"><span class="bar" style="background:#E8663C"></span><span class="lab" data-i18n="qoStep10">거의 못 움직여요</span><span class="num">10</span></button>
+      </div>
+      <div style="display:flex; align-items:center; justify-content:center; gap:16px; margin:10px 0">
+        <button class="btn ghost" id="qoMinus" style="font-size:19px; font-weight:800; width:64px; height:64px; border-radius:50%; flex:0 0 auto; transition:none">−5</button>
         <div style="text-align:center; min-width:76px">
-          <div id="qoCurrent" style="font-size:42px; font-weight:800">–</div>
+          <div id="qoCurrent" style="font-size:40px; font-weight:800">–</div>
           <div style="font-size:12px;color:var(--ink-2)" data-i18n="qoLabel">현재 출력</div>
         </div>
-        <button class="btn ghost" id="qoPlus" style="font-size:22px; font-weight:800; width:76px; height:76px; border-radius:50%; flex:0 0 auto; transition:none">+10</button>
+        <button class="btn ghost" id="qoPlus" style="font-size:19px; font-weight:800; width:64px; height:64px; border-radius:50%; flex:0 0 auto; transition:none">+5</button>
       </div>
-      <div class="trend-prompt" data-i18n="qoTrendPrompt">지금 몸 상태의 방향은?</div>
+      <div class="trend-prompt" data-i18n="qoTrendPrompt">이대로 기록할까요? 방향을 눌러주세요</div>
       <div class="trend-row" id="qoTrendRow">
         <button type="button" class="trend-btn rising" data-trend="rising"><span class="sym">+</span><span data-i18n="trendRising">상승 중</span></button>
         <button type="button" class="trend-btn stable" data-trend="stable"><span class="sym">=</span><span data-i18n="trendStable">유지 중</span></button>
         <button type="button" class="trend-btn falling" data-trend="falling"><span class="sym">−</span><span data-i18n="trendFalling">하강 중</span></button>
       </div>
-      <div style="text-align:center; margin-top:8px; display:flex; gap:6px; justify-content:center">
-        <button class="btn ghost no-print" id="qoResetAnchor" style="font-size:12px; width:auto" data-i18n="qoReset">오늘 기준점 다시 설정</button>
-        <button class="btn ghost no-print" id="qoGuideBtn" style="font-size:12px; width:auto" data-i18n="qoGuide">출력 점수 기준 보기</button>
+      <div style="text-align:center; margin-top:8px">
+        <button class="btn ghost no-print" id="qoHelpBtn" style="font-size:12.5px; width:auto" data-i18n="qoHelpBtn">ⓘ 도움말 · 기준 설정</button>
       </div>
-      <div style="text-align:center; margin-top:6px"><button class="btn ghost no-print" id="qoCheckBtn" style="font-size:12px; color:var(--accent, #5C93D6)" data-i18n="qoCheckBtn">출력 기준 확인하기</button></div>
     </div>
 
     <div class="top-actions no-print">
@@ -328,11 +345,9 @@ body{font-size:calc(15px*var(--app-font-scale))}
     </div>
 
     <div class="grid-title" data-i18n="symptomTitle">⚡ 증상 기록 — 시작할 때 누르고, 끝나면 한 번 더</div>
-    <button class="btn ghost no-print" id="glossaryBtn" data-i18n="glossaryBtn" style="margin-bottom:10px">ⓘ 상태·용어 설명 보기</button>
     <div class="quick-grid" id="symptomGrid"></div>
 
     <div class="grid-title" style="margin-top:16px" data-i18n="medLifeTitle">약·생활 기록</div>
-    <button class="med-btn" id="medBtn" data-i18n="medBtn">💊 약 먹음</button>
     <div class="recent-med-row" id="recentMedRow"></div>
     <div class="life-grid" id="lifeGrid"></div>
 
@@ -616,12 +631,13 @@ const I18N = {
     simPlanPeak:"현재안 피크 시간", simVirtualPeak:"가상안 피크 시간",
     glossaryBtn:"ⓘ 상태·용어 설명 보기",
     glossOnVsPartial:"ON vs 불완전 ON", glossDyskVsDyst:"이상운동 vs 근긴장",
-    quickOutputTitle:"지금 내 출력 기록하기", qoLabel:"현재 출력", qoReset:"오늘 기준점 다시 설정", qoGuide:"출력 점수 기준 보기",
+    quickOutputTitle:"지금 몸이 어떠세요?", qoLabel:"현재 출력",
+    qoStep90:"아주 잘 움직여요", qoStep70:"지낼 만해요", qoStep50:"불편하지만 움직여요", qoStep30:"많이 느리고 힘들어요", qoStep10:"거의 못 움직여요", qoHelpBtn:"ⓘ 도움말 · 기준 설정", qoReset:"오늘 기준점 다시 설정", qoGuide:"출력 점수 기준 보기",
     fontSize:"글씨 크기", fontSizeDesc:"기본 · 크게 · 매우 크게", fsNormal:"기본", fsLarge:"크게", fsXLarge:"매우 크게",
     primarySym:"주증상 (최대 3개)", primarySymDesc:"집중 기록할 증상을 골라두면 다음 버전 기능에 사용돼요",
     phsCardName:"🩺 진료용 요약 보고서", phsBtnProfile:"1. 기본 정보", phsBtnRange:"2. 기간 선택", phsBtnSurvey:"3. 설문 (선택)", phsBtnGen:"나의 병력 요약 만들기",
     outputGraphTitle:"출력 변화 그래프", todayInterpretTitle:"오늘 해석", qoCheckBtn:"출력 기준 확인하기",
-    qoTrendPrompt:"지금 몸 상태의 방향은?", trendRising:"상승 중", trendStable:"유지 중", trendFalling:"하강 중",
+    qoTrendPrompt:"이대로 기록할까요? 방향을 눌러주세요", trendRising:"상승 중", trendStable:"유지 중", trendFalling:"하강 중",
     trendPickAlert:"현재 몸 상태가 상승 중인지, 유지 중인지, 하강 중인지 선택해 주세요.",
     pastDateSaved:"기록을 추가했습니다", viewAddedRecord:"추가한 기록 보기", refState:"참고 상태",
     symptomTitle:"⚡ 증상 기록 — 시작할 때 누르고, 끝나면 한 번 더", medLifeTitle:"약·생활 기록",
@@ -629,7 +645,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음 (INSUF)",
-    versionLabel:"약효일지 · 테스트판 1.2.0",
+    versionLabel:"약효일지 · 테스트판 1.3.0",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -675,12 +691,13 @@ const I18N = {
     simPlanPeak:"Current plan peak time", simVirtualPeak:"Virtual plan peak time",
     glossaryBtn:"ⓘ View state & term guide",
     glossOnVsPartial:"ON vs Partial ON", glossDyskVsDyst:"Dyskinesia vs Dystonia",
-    quickOutputTitle:"Log my output now", qoLabel:"Current output", qoReset:"Reset today's baseline", qoGuide:"View output score guide",
+    quickOutputTitle:"How is your body right now?", qoLabel:"Current output",
+    qoStep90:"Moving very well", qoStep70:"Manageable", qoStep50:"Uncomfortable but moving", qoStep30:"Very slow and hard", qoStep10:"Can barely move", qoHelpBtn:"ⓘ Help & baseline", qoReset:"Reset today's baseline", qoGuide:"View output score guide",
     fontSize:"Font size", fontSizeDesc:"Normal · Large · Extra large", fsNormal:"Normal", fsLarge:"Large", fsXLarge:"Extra large",
     primarySym:"Main symptoms (up to 3)", primarySymDesc:"Pick symptoms to focus on — used by upcoming features",
     phsCardName:"🩺 Patient History Summary", phsBtnProfile:"1. Basic Information", phsBtnRange:"2. Select Period", phsBtnSurvey:"3. Survey (optional)", phsBtnGen:"Create My Patient History Summary",
     outputGraphTitle:"Output trend", todayInterpretTitle:"Today's interpretation", qoCheckBtn:"Check my output baseline",
-    qoTrendPrompt:"Which way is your body heading right now?", trendRising:"Rising", trendStable:"Stable", trendFalling:"Falling",
+    qoTrendPrompt:"Ready to save? Tap the direction", trendRising:"Rising", trendStable:"Stable", trendFalling:"Falling",
     trendPickAlert:"Please choose whether your body is currently rising, stable, or falling.",
     pastDateSaved:"Record added", viewAddedRecord:"View added record", refState:"Reference state",
     symptomTitle:"⚡ Symptoms — tap to start, tap again to end", medLifeTitle:"Medication & life records",
@@ -688,7 +705,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests (INSUF)",
-    versionLabel:"Med Log · Test build 1.2.0",
+    versionLabel:"Med Log · Test build 1.3.0",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -1587,6 +1604,7 @@ function qoAdjust(delta){
   const base = _qoPendingOutput!=null ? _qoPendingOutput : info.output;
   _qoPendingOutput = Math.max(0, Math.min(100, base + delta));
   document.getElementById("qoCurrent").textContent = _qoPendingOutput;
+  qoMarkSteps();
 }
 function qoCommitTrend(trend){
   const info = lastOutputInfo();
@@ -1602,6 +1620,13 @@ function qoCommitTrend(trend){
     openRiseResultPrompt(savedEvent);
   }
 }
+/* 현재 미리보기 값과 가장 가까운 단계 버튼을 표시 */
+function qoMarkSteps(){
+  const v=_qoPendingOutput;
+  document.querySelectorAll("#qoSteps .qo-step").forEach(b=>{
+    b.classList.toggle("sel", v!=null && +b.dataset.v===v);
+  });
+}
 function renderQuickOutput(){
   const card=document.getElementById("quickOutputCard"); if(!card) return;
   card.style.display="block";
@@ -1610,6 +1635,7 @@ function renderQuickOutput(){
   _qoPendingOutput=null;
   document.getElementById("qoCurrent").textContent = isToday ? info.output : "–";
   document.querySelectorAll("#qoTrendRow .trend-btn").forEach(b=>b.classList.remove("sel"));
+  qoMarkSteps();
 }
 /* 음성입력: 출력값 없는 state 이벤트를 만들지 않는다.
    오늘 출력 기준이 있으면 현재 출력값을 유지한 채 방향만 기록하고, 없으면 아침 기준점 입력을 연다. */
@@ -2051,15 +2077,38 @@ function openEditMedSheet(e){
     <div class="field"><label>${L("용량 (mg, 선택)","Dose (mg, optional)")}</label><input id="em_dose" type="number" inputmode="numeric" value="${e.dose??""}"></div>
     <div class="field"><label>${L("메모 (선택)","Memo (optional)")}</label><textarea id="em_memo">${escapeHtml(e.memo||"")}</textarea></div>
     <div style="text-align:center; margin-bottom:6px"><button class="btn ghost" id="em_changeKind" style="font-size:12.5px; width:auto">${L("↺ 기록 종류 변경 (출력·증상 등으로 전환)","↺ Change record type (convert to output, symptom, …)")}</button></div>
-    <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="em_save">${L("수정 저장","Save changes")}</button></div>`);
+    <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="em_save">${L("수정 저장","Save changes")}</button></div>
+    <button class="btn ghost" id="em_addNew" style="margin-top:8px">${L("＋ 이 내용으로 새 기록 추가 (원래 기록은 그대로)","＋ Add as a NEW record (keep the original)")}</button>
+    <div class="hint" style="margin-top:4px">${L("같은 약을 한 번 더 먹었다면 '새 기록 추가'를 누르세요. '수정 저장'은 원래 기록을 바꿉니다.","If you took the same medication again, use \"Add as a new record\". \"Save changes\" edits the original.")}</div>`);
   document.getElementById("em_changeKind").onclick=()=>{ closeSheet(); openAddPast(e); }; /* v0.9.18 */
-  document.getElementById("em_save").onclick=()=>{
-    const drug=document.getElementById("em_drug").value.trim(); if(!drug){ toast(L("약 이름을 입력하세요","Please enter a medication name")); return; }
-    const ts=tsFromTimeField("em_ts", e.ts);
-    const dose=(+document.getElementById("em_dose").value)||null;
-    const memo=document.getElementById("em_memo").value.trim();
+
+  const emRead=()=>{
+    const drug=document.getElementById("em_drug").value.trim();
+    if(!drug){ toast(L("약 이름을 입력하세요","Please enter a medication name")); return null; }
+    return { drug, ts:tsFromTimeField("em_ts", e.ts),
+      dose:(+document.getElementById("em_dose").value)||null,
+      memo:document.getElementById("em_memo").value.trim() };
+  };
+  /* v1.3: 새 기록으로 추가 — 원래 기록을 건드리지 않는다.
+     "9시 기록이 사라지고 10시만 남는다"는 신고의 정확한 해결책. */
+  document.getElementById("em_addNew").onclick=()=>{
+    const v=emRead(); if(!v) return;
     closeSheet();
-    Object.assign(e,{drug,ts,dose,memo});
+    db.events.push({id:uid(), type:"med", drug:v.drug, dose:v.dose, ts:v.ts, memo:v.memo});
+    db.events.sort((a,b)=>a.ts-b.ts); save(); renderAll();
+    toast(L("새 기록으로 추가했어요 (원래 기록 그대로)","Added as a new record (original kept)"));
+  };
+  document.getElementById("em_save").onclick=()=>{
+    const v=emRead(); if(!v) return;
+    /* 시각을 20분 넘게 옮기면 "추가"하려던 것일 수 있으므로 한 번 확인한다 */
+    if(Math.abs(v.ts-e.ts)>20*60000){
+      const keep=confirm(L(
+        `원래 ${hm(e.ts)} 기록을 ${hm(v.ts)}로 "옮깁니다". 원래 기록은 남지 않아요.\n\n같은 약을 한 번 더 먹은 것이라면 [취소]를 누르고 아래 '＋ 새 기록 추가'를 사용하세요.`,
+        `This MOVES the ${hm(e.ts)} record to ${hm(v.ts)}. The original will not remain.\n\nIf you took another dose, press Cancel and use "Add as a new record".`));
+      if(!keep) return;
+    }
+    closeSheet();
+    Object.assign(e,{drug:v.drug, ts:v.ts, dose:v.dose, memo:v.memo});
     db.events.sort((a,b)=>a.ts-b.ts); save(); renderAll(); toast(L("수정했어요","Updated"));
   };
 }
@@ -2078,6 +2127,35 @@ function openEditLifeSheet(e){
     Object.assign(e,{ts,memo});
     db.events.sort((a,b)=>a.ts-b.ts); save(); renderAll(); toast(L("수정했어요","Updated"));
   };
+}
+/* v1.2.1: 첫 화면에 흩어져 있던 보조 기능을 한 시트로 모은다.
+   처음 쓰는 사람이 메인 화면에서 마주치는 버튼 수를 줄이는 것이 목적. */
+function openTodayHelp(){
+  openSheet(`
+    <h2>${L("도움말 · 기준 설정","Help & baseline")}</h2>
+    <div class="hint">${L("자주 쓰지 않는 기능을 여기에 모았어요.","Less-used features are gathered here.")}</div>
+    <button class="btn ghost" style="margin-top:12px; text-align:left" id="th_guide">
+      📖 ${L("출력 점수 기준 보기","Output score guide")}
+      <div style="font-size:12px; color:var(--ink-2); font-weight:400">${L("0~100이 각각 어떤 상태인지","What each 0–100 level means")}</div>
+    </button>
+    <button class="btn ghost" style="margin-top:8px; text-align:left" id="th_check">
+      ✅ ${L("출력 기준 확인하기","Check my output baseline")}
+      <div style="font-size:12px; color:var(--ink-2); font-weight:400">${L("4가지 질문으로 지금 점수를 확인해요","Four questions to check today's score")}</div>
+    </button>
+    <button class="btn ghost" style="margin-top:8px; text-align:left" id="th_anchor">
+      🌅 ${L("오늘 기준점 다시 설정","Reset today's baseline")}
+      <div style="font-size:12px; color:var(--ink-2); font-weight:400">${L("아침 첫 기록을 다시 입력해요","Re-enter the first record of the day")}</div>
+    </button>
+    <button class="btn ghost" style="margin-top:8px; text-align:left" id="th_gloss">
+      ⓘ ${L("상태·용어 설명 보기","Terms and states")}
+      <div style="font-size:12px; color:var(--ink-2); font-weight:400">${L("ON/OFF·이상운동증 등 용어 설명","ON/OFF, dyskinesia and other terms")}</div>
+    </button>
+    <button class="btn ghost" style="margin-top:12px" onclick="closeSheet()">${L("닫기","Close")}</button>
+  `);
+  document.getElementById("th_guide").onclick=openOutputGuide;
+  document.getElementById("th_check").onclick=openOutputCheck;
+  document.getElementById("th_anchor").onclick=openMorningAnchor;
+  document.getElementById("th_gloss").onclick=openGlossary;
 }
 function openGlossary(){
   openSheet(`
@@ -3000,7 +3078,11 @@ function openSchedSheet(i){
 
 /* ---------- sheets ---------- */
 const scrim=document.getElementById("scrim"), sheet=document.getElementById("sheet");
-function openSheet(html){ sheet.innerHTML=html; scrim.classList.add("open"); }
+function openSheet(html){
+  sheet.innerHTML=html; scrim.classList.add("open");
+  /* v1.3: 시트 안에 시각 입력이 있으면 숫자칸↔시계칸 연동을 자동으로 걸어 준다 */
+  sheet.querySelectorAll('input[type="time"]').forEach(t=>{ if(t.id) bindTimeField(t.id); });
+}
 function closeSheet(){ scrim.classList.remove("open"); }
 scrim.addEventListener("click",e=>{ if(e.target===scrim) closeSheet(); });
 
@@ -3153,6 +3235,11 @@ function openStateSheet(key, editingEvent){
 }
 
 /* ---- v0.9.22: 출력 입력 컴포넌트 — 기본 버튼식(10단위+±5), 설정에서 슬라이더/병용 선택 ---- */
+/* 가장 최근 출력값 — 함께 기록 시 기본값으로 쓴다 */
+function lastOutputValue(){
+  const outs=db.events.filter(e=>e.type==="state"&&e.output!=null).sort((a,b)=>a.ts-b.ts);
+  return outs.length? outs[outs.length-1].output : null;
+}
 function outputInputMode(){ return (db.settings&&db.settings.outputInput)||"buttons"; }
 function outputBandLabel(v){ return v<20? L("매우 낮음","Very low") : v<50? L("낮음","Low") : v<80? L("중간","Medium") : L("높음","High"); }
 function outputPickerHtml(id, init){
@@ -3195,12 +3282,47 @@ function outputPickerValue(id){
   const wrap=document.getElementById(id+"_wrap");
   return wrap? +wrap.dataset.val : 50;
 }
+/* v1.3: 시각 입력 — 설문 요청("디지털식으로 시각을 바로 입력하는 게 더 빠를 것 같다")에 따라
+   시:분을 숫자로 직접 칠 수 있는 칸을 함께 제공한다. 기존 time 입력도 남겨 둘 다 쓸 수 있다. */
 function timeFieldHtml(id, ts){
   const d=new Date(ts||Date.now());
-  return `<div class="field"><label>${L("시각 (필요하면 수정하세요)","Time (edit if needed)")}</label><input type="time" id="${id}" value="${pad(d.getHours())}:${pad(d.getMinutes())}"></div>`;
+  return `<div class="field"><label>${L("시각 (필요하면 수정하세요)","Time (edit if needed)")}</label>
+    <div style="display:flex; align-items:center; gap:6px">
+      <input type="number" id="${id}_h" inputmode="numeric" min="0" max="23" value="${pad(d.getHours())}"
+        style="width:74px; text-align:center; font-size:20px; font-weight:800" aria-label="${L("시","Hour")}">
+      <span style="font-size:20px; font-weight:800">:</span>
+      <input type="number" id="${id}_m" inputmode="numeric" min="0" max="59" value="${pad(d.getMinutes())}"
+        style="width:74px; text-align:center; font-size:20px; font-weight:800" aria-label="${L("분","Minute")}">
+      <input type="time" id="${id}" value="${pad(d.getHours())}:${pad(d.getMinutes())}" style="flex:1; min-width:0">
+    </div>
+    <div class="hint">${L("숫자로 바로 치거나, 오른쪽에서 골라도 됩니다.","Type the numbers directly, or pick on the right.")}</div></div>`;
+}
+/* 숫자칸 ↔ time 칸을 서로 맞춰 준다. 시트를 연 뒤 한 번 호출하면 된다. */
+function bindTimeField(id){
+  const h=document.getElementById(id+"_h"), m=document.getElementById(id+"_m"), t=document.getElementById(id);
+  if(!h||!m||!t) return;
+  const clamp=(v,max)=>{ v=parseInt(v,10); if(isNaN(v)) return null; return Math.max(0,Math.min(max,v)); };
+  const toTime=()=>{ const hv=clamp(h.value,23), mv=clamp(m.value,59);
+    if(hv==null||mv==null) return; t.value=`${pad(hv)}:${pad(mv)}`; };
+  const fromTime=()=>{ if(!t.value) return; const [hh,mm]=t.value.split(":");
+    h.value=hh; m.value=mm; };
+  h.addEventListener("input",toTime); m.addEventListener("input",toTime);
+  h.addEventListener("blur",()=>{ const v=clamp(h.value,23); h.value=pad(v==null?0:v); toTime(); });
+  m.addEventListener("blur",()=>{ const v=clamp(m.value,59); m.value=pad(v==null?0:v); toTime(); });
+  t.addEventListener("input",fromTime);
 }
 function tsFromTimeField(id, base){
-  const v=document.getElementById(id).value; if(!v) return base;
+  /* 숫자칸에 친 값이 아직 time 칸에 반영되기 전일 수 있으므로 숫자칸을 우선 읽는다 */
+  const hEl=document.getElementById(id+"_h"), mEl=document.getElementById(id+"_m");
+  if(hEl&&mEl&&hEl.value!==""&&mEl.value!==""){
+    let h=parseInt(hEl.value,10), m=parseInt(mEl.value,10);
+    if(!isNaN(h)&&!isNaN(m)){
+      h=Math.max(0,Math.min(23,h)); m=Math.max(0,Math.min(59,m));
+      const d0=new Date(base); d0.setHours(h,m,0,0); return d0.getTime();
+    }
+  }
+  const el=document.getElementById(id); if(!el) return base;
+  const v=el.value; if(!v) return base;
   const [h,m]=v.split(":").map(Number); const d=new Date(base);
   d.setHours(h,m,0,0); return d.getTime();
 }
@@ -3407,7 +3529,28 @@ function openMedSheet(){
     <div class="field"><label>${L("약 선택 (여러 개 가능)","Select medication(s) — multiple allowed")}</label><div class="chips" id="medChips">${chips}</div></div>
     ${timeFieldHtml("med_time", now)}
     <div class="field" id="med_dose_f"><label>${L("용량 조정 (mg, 선택 · 약 1개 선택 시에만)","Adjust dose (mg, optional · single selection only)")}</label><input type="number" id="med_dose" inputmode="numeric" placeholder="${L("등록 용량 사용","Use registered dose")}"></div>
+
+    <!-- v1.3: 약 복용과 지금 상태를 한 번에 기록 (설문 요청: "약복용 따로, 상태기록 따로 시간 맞춰 기록하니 귀찮다") -->
+    <div class="field" style="border-top:1px solid var(--line); padding-top:12px; margin-top:4px">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; min-height:44px">
+        <input type="checkbox" id="med_withOutput" style="width:22px; height:22px">
+        <span>${L("지금 내 상태(출력)도 같이 기록","Also record my current state (output)")}</span>
+      </label>
+      <div id="med_outWrap" style="display:none; margin-top:8px"></div>
+    </div>
     <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="med_save" disabled>${L("저장","Save")}</button></div>`);
+  { /* 체크하면 그 자리에서 출력 버튼이 펼쳐진다 — 화면 이동 없음 */
+    const cb=document.getElementById("med_withOutput"), wrap=document.getElementById("med_outWrap");
+    cb.onchange=()=>{
+      if(cb.checked){
+        const last=lastOutputValue();
+        wrap.innerHTML=outputPickerHtml("med_out", last==null?50:last)+
+          `<div class="hint" style="margin-top:6px">${L("복용 시각과 같은 시각으로 함께 저장돼요.","Saved at the same time as the dose.")}</div>`;
+        wrap.style.display="block";
+        bindOutputPicker("med_out");
+      } else { wrap.style.display="none"; wrap.innerHTML=""; }
+    };
+  }
   const selSet=new Set();
   document.getElementById("medChips").addEventListener("click",e=>{
     const b=e.target.closest(".chip"); if(!b) return;
@@ -3426,6 +3569,8 @@ function openMedSheet(){
     const ts=tsFromTimeField("med_time", now);
     for(const i of selSet){ if(!medDupCheck(db.meds[i].name, ts)){ this.disabled=false; return; } }
     const d=document.getElementById("med_dose").value;
+    const withOut=document.getElementById("med_withOutput").checked;
+    const outVal=withOut? outputPickerValue("med_out") : null;
     const list=[...selSet];
     closeSheet();
     list.forEach((i,idx)=>{
@@ -3433,7 +3578,15 @@ function openMedSheet(){
       const dose = (list.length===1 && d)? +d : m.dose;
       addMed(m.name, dose, ts);
     });
-    if(list.length>1) toast(L(`${list.length}개 약 복약 기록됨 · ${hm(ts)}`,`${list.length} medications recorded · ${hm(ts)}`));
+    /* v1.3: 같이 기록하기를 켰으면 같은 시각으로 출력 기록도 남긴다 */
+    if(withOut){
+      db.events.push({id:uid(), type:"state", state:stateFromTrend("stable", outVal), ts,
+        output:outVal, trend:"stable", gait:null, dysk:null, dyst:null, memo:"",
+        symptoms:[], customSymptom:"", riseResult:null, inputMethod:"with_medication"});
+      db.events.sort((a,b)=>a.ts-b.ts); save(); renderAll();
+      toast(L(`복약 ${list.length}건 + 출력 ${outVal} 기록됨 · ${hm(ts)}`,`${list.length} dose(s) + output ${outVal} recorded · ${hm(ts)}`));
+    }
+    else if(list.length>1) toast(L(`${list.length}개 약 복약 기록됨 · ${hm(ts)}`,`${list.length} medications recorded · ${hm(ts)}`));
   };
 }
 
@@ -3475,7 +3628,7 @@ function openAddPast(editingEvent, presetTs){
     <h2>${isEdit? L("기록 수정","Edit record") : L("지난 기록 추가","Add a past record")}</h2>
     ${isEdit&&editingEvent.entryMode==="retrospective"? `<div class="hint" style="color:var(--ink-2)">${L(`지난 기록으로 추가됨 (입력 시각 ${editingEvent.createdAt? new Date(editingEvent.createdAt).toLocaleString():"-"})`,`Added retrospectively (entered ${editingEvent.createdAt? new Date(editingEvent.createdAt).toLocaleString():"-"})`)}</div>`:""}<div class="hint">${isEdit? L("날짜·시각과 내용을 고쳐서 저장해요. 종류를 바꾸면 그 종류의 기록으로 전환돼요.","Edit the date, time, and details, then save. Changing the type converts this record to that type.") : L("깜빡한 기록을 날짜·시각을 지정해 추가해요.","Add a record you forgot to log, with a specific date and time.")}</div>
     <div class="field"><label>${L("날짜","Date")}</label><input type="date" id="p_date" value="${dval}"></div>
-    <div class="field"><label>${L("시각","Time")}</label><input type="time" id="p_time" value="${pad(now.getHours())}:${pad(now.getMinutes())}"></div>
+    ${timeFieldHtml("p_time", now.getTime())}
     ${isEdit? "" : `<div class="chips" id="p_quickTime" style="margin:-4px 0 10px">
       <button type="button" class="chip" data-min="30">${L("30분 전","30 min ago")}</button>
       <button type="button" class="chip" data-min="60">${L("1시간 전","1 hr ago")}</button>
@@ -3740,18 +3893,28 @@ function switchTab(name){
   window.scrollTo(0,0);
 }
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
-document.getElementById("medBtn").onclick=openMedSheet;
+/* v1.2.1: 중복이던 하단 "약 먹음" 버튼은 제거됨 (상단 [약 복용 기록]이 같은 기능) */
 document.getElementById("addMedBtn").onclick=()=>openAddMed(false);
 document.getElementById("addPastBtn").onclick=openAddPast;
-document.getElementById("glossaryBtn").onclick=openGlossary;
-document.getElementById("qoMinus").onclick=()=>qoAdjust(-10);
-document.getElementById("qoPlus").onclick=()=>qoAdjust(10);
+/* v1.2.1: 용어 설명은 출력 카드의 [ⓘ 도움말] 안으로 이동 */
+document.getElementById("qoMinus").onclick=()=>qoAdjust(-5);
+document.getElementById("qoPlus").onclick=()=>qoAdjust(5);
+/* v1.3: 일상어 단계 버튼 — 누르면 그 값이 미리보기로 잡히고, 방향 버튼을 누르면 저장된다 */
+document.getElementById("qoSteps").addEventListener("click", e=>{
+  const b=e.target.closest(".qo-step"); if(!b) return;
+  const info=lastOutputInfo();
+  const isToday = info && dkey(new Date(info.ts))===todayKey();
+  if(!isToday){ openMorningAnchor(); return; }
+  _qoPendingOutput = +b.dataset.v;
+  document.getElementById("qoCurrent").textContent = _qoPendingOutput;
+  qoMarkSteps();
+});
 document.getElementById("qoTrendRow").addEventListener("click", e=>{
   const b=e.target.closest(".trend-btn"); if(!b) return;
   qoCommitTrend(b.dataset.trend);
 });
-document.getElementById("qoResetAnchor").onclick=openMorningAnchor;
-document.getElementById("qoCheckBtn").onclick=openOutputCheck;
+/* v1.2.1: 첫 화면 단순화 — 기준점 재설정·기준 보기·기준 확인·용어 설명을 [ⓘ 도움말] 한 곳으로 모음 */
+document.getElementById("qoHelpBtn").onclick=openTodayHelp;
 document.getElementById("printBtn").onclick=()=>window.print();
 document.getElementById("repRange").onchange=renderReport;
 
@@ -3855,7 +4018,7 @@ function openOutputGuide(){
     <div class="disclaimer" style="margin-top:10px">${L("출력은 검사 점수가 아니라 현재 몸 상태를 스스로 비교하기 위한 개인 기준입니다. 다른 사람의 점수와 비교하지 말고 자신의 평소 상태를 기준으로 기록하세요.","Output is not a test score — it is your personal scale for comparing your own state. Don't compare with others; use your usual condition as the reference.")}</div>
     <div class="btn-row" style="margin-top:10px"><button class="btn primary" onclick="closeSheet()">${L("닫기","Close")}</button></div>`);
 }
-document.getElementById("qoGuideBtn").onclick=openOutputGuide;
+/* v1.2.1: 출력 점수 기준 보기도 [ⓘ 도움말] 안에서 열림 */
 /* ---- v0.9.20: 주증상 선택 (최대 3개, 구조 준비 — 분석은 다음 버전) ---- */
 const PRIMARY_SYM_OPTIONS=[
   {type:"tremor",ko:"떨림",en:"Tremor"},{type:"rigidity",ko:"몸의 뻣뻣함",en:"Rigidity"},
