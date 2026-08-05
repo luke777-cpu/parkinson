@@ -432,6 +432,13 @@ body{font-size:calc(15px*var(--app-font-scale))}
       <div id="anContext"></div>
       <div id="anTable" style="overflow-x:auto; margin-top:10px"></div>
     </div>
+
+    <!-- v2.2 Phase 2: 치료 구간(하한·상한) 추정 -->
+    <div class="chart-card" id="anWindowCard" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px; display:none">
+      <div class="card-title"><span data-i18n="anWindowTitle">치료 구간 추정 (하한·상한)</span></div>
+      <div class="disclaimer" style="margin-bottom:10px" data-i18n="anWindowDisclaimer">이 구간은 회원님이 실제로 기록한 OFF 시각·이상운동증 시각을 근거로 추정한 값이며, 절대 기준이 아닙니다. 표본이 부족하면 추정하지 않습니다.</div>
+      <div id="anWindowBody"></div>
+    </div>
   </section>
 
   <!-- SIM (LEDD 복약 시뮬레이션) -->
@@ -610,6 +617,7 @@ body{font-size:calc(15px*var(--app-font-scale))}
 <script src="phs-report.js"></script>
 <script src="simulation-drugmodel.js"></script>
 <script src="analysis-clinical.js"></script>
+<script src="analysis-threshold.js"></script>
 <script>
 "use strict";
 /* ---------- i18n ---------- */
@@ -656,6 +664,8 @@ const I18N = {
     glossaryBtn:"ⓘ 상태·용어 설명 보기",
     glossOnVsPartial:"ON vs 불완전 ON", glossDyskVsDyst:"이상운동 vs 근긴장",
     navAnalysis:"분석", analysisTitle:"기록 분석 · 재현성 확인",
+    anWindowTitle:"치료 구간 추정 (하한·상한)",
+    anWindowDisclaimer:"이 구간은 회원님이 실제로 기록한 OFF 시각·이상운동증 시각을 근거로 추정한 값이며, 절대 기준이 아닙니다. 표본이 부족하면 추정하지 않습니다.",
     quickOutputTitle:"지금 몸이 어떠세요?", qoLabel:"현재 출력",
     qoStep90:"아주 잘 움직여요", qoStep70:"지낼 만해요", qoStep50:"불편하지만 움직여요", qoStep30:"많이 느리고 힘들어요", qoStep10:"거의 못 움직여요", qoHelpBtn:"ⓘ 도움말 · 기준 설정", qoReset:"오늘 기준점 다시 설정", qoGuide:"출력 점수 기준 보기",
     fontSize:"글씨 크기", fontSizeDesc:"기본 · 크게 · 매우 크게", fsNormal:"기본", fsLarge:"크게", fsXLarge:"매우 크게",
@@ -670,7 +680,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음 (INSUF)",
-    versionLabel:"약효일지 · 비공개 시험판 2.1.0-phase1",
+    versionLabel:"약효일지 · 비공개 시험판 2.2.0-phase2",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -717,6 +727,8 @@ const I18N = {
     glossaryBtn:"ⓘ View state & term guide",
     glossOnVsPartial:"ON vs Partial ON", glossDyskVsDyst:"Dyskinesia vs Dystonia",
     navAnalysis:"Analysis", analysisTitle:"Record Analysis · Reproducibility",
+    anWindowTitle:"Estimated therapeutic window (lower/upper bound)",
+    anWindowDisclaimer:"This window is estimated from your own recorded OFF times and dyskinesia times — it is not an absolute standard. It is not estimated when there isn't enough data.",
     quickOutputTitle:"How is your body right now?", qoLabel:"Current output",
     qoStep90:"Moving very well", qoStep70:"Manageable", qoStep50:"Uncomfortable but moving", qoStep30:"Very slow and hard", qoStep10:"Can barely move", qoHelpBtn:"ⓘ Help & baseline", qoReset:"Reset today's baseline", qoGuide:"View output score guide",
     fontSize:"Font size", fontSizeDesc:"Normal · Large · Extra large", fsNormal:"Normal", fsLarge:"Large", fsXLarge:"Extra large",
@@ -731,7 +743,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests (INSUF)",
-    versionLabel:"Med Log · Test build 2.1.0-phase1",
+    versionLabel:"Med Log · Test build 2.2.0-phase2",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -3062,6 +3074,7 @@ function renderAnalysis(){
     gsel.innerHTML=`<option>${L("복약 기록 없음","No medication records")}</option>`;
     document.getElementById("anSummary").innerHTML=`<div class="hint">${L(`최근 ${periodDays}일에 복약 기록이 없습니다.`,`No medication records in the last ${periodDays} days.`)}</div>`;
     document.getElementById("anTable").innerHTML="";
+    document.getElementById("anWindowCard").style.display="none";
     return;
   }
   const ROLE_TAG={background:L(" (배경형)"," (background)"), adjunct:L(" (보조형)"," (adjunct)")};
@@ -3085,6 +3098,9 @@ function renderAnalysis(){
              `This medication is ${ROLE_LABEL[r.role]} and does not form a sharp peak. The "ON latency" analysis here is designed for medications that do form a peak (levodopa-type), so frequent "not reached" results are expected and normal for this medication.`)}
       </div>`;
     document.getElementById("anTable").innerHTML="";
+    /* 치료 구간 추정은 특정 약 그룹과 무관하게 그 기간 전체 기록으로 계산되므로,
+       선택된 그룹이 배경형·보조형이라 통계를 못 낼 때도 그대로 보여준다. */
+    renderTherapeuticWindow(r.period);
     return;
   }
 
@@ -3160,6 +3176,62 @@ function renderAnalysis(){
       <td style="padding:4px 6px">${L("판정","Result")}</td></tr>
     ${rows}</table>
     <div class="hint" style="margin-top:4px">${L("이 분류는 앱 내부 패턴 요약이며 확정 진단이 아닙니다.","This classification is an internal pattern summary, not a diagnosis.")}</div>` : "";
+
+  renderTherapeuticWindow(r.period);
+}
+/* v2.2 Phase 2: OFF·이상운동증 시각의 곡선값을 모아 치료 구간(하한·상한)을 추정한다.
+   복용 그룹과 무관하게 그 기간 전체의 실제 하루 곡선을 기준으로 계산한다 —
+   역치는 "이 약의" 역치가 아니라 "이 사람의" 몸 상태 기준이기 때문이다. */
+function anGatherThresholdSamples(period){
+  const days=byDay();
+  const offSamples=[], dyskSamples=[];
+  period.keys.forEach(k=>{
+    const evs=days[k]||[];
+    const outs=evs.filter(e=>e.type==="state"&&e.output!=null)
+      .map(e=>({timeMin:new Date(e.ts).getHours()*60+new Date(e.ts).getMinutes(), val:e.output}))
+      .sort((a,b)=>a.timeMin-b.timeMin);
+    /* OFF 시각: 그 날 출력이 처음으로 20 이하로 떨어진 시각 (기존 OFF_존 기준 재사용) */
+    const offPt=outs.find(o=>o.val<=20 && o.timeMin>=360); /* 새벽 시간대 잡음 방지로 06:00 이후만 */
+    /* 이상운동증 시각: state:"dysk" 또는 symptoms에 dysk 포함된 이벤트의 시작 시각 */
+    const dyskEvs=evs.filter(e=>e.type==="state" && (e.state==="dysk" || (e.symptoms&&e.symptoms.includes("dysk"))));
+    const {today, carry}=medsForSimulationDay(k);
+    const doses=carry.concat(today);
+    if(!doses.length) return;
+    const composite=SIMDRUG.compositeCurve(doses, 0, 1440, 10);
+    if(offPt) offSamples.push({dayKey:k, offTimeMin:offPt.timeMin, rawPoints:composite.rawPoints});
+    dyskEvs.forEach(e=>{
+      const t=new Date(e.ts).getHours()*60+new Date(e.ts).getMinutes();
+      dyskSamples.push({dayKey:k, dyskOnsetTimeMin:t, rawPoints:composite.rawPoints});
+    });
+  });
+  return {offSamples, dyskSamples};
+}
+function renderTherapeuticWindow(period){
+  const card=document.getElementById("anWindowCard");
+  if(typeof SIMTHR==="undefined"){ card.style.display="none"; return; }
+  const {offSamples, dyskSamples}=anGatherThresholdSamples(period);
+  const lower=SIMTHR.estimateLowerBound(offSamples);
+  const upper=SIMTHR.estimateUpperBound(dyskSamples);
+  const win=SIMTHR.therapeuticWindow(lower, upper);
+  card.style.display="block";
+
+  const CONF_LABEL={good:L("양호","Good"), moderate:L("보통","Moderate"), low:L("낮음","Low"), insufficient:L("판정 불가","N/A")};
+  const CONF_COLOR={good:"#1FA971", moderate:"#E0A030", low:"#B3261E", insufficient:"var(--ink-2)"};
+  const boundCard=(title, b)=>`<div style="background:var(--surface-2); border-radius:10px; padding:10px 12px; border-left:3px solid ${CONF_COLOR[b.confidence]}">
+    <div style="font-size:11.5px; color:var(--ink-2)">${title}</div>
+    <div style="font-weight:800; font-size:17px">${b.value!=null? (Math.round(b.value*100)/100) : "–"}</div>
+    <div style="font-size:11px; color:var(--ink-2)">${L("표본","n")} ${b.n}${L("회","x")} · ${CONF_LABEL[b.confidence]}</div>
+    ${b.reasons.length? `<div style="font-size:11px; color:var(--ink-2); margin-top:2px">${escapeHtml(b.reasons.join(" · "))}</div>`:""}
+  </div>`;
+
+  document.getElementById("anWindowBody").innerHTML=`
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+      ${boundCard(L("상한 (이상운동증 역치)","Upper bound (dyskinesia threshold)"), upper)}
+      ${boundCard(L("하한 (OFF 역치)","Lower bound (OFF threshold)"), lower)}
+    </div>
+    ${win.valid? `<div class="hint" style="margin-top:8px; color:var(--accent)">${L(`치료 구간이 추정되었습니다 (폭 ${Math.round(win.width*100)/100}).`,`Therapeutic window estimated (width ${Math.round(win.width*100)/100}).`)}</div>`
+      : `<div class="hint" style="margin-top:8px; color:var(--danger)">${escapeHtml(win.reasons.join(" "))}</div>`}
+  `;
 }
 let _anGroupId=null;
 
