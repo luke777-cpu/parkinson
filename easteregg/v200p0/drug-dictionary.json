@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "note": "파킨슨 약물 사전 정본. 프로그램이 시작할 때 이 파일을 실제로 읽어 곡선·별칭을 구성한다(simulation-drugmodel.js의 내장 기본값은 오프라인/로드 실패 시 폴백). 새 카피약을 추가할 때는 해당 성분의 aliases 배열에 상품명만 추가하면 되고, 프로그램 코드는 수정하지 않는다.",
   "disclaimer": "곡선 파라미터는 약물군·제형의 일반적인 시간 특성을 단순화한 참조값이며, 실제 혈중농도나 개인의 약효를 예측하지 않는다.",
   "curves": [
@@ -187,9 +187,9 @@
       "curveId": "PRAMI_IR",
       "roleLabel": "도파민 작용제 배경효과 (즉방형)",
       "leddFactor": 100,
-      "leddIncluded": false,
+      "leddIncluded": true,
       "refDoseMg": 0.375,
-      "note": "도파민 작용제는 LEDD 합계에서 제외 (배경효과로만 표시)",
+      "note": "도파민 작용제는 곡선 모양에서는 완만한 배경효과로만 표시하지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)",
       "aliases": [
         "미라펙스",
         "미라팩스",
@@ -207,9 +207,9 @@
       "curveId": "PRAMI_ER",
       "roleLabel": "도파민 작용제 배경효과 (서방형)",
       "leddFactor": 100,
-      "leddIncluded": false,
+      "leddIncluded": true,
       "refDoseMg": 0.375,
-      "note": "도파민 작용제는 LEDD 합계에서 제외 (배경효과로만 표시)",
+      "note": "도파민 작용제는 곡선 모양에서는 완만한 배경효과로만 표시하지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)",
       "aliases": [
         "미라펙스 ER",
         "미라펙스ER",
@@ -223,9 +223,9 @@
       "curveId": "ROPI_IR",
       "roleLabel": "도파민 작용제 배경효과 (즉방형)",
       "leddFactor": 20,
-      "leddIncluded": false,
+      "leddIncluded": true,
       "refDoseMg": 2,
-      "note": "도파민 작용제는 LEDD 합계에서 제외 (배경효과로만 표시)",
+      "note": "도파민 작용제는 곡선 모양에서는 완만한 배경효과로만 표시하지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)",
       "aliases": [
         "리큅",
         "로피니롤"
@@ -237,9 +237,9 @@
       "curveId": "ROPI_ER",
       "roleLabel": "도파민 작용제 배경효과 (서방형)",
       "leddFactor": 20,
-      "leddIncluded": false,
+      "leddIncluded": true,
       "refDoseMg": 2,
-      "note": "도파민 작용제는 LEDD 합계에서 제외 (배경효과로만 표시)",
+      "note": "도파민 작용제는 곡선 모양에서는 완만한 배경효과로만 표시하지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)",
       "aliases": [
         "리큅 PD",
         "리큅PD",
@@ -253,9 +253,9 @@
       "curveId": "ROTIGOTINE",
       "roleLabel": "도파민 작용제 배경효과 (패치)",
       "leddFactor": 30,
-      "leddIncluded": false,
+      "leddIncluded": true,
       "refDoseMg": 4,
-      "note": "도파민 작용제는 LEDD 합계에서 제외 (배경효과로만 표시)",
+      "note": "도파민 작용제는 곡선 모양에서는 완만한 배경효과로만 표시하지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)",
       "aliases": [
         "뉴프로",
         "로티고틴"
@@ -267,7 +267,7 @@
       "curveId": "ADJUNCT",
       "roleLabel": "보조약 (곡선 미포함)",
       "leddFactor": 1.0,
-      "leddIncluded": false,
+      "leddIncluded": true,
       "refDoseMg": 100,
       "note": "아만타딘은 등록된 보정값이 없어 복합 약효 추정곡선 계산에는 포함하지 않습니다",
       "aliases": [
@@ -281,7 +281,7 @@
       "curveId": "ADJUNCT",
       "roleLabel": "보조약 (곡선 미포함)",
       "leddFactor": 100,
-      "leddIncluded": false,
+      "leddIncluded": true,
       "refDoseMg": 1,
       "note": "MAO-B 억제제는 등록된 보정값이 없어 복합 약효 추정곡선 계산에는 포함하지 않습니다",
       "aliases": [
@@ -297,7 +297,7 @@
       "curveId": "ADJUNCT",
       "roleLabel": "보조약 (곡선 미포함)",
       "leddFactor": 100,
-      "leddIncluded": false,
+      "leddIncluded": true,
       "refDoseMg": 50,
       "note": "MAO-B 억제제는 등록된 보정값이 없어 복합 약효 추정곡선 계산에는 포함하지 않습니다",
       "aliases": [
