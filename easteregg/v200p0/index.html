@@ -556,6 +556,14 @@ body{font-size:calc(15px*var(--app-font-scale))}
     <div class="list-card" id="medList"></div>
     <button class="btn ghost no-print" id="addMedBtn" style="margin-bottom:8px" data-i18n="addMed">+ 약 추가</button>
 
+    <!-- v2.7: 성분명 기반 개인 별칭 매핑 — 앱 사전에 없는 약 이름을 이 기기에서만 성분에 연결한다.
+         공용 사전(drug-dictionary.json)은 건드리지 않는다. -->
+    <div id="unregDrugSection" style="display:none">
+      <div class="section-label" data-i18n="unregDrugTitle">미등록 약 정리</div>
+      <div class="disclaimer" style="margin-bottom:8px" data-i18n="unregDrugDesc">기록에 있지만 앱 사전에 없는 약 이름입니다. 성분을 한 번만 골라 두면, 그 이름으로 기록된 모든 복용이 앞으로 계산에 포함됩니다. 이 설정은 이 기기에만 저장됩니다.</div>
+      <div class="list-card" id="unregDrugList"></div>
+    </div>
+
     <div class="section-label" data-i18n="medAlarm">약 알림</div>
     <div class="list-card">
       <div class="li"><div class="grow"><div class="name" data-i18n="appNotify">앱 알림 켜기</div><div class="meta" data-i18n="appNotifyDesc">앱이 켜져 있을 때 예약 시간에 알려줘요</div></div><div class="toggle" id="notifyToggle"></div></div>
@@ -680,6 +688,8 @@ const I18N = {
     anCoverageDisclaimer:"이 계산은 추정된 치료 구간과 약효 추정곡선을 비교한 것으로, 처방을 권고하지 않습니다. 약물 조정은 담당 의료진과 상의하세요.",
     anValidationTitle:"예측 vs 실제",
     anValidationDisclaimer:"보고서에서 제안했던 후보안을 실제로 복용한 날의 기록과, 그때 예측했던 값을 비교합니다. 예측과 다르다고 해서 잘못된 것이 아니며, 그 차이가 다음 추정을 더 정확하게 만드는 데 쓰입니다.",
+    unregDrugTitle:"미등록 약 정리",
+    unregDrugDesc:"기록에 있지만 앱 사전에 없는 약 이름입니다. 성분을 한 번만 골라 두면, 그 이름으로 기록된 모든 복용이 앞으로 계산에 포함됩니다. 이 설정은 이 기기에만 저장됩니다.",
     quickOutputTitle:"지금 몸이 어떠세요?", qoLabel:"현재 출력",
     qoStep90:"아주 잘 움직여요", qoStep70:"지낼 만해요", qoStep50:"불편하지만 움직여요", qoStep30:"많이 느리고 힘들어요", qoStep10:"거의 못 움직여요", qoHelpBtn:"ⓘ 도움말 · 기준 설정", qoReset:"오늘 기준점 다시 설정", qoGuide:"출력 점수 기준 보기",
     fontSize:"글씨 크기", fontSizeDesc:"기본 · 크게 · 매우 크게", fsNormal:"기본", fsLarge:"크게", fsXLarge:"매우 크게",
@@ -694,7 +704,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음 (INSUF)",
-    versionLabel:"약효일지 · 비공개 시험판 2.6.0-phase5",
+    versionLabel:"약효일지 · 비공개 시험판 2.7.0-alias",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -747,6 +757,8 @@ const I18N = {
     anCoverageDisclaimer:"This is a comparison of your estimated window against the effect-estimate curve. It does not recommend a prescription. Discuss medication changes with your clinician.",
     anValidationTitle:"Predicted vs Actual",
     anValidationDisclaimer:"Compares a candidate suggested in a past report against records from a day it was actually taken. A mismatch isn't a failure — the difference helps refine future estimates.",
+    unregDrugTitle:"Unrecognized medications",
+    unregDrugDesc:"These drug names appear in your records but aren't in the app dictionary. Choose the ingredient once and every past and future dose under that name will be included in calculations. Saved on this device only.",
     quickOutputTitle:"How is your body right now?", qoLabel:"Current output",
     qoStep90:"Moving very well", qoStep70:"Manageable", qoStep50:"Uncomfortable but moving", qoStep30:"Very slow and hard", qoStep10:"Can barely move", qoHelpBtn:"ⓘ Help & baseline", qoReset:"Reset today's baseline", qoGuide:"View output score guide",
     fontSize:"Font size", fontSizeDesc:"Normal · Large · Extra large", fsNormal:"Normal", fsLarge:"Large", fsXLarge:"Extra large",
@@ -761,7 +773,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests (INSUF)",
-    versionLabel:"Med Log · Test build 2.6.0-phase5",
+    versionLabel:"Med Log · Test build 2.7.0-alias",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -2711,9 +2723,82 @@ function carryoverDosesFor(dayKey){
     return false;
   }).map(d=>({...d, dayOffset:-1}));
 }
+/* v2.7: 성분명 기반 개인 별칭 ---------------------------------------------
+   "길렉트정" 같이 사전에 없는 이름을, 그 사람이 딱 한 번 고른 성분(=사전에
+   이미 있는 등록 이름 하나)에 매핑해 이 기기에만 저장한다. 공용 사전 파일은
+   그대로 두고, 곡선·LEDD 계산에 들어가기 직전에만 이름을 바꿔치기한다 —
+   그래서 이 파일 하나만 고치면 Phase 1~5 전부에 자동으로 적용된다. */
+function personalAliasMap(){ return (db.personalDrugAliases)||{}; }
+function resolveDrugName(name){ return personalAliasMap()[name] || name; }
+function savePersonalAlias(typedName, canonicalAlias){
+  if(!db.personalDrugAliases) db.personalDrugAliases={};
+  db.personalDrugAliases[typedName]=canonicalAlias;
+  save();
+}
+function forgetPersonalAlias(typedName){
+  if(db.personalDrugAliases) delete db.personalDrugAliases[typedName];
+  save();
+}
+/* 성분 선택지 — SIMDRUG.DRUGS(약물 사전)를 그대로 쓴다. 새 성분을 여기 하드코딩하지
+   않는다 — 사전에 추가되면 이 목록에도 자동으로 나타난다. */
+function ingredientChoiceLabel(d){
+  const FAMILY={
+    LEVO_IR:"레보도파 (즉방형)", LEVO_HBS:"레보도파 (서방형)", STALEVO:"레보도파+엔타카폰 복합",
+    APOMORPHINE:"아포모르핀 (구제요법)", ONGENTYS:"COMT 억제제 (1일 1회형)", ENTACAPONE:"COMT 억제제 (매 복용 병용형)",
+    PRAMI_IR:"프라미펙솔 (즉방형)", PRAMI_ER:"프라미펙솔 (서방형)",
+    ROPI_IR:"로피니롤 (즉방형)", ROPI_ER:"로피니롤 (서방형)", ROTIGOTINE:"로티고틴 (패치)",
+  };
+  if(FAMILY[d.curveId]) return FAMILY[d.curveId];
+  if(/rasagiline/i.test(d.genericName)) return "MAO-B 억제제 (라사길린/셀레길린 계열)";
+  if(/safinamide/i.test(d.genericName)) return "MAO-B 억제제 (사피나미드)";
+  if(/amantadine/i.test(d.genericName)) return "아만타딘";
+  return d.genericName;
+}
+function openIngredientPicker(typedName){
+  const items=SIMDRUG.DRUGS.map(d=>({d, label:ingredientChoiceLabel(d), example:d.aliases[0]}));
+  openSheet(`
+    <h2>${L("이 약의 성분을 골라주세요","Choose the ingredient")}</h2>
+    <div class="hint" style="margin-bottom:10px">${L(`"${escapeHtml(typedName)}"이(가) 어떤 성분인지 한 번만 골라 두면, 다음부터 자동으로 인식됩니다. 잘 모르시면 처방전이나 약 봉투에 적힌 성분명을 확인해 보세요.`,`Pick the ingredient for "${escapeHtml(typedName)}" once — it'll be recognized automatically from now on.`)}</div>
+    <div class="chips" style="display:flex; flex-direction:column; gap:8px">
+      ${items.map((it,i)=>`<button class="btn ghost" data-i="${i}" style="text-align:left; min-height:56px">
+        <div style="font-weight:800">${escapeHtml(it.label)}</div>
+        <div style="font-size:12px; color:var(--ink-2)">${L("예","e.g.")}: ${escapeHtml(it.example)}</div>
+      </button>`).join("")}
+    </div>
+    <button class="btn ghost" style="margin-top:12px" onclick="closeSheet()">${L("취소","Cancel")}</button>
+  `);
+  items.forEach((it,i)=>{
+    document.querySelector(`[data-i="${i}"]`).onclick=()=>{
+      savePersonalAlias(typedName, it.example);
+      closeSheet();
+      toast(L(`"${typedName}"을(를) ${it.label}(으)로 저장했어요`,`Saved "${typedName}" as ${it.label}`));
+      renderUnregisteredDrugList();
+    };
+  });
+}
+function renderUnregisteredDrugList(){
+  const sec=document.getElementById("unregDrugSection");
+  const names=findUnregisteredDrugNames();
+  if(!names.length){ sec.style.display="none"; return; }
+  sec.style.display="block";
+  const list=document.getElementById("unregDrugList");
+  list.innerHTML=names.map(n=>{
+    const cnt=db.events.filter(e=>e.type==="med"&&e.drug===n).length;
+    return `<div class="li"><div class="grow"><div class="name">${escapeHtml(n)}</div><div class="meta">${L(`${cnt}회 기록됨 · 곡선·LEDD 계산에서 제외 중`,`${cnt} records · excluded from curve/LEDD calc`)}</div></div>
+      <button class="btn ghost" data-name="${escapeHtml(n)}" style="width:auto">${L("성분 선택","Choose")}</button></div>`;
+  }).join("");
+  list.querySelectorAll("button[data-name]").forEach(b=>{ b.onclick=()=>openIngredientPicker(b.dataset.name); });
+}
+/* 기록에 있지만 사전에도, 개인 별칭에도 없는 약 이름들을 찾는다 */
+function findUnregisteredDrugNames(){
+  const names=new Set();
+  db.events.forEach(e=>{ if(e.type==="med" && e.drug) names.add(e.drug); });
+  const map=personalAliasMap();
+  return [...names].filter(n => !map[n] && !SIMDRUG.classify(n)).sort();
+}
 function medsForSimulationDay(dayKey){
-  const today=medsForDay(dayKey).map(d=>({...d, dayOffset:0}));
-  const carry=carryoverDosesFor(dayKey);
+  const today=medsForDay(dayKey).map(d=>({...d, dayOffset:0, name:resolveDrugName(d.name)}));
+  const carry=carryoverDosesFor(dayKey).map(d=>({...d, name:resolveDrugName(d.name)}));
   return {today, carry, all:carry.concat(today)};
 }
 function outputsForDay(dayKey){
@@ -2728,12 +2813,12 @@ function renderSimPlanList(dayKey){
   const doses=medsForDay(dayKey);
   if(!doses.length){ el.textContent=tr("simNoMed"); document.getElementById("simUnregisteredNote").textContent=""; return; }
   el.innerHTML = doses.map(d=>{
-    const model=SIMDRUG.classify(d.name);
+    const model=SIMDRUG.classify(resolveDrugName(d.name)); /* v2.7: 개인 별칭 반영 */
     const roleTxt=model? model.roleLabel : "곡선 모델 미등록";
     return `<div style="padding:4px 0">💊 ${d.time} · ${escapeHtml(d.name)}${d.dose?` ${d.dose}mg`:` <span style="color:var(--ink-2)">(용량 확인 필요)</span>`}
       <span style="color:var(--ink-2); font-size:11.5px">— ${escapeHtml(roleTxt)}</span></div>`;
   }).join("");
-  const unreg=doses.filter(d=>!SIMDRUG.classify(d.name));
+  const unreg=doses.filter(d=>!SIMDRUG.classify(resolveDrugName(d.name)));
   document.getElementById("simUnregisteredNote").innerHTML = unreg.length
     ? unreg.map(d=>`<div>· ${escapeHtml(d.name)}: ${escapeHtml(SIMDRUG.UNREGISTERED_NOTE)}</div>`).join("") : "";
 }
@@ -3396,6 +3481,7 @@ window.addQ=()=>{ const t=prompt(L("질문을 입력하세요","Enter your quest
 
 /* ---------- render: SETTINGS ---------- */
 function renderMeds(){
+  renderUnregisteredDrugList(); /* v2.7 */
   const el=document.getElementById("medList"); el.innerHTML="";
   if(!db.meds.length){ el.innerHTML=`<div class="li"><div class="grow"><div class="meta">${L("아직 등록된 약이 없어요. 아래에서 추가하세요.","No medications registered yet. Add one below.")}</div></div></div>`; }
   const ordered = db.meds.map((m,i)=>({m,i})).sort((a,b)=>(b.m.fav?1:0)-(a.m.fav?1:0));
