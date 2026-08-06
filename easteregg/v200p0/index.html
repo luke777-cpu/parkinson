@@ -704,7 +704,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음 (INSUF)",
-    versionLabel:"약효일지 · 비공개 시험판 2.7.0-alias",
+    versionLabel:"약효일지 · 비공개 시험판 2.7.1-alias",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -773,7 +773,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests (INSUF)",
-    versionLabel:"Med Log · Test build 2.7.0-alias",
+    versionLabel:"Med Log · Test build 2.7.1-alias",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -4423,14 +4423,19 @@ function renderLangToggle(){
   const btn=document.getElementById("langToggle");
   btn.textContent = currentLang()==="en" ? "English" : "한국어";
 }
-/* ---- Easter Egg: 설정의 버전 표시 7회 연속 터치 → easteregg/ (메뉴·버튼·설명 없음, 저장소 무접근) ---- */
+/* ---- Easter Egg: 설정의 버전 표시 7회 연속 터치 → easteregg/ (메뉴·버튼·설명 없음, 저장소 무접근) ----
+   검토(2026-08-06): 상대경로("easteregg/index.html")를 쓰면, 앱이 사이트 최상위가 아닌
+   하위 폴더(예: easteregg/v200p0/의 비공개 시험판)에서 열렸을 때 그 폴더 기준으로 또
+   한 단계 더 들어간 잘못된 주소가 되어 404가 났다(예: .../v200p0/easteregg/index.html).
+   토토 페이지는 사이트에 하나만 있으면 되므로, 앱이 어느 경로에서 열리든 항상 그
+   하나(사이트 최상위의 easteregg/)를 가리키도록 절대경로로 고정한다. */
 (function(){
   const el=document.getElementById("versionLabel"); if(!el) return;
   let n=0, t=null;
   el.addEventListener("click",()=>{
     n++;
     clearTimeout(t); t=setTimeout(()=>{ n=0; },2000); /* 2초 쉬면 처음부터 */
-    if(n>=7){ n=0; location.href="easteregg/index.html"; }
+    if(n>=7){ n=0; location.href="/parkinson/easteregg/index.html"; }
   });
 })();
 
