@@ -704,7 +704,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음 (INSUF)",
-    versionLabel:"약효일지 · 비공개 시험판 2.7.1-alias",
+    versionLabel:"약효일지 · 비공개 시험판 2.7.2-alias",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -773,7 +773,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests (INSUF)",
-    versionLabel:"Med Log · Test build 2.7.1-alias",
+    versionLabel:"Med Log · Test build 2.7.2-alias",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -2784,15 +2784,24 @@ function renderUnregisteredDrugList(){
   const list=document.getElementById("unregDrugList");
   list.innerHTML=names.map(n=>{
     const cnt=db.events.filter(e=>e.type==="med"&&e.drug===n).length;
-    return `<div class="li"><div class="grow"><div class="name">${escapeHtml(n)}</div><div class="meta">${L(`${cnt}회 기록됨 · 곡선·LEDD 계산에서 제외 중`,`${cnt} records · excluded from curve/LEDD calc`)}</div></div>
+    const metaTxt = cnt>0
+      ? L(`${cnt}회 기록됨 · 곡선·LEDD 계산에서 제외 중`,`${cnt} records · excluded from curve/LEDD calc`)
+      : L(`등록만 되어 있음 · 아직 복용 기록 없음`,`Registered only · no doses logged yet`);
+    return `<div class="li"><div class="grow"><div class="name">${escapeHtml(n)}</div><div class="meta">${metaTxt}</div></div>
       <button class="btn ghost" data-name="${escapeHtml(n)}" style="width:auto">${L("성분 선택","Choose")}</button></div>`;
   }).join("");
   list.querySelectorAll("button[data-name]").forEach(b=>{ b.onclick=()=>openIngredientPicker(b.dataset.name); });
 }
 /* 기록에 있지만 사전에도, 개인 별칭에도 없는 약 이름들을 찾는다 */
+/* 검토 발견(2026-08-06, 실사용): "+ 약 추가"로 내 약 목록에만 등록해 두고 아직
+   그 약으로 복용 기록을 한 번도 안 남긴 경우, 예전엔 감지가 안 됐다 — 실제 복용
+   기록(db.events)만 보고 등록해 둔 약 목록(db.meds)은 안 봤기 때문이다. 사용자는
+   보통 약부터 등록하고 나서 기록을 시작하므로, 등록 단계에서부터 미등록임을
+   알려주는 게 자연스럽다. 이제 둘 다 본다. */
 function findUnregisteredDrugNames(){
   const names=new Set();
   db.events.forEach(e=>{ if(e.type==="med" && e.drug) names.add(e.drug); });
+  db.meds.forEach(m=>{ if(m.name) names.add(m.name); });
   const map=personalAliasMap();
   return [...names].filter(n => !map[n] && !SIMDRUG.classify(n)).sort();
 }
