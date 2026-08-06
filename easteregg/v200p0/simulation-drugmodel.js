@@ -99,10 +99,21 @@ DM.buildAliasIndex = function(){
 function aliasIndex(){ if(!_aliasIndex) _aliasIndex=DM.buildAliasIndex(); return _aliasIndex; }
 
 /* 상품명(오타·부분 문자열 포함) → 약물 사전 항목 */
+/* 검토 발견(2026-08-06, 실사용): 부분 문자열 매칭(includes)만 쓰면, 이름에 "서방형"이라고
+   분명히 적혀 있어도 그보다 짧은 즉방형 별칭("프라펙솔")이 먼저 걸려서 즉방형(IR)으로
+   잘못 인식된다("프라펙솔 서방형"→PRAMI_IR로 오분류, "퍼킨cr"→LEVO_IR로 오분류).
+   제형이 틀리면 곡선 모양 자체가 틀려지므로, 이름에 서방형을 가리키는 단어가 있는데
+   매칭된 게 즉방형(IR)이면 그 매칭을 신뢰하지 않고 미등록으로 남긴다 — 확신 없는 잘못된
+   매칭보다는, 성분 선택 화면(개인 별칭)에서 사용자가 정확한 제형을 직접 고르게 하는 편이
+   안전하다("임의 곡선 생성 금지" 원칙의 연장). "확산정"(dispersible)은 서방형이 아니라
+   빠르게 녹는 정제라 이 목록에 넣지 않는다. */
+const ER_HINT_RE=/서방|서방형|CR|ER형|ER|XR|지속형|패치/i;
 DM.findDrug = function(name){
   const n=String(name||"");
   const hit=aliasIndex().find(x=>n.includes(x.alias));
-  return hit? hit.drug : null;
+  if(!hit) return null;
+  if(ER_HINT_RE.test(n) && hit.drug.formulation==="IR") return null;
+  return hit.drug;
 };
 
 /* 상품명 → 계산에 쓰는 통합 모델 객체 (곡선 파라미터 + 사전 정보를 합침).
