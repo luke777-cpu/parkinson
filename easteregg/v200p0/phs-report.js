@@ -103,6 +103,19 @@ PHS.reasonText = (reason,lang)=>{
   return t? t(reason.params||{}) : reason.code;
 };
 
+/* 검토 발견(2026-08-06, 실사용): "단백질 많은 식사이(가) 1회(일) 기록되어..."처럼
+   조사(이/가) 선택과 단위("회"인지 "일"인지)를 실제로 정하지 않고 두 후보를 괄호로
+   병기한 채로 문장이 나가고 있었다("(INSUF)"라는 내부 표시가 그대로 노출된 것과
+   같은 종류의 실수). 받침 유무로 조사를 고르고, 단위는 supportingEvents가 실제로는
+   "건수"이므로 "회"로 통일한다. */
+function hasBatchim(word){
+  const ch=String(word||"").trim().slice(-1);
+  const code=ch.charCodeAt(0);
+  if(code<0xAC00||code>0xD7A3) return false; /* 한글 음절이 아니면 받침 없다고 간주 */
+  return (code-0xAC00)%28!==0;
+}
+function josaIGa(word){ return hasBatchim(word)? "이":"가"; }
+
 /* ---------- 한국어 문장 템플릿 (결정론적) ---------- */
 PHS.templatesKo = {
   diagnosisHistory: ({years}) => years!=null? `파킨슨병 진단 후 약 ${years}년 경과한 환자입니다.` : `파킨슨병으로 추적 관찰 중인 환자입니다.`,
@@ -129,7 +142,7 @@ PHS.templatesKo = {
     if(relation) s+=` — ${relation}`;
     return s+".";
   },
-  lifestyleLine: ({label,n}) => `${label}이(가) ${n}회(일) 기록되어 출력 변동과의 시간적 연관성 검토가 가능하나, 인과관계는 확정할 수 없습니다.`,
+  lifestyleLine: ({label,n}) => `${label}${josaIGa(label)} ${n}회 기록되어 출력 변동과의 시간적 연관성 검토가 가능하나, 인과관계는 확정할 수 없습니다.`,
   missingDataLimitation: () => `일부 시간대는 기록이 부족하여 체류시간과 약물 반응을 정확히 평가하기 어려웠습니다.`,
   lowRecordLimitation: ({days}) => `기록 일수가 ${days}일로 적어 해석의 신뢰도가 제한적입니다.`,
   confidenceLine: ({level,score}) => `기록 데이터 신뢰도: ${CONF_KO[level]||level} (${score}/100).`,
@@ -164,7 +177,7 @@ PHS.templatesEn = {
     if(relation) s+=` — ${relation}`;
     return s+".";
   },
-  lifestyleLine: ({label,n}) => `${label} was recorded ${n} time(s)/day(s); a temporal association with output change can be reviewed, but causation cannot be established.`,
+  lifestyleLine: ({label,n}) => `${label} was recorded ${n} time(s); a temporal association with output change can be reviewed, but causation cannot be established.`,
   missingDataLimitation: () => `Some periods lack records, limiting accurate assessment of dwell time and medication response.`,
   lowRecordLimitation: ({days}) => `Only ${days} recorded day(s); interpretation reliability is limited.`,
   confidenceLine: ({level,score}) => `Recorded-data confidence: ${CONF_EN[level]||level} (${score}/100).`,
@@ -343,7 +356,7 @@ function buildChallengeSection(tests, lang){
   const title=en? "Medication Response Tests (patient-run comparison)":"약효 반응 시험 (환자 자가 비교 기록)";
   const note=en? "Patient-recorded structured response tests (pre-dose and 30/60/90/120 min). Summary of recorded facts only; not a levodopa challenge test result or treatment judgment."
               : "환자가 복용 전과 30·60·90·120분 시점에 직접 기록한 구조화 시험 요약입니다. 기록 사실의 정리이며, 레보도파 반응 판정이나 치료 판단이 아닙니다.";
-  if(!tests||!tests.length) return {title, note, lines:[en? "No completed tests (INSUF)":"완료된 시험 없음 (INSUF)"]};
+  if(!tests||!tests.length) return {title, note, lines:[en? "No completed tests":"완료된 시험 없음"]};
   const NA=en? "N/A":"평가 불가";
   const lines=tests.slice(-3).reverse().map(t=>{
     const parts=[];
@@ -352,7 +365,7 @@ function buildChallengeSection(tests, lang){
                  : `최초 체감 ${t.firstPerceivedMin!=null? t.firstPerceivedMin+"분":NA} / 분명한 체감 ${t.firstClearMin!=null? t.firstClearMin+"분":NA}`);
     const imps=Object.entries(t.maxImpByGroup||{}).filter(([,v])=>v!=null);
     parts.push(imps.length? (en? "Max score decrease: ":"최대 점수 감소: ")+imps.map(([g,v])=>`${chgLbl("group",g,lang)} ${v}`).join(", ")
-                          : (en? "Max score decrease: INSUF":"최대 점수 감소: 기록 부족 (INSUF)"));
+                          : (en? "Max score decrease: not enough data":"최대 점수 감소: 기록 부족"));
     parts.push(t.worstAdverse? (en? `Max adverse: ${chgLbl("adverse",t.worstAdverse.code,lang)} ${t.worstAdverse.score}/4 at ${t.worstAdverse.minutes} min`
                                   : `부작용 최고: ${chgLbl("adverse",t.worstAdverse.code,lang)} ${t.worstAdverse.score}/4 (${t.worstAdverse.minutes}분)`)
                              : (en? "Max adverse: none recorded":"부작용 최고: 기록 없음"));
