@@ -323,6 +323,12 @@ body{font-size:calc(15px*var(--app-font-scale))}
       </div>
     </div>
 
+    <div class="btn-row no-print" id="onoffQuickRow" style="margin:10px 0 2px">
+      <button type="button" class="btn ghost" id="onoffOnBtn" style="border-color:#1FA971; color:#1FA971">🟢 <span data-i18n="onoffOnBtn">지금 ON</span></button>
+      <button type="button" class="btn ghost" id="onoffOffBtn" style="border-color:#54657A; color:#54657A">⚫ <span data-i18n="onoffOffBtn">지금 OFF</span></button>
+    </div>
+    <div class="hint no-print" style="text-align:center; margin:0 0 10px" data-i18n="onoffQuickHint">출력 점수와 별개로, 지금이 확실한 ON/OFF 상태면 바로 한 번에 기록할 수 있어요</div>
+
     <div class="top-actions no-print">
       <button class="btn primary" id="topMedBtn">💊 <span data-i18n="topMedBtn">약 복용 기록</span></button>
       <button class="btn ghost" id="topPastBtn">🕒 <span data-i18n="topPastBtn">지난 기록 추가</span></button>
@@ -560,6 +566,7 @@ body{font-size:calc(15px*var(--app-font-scale))}
       약물 용량·복용 간격 조정은 반드시 주치의와 상의하세요. 모든 기록은 이 기기 안에만 저장되며, 다른 곳으로 전송되지 않습니다.
     </div>
     <button class="btn danger no-print" id="resetBtn" style="margin-top:14px" data-i18n="resetAll">모든 기록 삭제</button>
+    <div class="hint no-print" style="text-align:center; margin:14px 0 2px"><a href="privacy.html" target="_blank" rel="noopener" data-i18n="privacyPolicyLink">개인정보처리방침 보기</a></div>
     <div id="versionLabel" style="text-align:center; color:var(--ink-2); font-size:12px; margin:18px 0 8px" data-i18n="versionLabel">약효일지 · 테스트판 0.9.2</div>
   </section>
 
@@ -632,6 +639,7 @@ const I18N = {
     glossaryBtn:"ⓘ 상태·용어 설명 보기",
     glossOnVsPartial:"ON vs 불완전 ON", glossDyskVsDyst:"이상운동 vs 근긴장",
     quickOutputTitle:"지금 몸이 어떠세요?", qoLabel:"현재 출력",
+    onoffOnBtn:"지금 ON", onoffOffBtn:"지금 OFF", onoffQuickHint:"출력 점수와 별개로, 지금이 확실한 ON/OFF 상태면 바로 한 번에 기록할 수 있어요",
     qoStep90:"아주 잘 움직여요", qoStep70:"지낼 만해요", qoStep50:"불편하지만 움직여요", qoStep30:"많이 느리고 힘들어요", qoStep10:"거의 못 움직여요", qoHelpBtn:"ⓘ 도움말 · 기준 설정", qoReset:"오늘 기준점 다시 설정", qoGuide:"출력 점수 기준 보기",
     fontSize:"글씨 크기", fontSizeDesc:"기본 · 크게 · 매우 크게", fsNormal:"기본", fsLarge:"크게", fsXLarge:"매우 크게",
     primarySym:"주증상 (최대 3개)", primarySymDesc:"집중 기록할 증상을 골라두면 다음 버전 기능에 사용돼요",
@@ -645,7 +653,8 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음 (INSUF)",
-    versionLabel:"약효일지 · 테스트판 1.3.0",
+    versionLabel:"파킨슨 약효 기록 · 1.3.0",
+    privacyPolicyLink:"개인정보처리방침 보기",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -727,6 +736,7 @@ const I18N = {
     glossaryBtn:"ⓘ View state & term guide",
     glossOnVsPartial:"ON vs Partial ON", glossDyskVsDyst:"Dyskinesia vs Dystonia",
     quickOutputTitle:"How is your body right now?", qoLabel:"Current output",
+    onoffOnBtn:"Log ON now", onoffOffBtn:"Log OFF now", onoffQuickHint:"Separate from your output score — if you're clearly ON or OFF right now, you can log it in one tap",
     qoStep90:"Moving very well", qoStep70:"Manageable", qoStep50:"Uncomfortable but moving", qoStep30:"Very slow and hard", qoStep10:"Can barely move", qoHelpBtn:"ⓘ Help & baseline", qoReset:"Reset today's baseline", qoGuide:"View output score guide",
     fontSize:"Font size", fontSizeDesc:"Normal · Large · Extra large", fsNormal:"Normal", fsLarge:"Large", fsXLarge:"Extra large",
     primarySym:"Main symptoms (up to 3)", primarySymDesc:"Pick symptoms to focus on — used by upcoming features",
@@ -740,7 +750,8 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests (INSUF)",
-    versionLabel:"Med Log · Test build 1.3.0",
+    versionLabel:"Parkinson's Medication Diary · 1.3.0",
+    privacyPolicyLink:"View Privacy Policy",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -3992,6 +4003,8 @@ document.getElementById("qoTrendRow").addEventListener("click", e=>{
 });
 /* v1.2.1: 첫 화면 단순화 — 기준점 재설정·기준 보기·기준 확인·용어 설명을 [ⓘ 도움말] 한 곳으로 모음 */
 document.getElementById("qoHelpBtn").onclick=openTodayHelp;
+document.getElementById("onoffOnBtn").onclick=()=>quickSave(QUICK_ACTIONS.find(q=>q.key==="on"));
+document.getElementById("onoffOffBtn").onclick=()=>quickSave(QUICK_ACTIONS.find(q=>q.key==="off"));
 document.getElementById("printBtn").onclick=()=>window.print();
 document.getElementById("repRange").onchange=renderReport;
 
