@@ -4003,8 +4003,8 @@ document.getElementById("qoTrendRow").addEventListener("click", e=>{
 });
 /* v1.2.1: 첫 화면 단순화 — 기준점 재설정·기준 보기·기준 확인·용어 설명을 [ⓘ 도움말] 한 곳으로 모음 */
 document.getElementById("qoHelpBtn").onclick=openTodayHelp;
-document.getElementById("onoffOnBtn").onclick=()=>quickSave(QUICK_ACTIONS.find(q=>q.key==="on"));
-document.getElementById("onoffOffBtn").onclick=()=>quickSave(QUICK_ACTIONS.find(q=>q.key==="off"));
+document.getElementById("onoffOnBtn").onclick=()=>addState("on", {output:90, trend:"stable"});
+document.getElementById("onoffOffBtn").onclick=()=>addState("off", {output:10, trend:"stable"});
 document.getElementById("printBtn").onclick=()=>window.print();
 document.getElementById("repRange").onchange=renderReport;
 
