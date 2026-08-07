@@ -1,8 +1,0 @@
-[{
-  "relation": ["delegate_permission/common.handle_all_urls"],
-  "target": {
-    "namespace": "android_app",
-    "package_name": "com.geochang.yakhyo",
-    "sha256_cert_fingerprints": ["여기에_PWABuilder에서_받은_SHA256_지문을_붙여넣으세요"]
-  }
-}]
