@@ -348,6 +348,13 @@ body{font-size:calc(15px*var(--app-font-scale))}
     <div class="grid-title" data-i18n="symptomTitle">⚡ 증상 기록 — 시작할 때 누르고, 끝나면 한 번 더</div>
     <div class="quick-grid" id="symptomGrid"></div>
 
+    <!-- v2.8: 생활기록(특히 단백질 식사)이 너무 드물어서 매번 시트를 열어야 하는 게
+         마찰이라는 실사용 피드백 — OFF 버튼과 같은 원탭 방식으로 가장 자주 궁금해하는
+         신호(저녁 단백질 식사)만 시트 없이 바로 기록하게 한다. 나머지 항목(수면·운동·
+         배변 등)은 기존처럼 "약·생활 기록"에서 상세히 기록. -->
+    <div class="grid-title" style="margin-top:16px" data-i18n="quickLifeTitle">🍽 빠른 생활기록</div>
+    <div class="quick-grid" id="quickLifeGrid"></div>
+
     <div class="grid-title" style="margin-top:16px" data-i18n="medLifeTitle">약·생활 기록</div>
     <div class="recent-med-row" id="recentMedRow"></div>
     <div class="life-grid" id="lifeGrid"></div>
@@ -699,12 +706,12 @@ const I18N = {
     qoTrendPrompt:"이대로 기록할까요? 방향을 눌러주세요", trendRising:"상승 중", trendStable:"유지 중", trendFalling:"하강 중",
     trendPickAlert:"현재 몸 상태가 상승 중인지, 유지 중인지, 하강 중인지 선택해 주세요.",
     pastDateSaved:"기록을 추가했습니다", viewAddedRecord:"추가한 기록 보기", refState:"참고 상태",
-    symptomTitle:"⚡ 증상 기록 — 시작할 때 누르고, 끝나면 한 번 더", medLifeTitle:"약·생활 기록",
+    symptomTitle:"⚡ 증상 기록 — 시작할 때 누르고, 끝나면 한 번 더", medLifeTitle:"약·생활 기록", quickLifeTitle:"🍽 빠른 생활기록",
     outputOverlayTitle:"출력 곡선 + 생활기록 + 이벤트", overlayTapHint:"그래프를 눌러 그 시각의 출력·약효·이벤트를 확인하세요",
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
-    chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음 (INSUF)",
-    versionLabel:"약효일지 · 비공개 시험판 2.7.4-alias",
+    chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음",
+    versionLabel:"약효일지 · 비공개 시험판 2.8.1-quicklife",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -768,12 +775,12 @@ const I18N = {
     qoTrendPrompt:"Ready to save? Tap the direction", trendRising:"Rising", trendStable:"Stable", trendFalling:"Falling",
     trendPickAlert:"Please choose whether your body is currently rising, stable, or falling.",
     pastDateSaved:"Record added", viewAddedRecord:"View added record", refState:"Reference state",
-    symptomTitle:"⚡ Symptoms — tap to start, tap again to end", medLifeTitle:"Medication & life records",
+    symptomTitle:"⚡ Symptoms — tap to start, tap again to end", medLifeTitle:"Medication & life records", quickLifeTitle:"🍽 Quick life log",
     outputOverlayTitle:"Output curve + life records + events", overlayTapHint:"Tap the chart to see output, drug level, and events at that time",
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
-    chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests (INSUF)",
-    versionLabel:"Med Log · Test build 2.7.4-alias",
+    chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests",
+    versionLabel:"Med Log · Test build 2.8.1-quicklife",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -1861,6 +1868,57 @@ const SYMPTOM_QUICK = [
   {key:"other",  ko:"기타 증상", en:"Other symptom", ic:"➕"},
 ];
 function symQuickLabel(key){ const s=SYMPTOM_QUICK.find(x=>x.key===key); return s? L(s.ko,s.en) : key; }
+/* v2.8: 생활기록 원탭 — 시트를 열지 않고 그 자리에서 바로 addLife를 호출한다.
+   식사 종류는 지금 시각으로 자동 추정(06~10시=아침, 11~14시=점심, 17~20시=저녁, 그 외=간식) —
+   틀렸으면 "약·생활 기록"의 기존 시트에서 수정하면 된다. 가장 자주 궁금해하는 신호
+   (저녁 단백질 식사가 다음날 아침 온 지연과 관련 있는지)부터 마찰 없이 남기게 한다. */
+function inferMealType(){
+  const h=new Date().getHours();
+  if(h>=6&&h<11) return "아침";
+  if(h>=11&&h<15) return "점심";
+  if(h>=17&&h<21) return "저녁";
+  return "간식";
+}
+/* v2.8.1: 단백질원마다 레보도파 흡수 경쟁 정도가 달라(고기·유제품은 큰 중성아미노산이
+   많고, 콩류·두부는 상대적으로 적음) "단백질 먹었다/안 먹었다"만으론 나중에 어떤
+   종류가 관련 있는지 구분이 안 된다는 실사용 피드백 — 완전한 시트를 열지 않고,
+   짧은 선택지 한 번만 더 눌러 종류를 남기게 한다(원탭 정신은 유지, 두 탭까지만). */
+const PROTEIN_SOURCES = [
+  {key:"고기",     ko:"고기",       en:"Meat",   ic:"🥩"},
+  {key:"생선",     ko:"생선",       en:"Fish",   ic:"🐟"},
+  {key:"유제품",   ko:"유제품(우유·치즈)", en:"Dairy", ic:"🧀"},
+  {key:"콩류",     ko:"두부·콩류",  en:"Tofu/beans", ic:"🫘"},
+  {key:"기타",     ko:"기타",       en:"Other",  ic:"🍽"},
+];
+function openProteinSourcePicker(){
+  openSheet(`
+    <h2>🍖 ${L("어떤 단백질이었나요?","What kind of protein?")}</h2>
+    <div class="hint" style="margin-bottom:10px">${L("한 번만 골라주세요 — 뒤에 다른 입력은 필요 없어요.","Just pick one — nothing else to fill in.")}</div>
+    <div class="chips" style="display:flex; flex-direction:column; gap:8px">
+      ${PROTEIN_SOURCES.map((p,i)=>`<button class="btn ghost" data-i="${i}" style="text-align:left; min-height:52px">
+        <span style="font-size:18px; margin-right:8px">${p.ic}</span>${L(p.ko,p.en)}
+      </button>`).join("")}
+    </div>
+    <button class="btn ghost" style="margin-top:12px" onclick="closeSheet()">${L("취소","Cancel")}</button>
+  `);
+  PROTEIN_SOURCES.forEach((p,i)=>{
+    document.querySelector(`[data-i="${i}"]`).onclick=()=>{
+      closeSheet();
+      addLife("meal", {mealType:inferMealType(), protein:true, extras:["단백질 많음", p.key]});
+    };
+  });
+}
+const QUICK_LIFE = [
+  {key:"protein_meal", ko:"단백질 식사", en:"Protein meal", ic:"🍖", action:openProteinSourcePicker},
+];
+function renderQuickLifeGrid(){
+  const grid=document.getElementById("quickLifeGrid"); if(!grid) return; grid.innerHTML="";
+  QUICK_LIFE.forEach(q=>{
+    const b=document.createElement("button"); b.className="quick-btn";
+    b.innerHTML=`<span class="qic">${q.ic}</span><span>${L(q.ko,q.en)}</span>`;
+    b.onclick=q.action; grid.appendChild(b);
+  });
+}
 function openSymptomState(key){
   const evs = db.events.filter(e=>e.type==="symptom" && e.key===key).sort((a,b)=>b.ts-a.ts);
   return (evs.length && evs[0].phase==="start") ? evs[0] : null;
@@ -1942,6 +2000,7 @@ function renderToday(){
     b.onclick=()=>toggleSymptomTimer(sq.key); symGrid.appendChild(b);
   });
   renderRecentMedRow();
+  renderQuickLifeGrid();
   const lgrid=document.getElementById("lifeGrid"); lgrid.innerHTML="";
   Object.entries(LIFE).forEach(([k,lf])=>{
     const b=document.createElement("button"); b.className="life-btn";
