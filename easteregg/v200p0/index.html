@@ -356,6 +356,8 @@ body{font-size:calc(15px*var(--app-font-scale))}
     <div class="quick-grid" id="quickLifeGrid"></div>
 
     <div class="grid-title" style="margin-top:16px" data-i18n="medLifeTitle">약·생활 기록</div>
+    <!-- v2.9: 복용 세트 원탭 — 같이 드시는 약들을 한 번에 같은 시각으로 기록 -->
+    <div class="recent-med-row" id="medSetQuickRow" style="display:none"></div>
     <div class="recent-med-row" id="recentMedRow"></div>
     <div class="life-grid" id="lifeGrid"></div>
 
@@ -562,6 +564,15 @@ body{font-size:calc(15px*var(--app-font-scale))}
     <div class="section-label" data-i18n="myMeds">내 약 · 복용 시간 예약</div>
     <div class="list-card" id="medList"></div>
     <button class="btn ghost no-print" id="addMedBtn" style="margin-bottom:8px" data-i18n="addMed">+ 약 추가</button>
+    <button class="btn ghost no-print" id="addRxBtn" style="margin-bottom:8px" data-i18n="addRx">📋 처방전으로 한 번에 등록</button>
+
+    <!-- v2.9: 복용 세트 — 같이 드시는 여러 약을 묶어 한 번에 같은 시각으로 기록 -->
+    <div id="medSetSection">
+      <div class="section-label" data-i18n="medSetTitle">복용 세트</div>
+      <div class="disclaimer" style="margin-bottom:8px" data-i18n="medSetDesc">같이 드시는 약들을 묶어두면, 매번 하나씩 기록할 필요 없이 한 번에 같은 시각으로 기록됩니다. 시각이 정확히 겹쳐야 기록 분석도 더 정확해집니다.</div>
+      <div class="list-card" id="medSetList"></div>
+      <button class="btn ghost no-print" id="addMedSetBtn" style="margin-bottom:8px" data-i18n="addMedSet">+ 세트 만들기</button>
+    </div>
 
     <!-- v2.7: 성분명 기반 개인 별칭 매핑 — 앱 사전에 없는 약 이름을 이 기기에서만 성분에 연결한다.
          공용 사전(drug-dictionary.json)은 건드리지 않는다. -->
@@ -697,6 +708,7 @@ const I18N = {
     anValidationDisclaimer:"보고서에서 제안했던 후보안을 실제로 복용한 날의 기록과, 그때 예측했던 값을 비교합니다. 예측과 다르다고 해서 잘못된 것이 아니며, 그 차이가 다음 추정을 더 정확하게 만드는 데 쓰입니다.",
     unregDrugTitle:"미등록 약 정리",
     unregDrugDesc:"기록에 있지만 앱 사전에 없는 약 이름입니다. 성분을 한 번만 골라 두면, 그 이름으로 기록된 모든 복용이 앞으로 계산에 포함됩니다. 이 설정은 이 기기에만 저장됩니다.",
+    medSetTitle:"복용 세트", medSetDesc:"같이 드시는 약들을 묶어두면, 매번 하나씩 기록할 필요 없이 한 번에 같은 시각으로 기록됩니다. 시각이 정확히 겹쳐야 기록 분석도 더 정확해집니다.", addMedSet:"+ 세트 만들기", addRx:"📋 처방전으로 한 번에 등록",
     quickOutputTitle:"지금 몸이 어떠세요?", qoLabel:"현재 출력",
     qoStep90:"아주 잘 움직여요", qoStep70:"지낼 만해요", qoStep50:"불편하지만 움직여요", qoStep30:"많이 느리고 힘들어요", qoStep10:"거의 못 움직여요", qoHelpBtn:"ⓘ 도움말 · 기준 설정", qoReset:"오늘 기준점 다시 설정", qoGuide:"출력 점수 기준 보기",
     fontSize:"글씨 크기", fontSizeDesc:"기본 · 크게 · 매우 크게", fsNormal:"기본", fsLarge:"크게", fsXLarge:"매우 크게",
@@ -711,7 +723,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음",
-    versionLabel:"약효일지 · 비공개 시험판 2.8.1-quicklife",
+    versionLabel:"약효일지 · 비공개 시험판 2.10.1-rx",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -766,6 +778,7 @@ const I18N = {
     anValidationDisclaimer:"Compares a candidate suggested in a past report against records from a day it was actually taken. A mismatch isn't a failure — the difference helps refine future estimates.",
     unregDrugTitle:"Unrecognized medications",
     unregDrugDesc:"These drug names appear in your records but aren't in the app dictionary. Choose the ingredient once and every past and future dose under that name will be included in calculations. Saved on this device only.",
+    medSetTitle:"Medication sets", medSetDesc:"Group medications you take together — logging the set records them all at the exact same time, instead of one by one. Matching timestamps also make analysis more accurate.", addMedSet:"+ Create set", addRx:"📋 Add from a prescription",
     quickOutputTitle:"How is your body right now?", qoLabel:"Current output",
     qoStep90:"Moving very well", qoStep70:"Manageable", qoStep50:"Uncomfortable but moving", qoStep30:"Very slow and hard", qoStep10:"Can barely move", qoHelpBtn:"ⓘ Help & baseline", qoReset:"Reset today's baseline", qoGuide:"View output score guide",
     fontSize:"Font size", fontSizeDesc:"Normal · Large · Extra large", fsNormal:"Normal", fsLarge:"Large", fsXLarge:"Extra large",
@@ -780,7 +793,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests",
-    versionLabel:"Med Log · Test build 2.8.1-quicklife",
+    versionLabel:"Med Log · Test build 2.10.1-rx",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -1274,6 +1287,167 @@ function addMed(name, dose, ts){
   db.events.push({ id:uid(), type:"med", drug:name, dose:dose||null, ts:ts||Date.now(), memo:"" });
   db.events.sort((a,b)=>a.ts-b.ts); save(); renderAll();
   toast(`${name}${dose?(" "+dose+"mg"):""} ${L("복약 기록됨","medication recorded")}`);
+}
+/* v2.9: 복용 세트 — 실사용 신고: 같이 드시는 여러 약(예: 아침 6시에 마도파HBS·미라펙스·
+   아만타딘 동시복용)을 하나씩 따로 기록하면 실제로는 5~10분 안에 다 드셨는데도 기록
+   시각이 6:01, 6:03, 6:05처럼 몇 분씩 흩어진다. Phase 0의 그룹핑(±45분 근접성 기준)은
+   시각이 정확히 같을수록 정확한 하나의 그룹으로 묶이므로, 이 시간차 자체가 재현성
+   분석에 불필요한 잡음이 된다. 세트 하나를 한 번에 기록하면 전부 정확히 같은 시각으로
+   저장되어, 기록 부담도 줄고 Phase 0 분석 정확도도 함께 올라간다. */
+function addMedSet(setId){
+  const set=(db.medSets||[]).find(s=>s.id===setId); if(!set || !set.items.length) return;
+  const ts=Date.now();
+  set.items.forEach(it=>{ db.events.push({ id:uid(), type:"med", drug:it.name, dose:it.dose||null, ts, memo:"", fromSet:set.id }); });
+  db.events.sort((a,b)=>a.ts-b.ts); save(); renderAll();
+  toast(`${set.name} · ${set.items.length}${L("개 약 동시 기록됨","items recorded together")} · ${hm(ts)}`);
+}
+function saveMedSet(name, items, existingId){
+  if(!db.medSets) db.medSets=[];
+  if(existingId){ const s=db.medSets.find(x=>x.id===existingId); if(s){ s.name=name; s.items=items; } }
+  else db.medSets.push({id:uid(), name, items});
+  save();
+}
+function deleteMedSet(setId){
+  db.medSets=(db.medSets||[]).filter(s=>s.id!==setId); save(); renderMedSets(); renderToday();
+}
+function openMedSetEditor(existingId){
+  const existing=existingId? (db.medSets||[]).find(s=>s.id===existingId) : null;
+  const medChips=(db.meds||[]).map((m,i)=>{
+    const inSet=existing && existing.items.some(it=>it.name===m.name && it.dose===m.dose);
+    return `<button type="button" class="chip${inSet?" sel":""}" data-t="${i}">${escapeHtml(m.name)}${m.dose?` ${m.dose}mg`:""}</button>`;
+  }).join("");
+  openSheet(`
+    <h2>${existing? L("복용 세트 수정","Edit medication set") : L("복용 세트 만들기","Create medication set")}</h2>
+    <div class="hint" style="margin-bottom:10px">${L("같이 드시는 약들을 골라 이름을 붙여두면, 다음부터 한 번에 같은 시각으로 기록됩니다.","Group meds you take together — logging the set records them all at the same time.")}</div>
+    <div class="field"><label>${L("세트 이름","Set name")}</label><input type="text" id="msetName" placeholder="${L("예: 아침 6시 세트","e.g. Morning 6am set")}" value="${existing?escapeHtml(existing.name):""}"></div>
+    <div class="field"><label>${L("포함할 약 (복수 선택)","Medications (multi-select)")}</label>
+      <div class="chips" id="msetChips">${medChips || `<span class="hint">${L("먼저 '내 약'에 약을 등록해 주세요.","Register medications in \"My meds\" first.")}</span>`}</div>
+    </div>
+    <div class="field">
+      <label style="display:flex; align-items:center; gap:6px"><input type="checkbox" id="msetSchedOn" ${existing&&existing.schedTime?"checked":""}> ${L("매일 정해진 시각에 자동으로 '복용함'으로 기록","Automatically record as taken at a set time each day")}</label>
+      <div class="hint" style="margin:4px 0 8px">${L("이 시각이 지나면 따로 안 눌러도 먹은 것으로 기록됩니다. 실제로 안 드셨거나 시각이 다르면 그때 고치면 됩니다.","Once this time passes, it's recorded as taken automatically — correct it only if you skipped it or took it at a different time.")}</div>
+      <input type="time" id="msetSchedTime" value="${existing&&existing.schedTime?existing.schedTime:"06:00"}" style="width:100%">
+    </div>
+    <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="msetSave">${L("저장","Save")}</button></div>
+  `);
+  multiChipToggle("msetChips");
+  document.getElementById("msetSave").onclick=()=>{
+    const name=document.getElementById("msetName").value.trim();
+    const idxs=selectedChips("msetChips").map(Number);
+    if(!name || !idxs.length){ toast(L("이름과 약을 선택해 주세요","Please enter a name and select medications")); return; }
+    const items=idxs.map(i=>({name:db.meds[i].name, dose:db.meds[i].dose}));
+    const schedTime = document.getElementById("msetSchedOn").checked? document.getElementById("msetSchedTime").value : null;
+    saveMedSet(name, items, existingId, schedTime);
+    closeSheet(); renderMedSets(); renderToday();
+  };
+}
+function renderMedSets(){
+  const sec=document.getElementById("medSetSection"); if(!sec) return;
+  const list=document.getElementById("medSetList");
+  const sets=db.medSets||[];
+  list.innerHTML = sets.map(s=>`<div class="li"><div class="grow"><div class="name">${escapeHtml(s.name)}${s.schedTime?` <span style="color:var(--accent); font-weight:700">· ⏰ ${s.schedTime} ${L("자동","auto")}</span>`:""}</div><div class="meta">${s.items.map(it=>escapeHtml(it.name)).join(" · ")}</div></div>
+    <button class="btn ghost" data-edit="${s.id}" style="width:auto">${L("수정","Edit")}</button>
+    <button class="btn ghost" data-del="${s.id}" style="width:auto">✕</button></div>`).join("");
+  list.querySelectorAll("button[data-edit]").forEach(b=>{ b.onclick=()=>openMedSetEditor(b.dataset.edit); });
+  list.querySelectorAll("button[data-del]").forEach(b=>{ b.onclick=()=>{ if(confirm(L("이 세트를 삭제할까요?","Delete this set?"))) deleteMedSet(b.dataset.del); }; });
+}
+/* v2.9.1: "안 먹거나 시간을 어긴 사람만 고치는" 반대 방향 기록 — 실사용 아이디어.
+   대부분의 환자는 정해진 시각에 세트를 그대로 복용하므로, 매번 눌러서 "먹었다"고
+   확인시키는 대신 예정 시각이 지나면 "먹은 것으로" 자동 기록하고, 실제로 안 먹었거나
+   다른 시각에 먹은 예외적인 경우에만 그 사람이 고치게 한다. 자동 기록된 항목은
+   assumed:true로 표시해 "확인된 사실"과 구분한다(나중에 분석 신뢰도 표시 등에 활용 가능) —
+   조용히 사실인 척하지 않는다는 원칙을 지킨다. */
+function todayScheduledTs(schedTime){
+  const [h,m]=schedTime.split(":").map(Number);
+  const d=new Date(); d.setHours(h,m,0,0); return d.getTime();
+}
+/* 검토 발견: 같은 약이 두 세트에 걸쳐 있으면(예: 마도파HBS가 아침·저녁 세트 둘 다에
+   포함) 약 이름만으로 "오늘 이 세트가 기록됐는지"를 판단하면 서로 헷갈린다 — 한쪽
+   세트가 채워지면 다른 세트도 "이미 기록됨"으로 잘못 보인다. 세트를 통해 생성된
+   이벤트에는 fromSet(어느 세트에서 왔는지)을 남겨서, 세트별로 정확히 구분한다. */
+function assumedEventsForSetToday(set){
+  const dayStart=new Date(); dayStart.setHours(0,0,0,0);
+  return db.events.filter(e=>e.type==="med" && e.ts>=dayStart.getTime() && e.fromSet===set.id);
+}
+/* 오늘 렌더링 때마다 호출 — 예정 시각이 지났고 오늘 그 세트에 대한 기록이 전혀 없으면
+   "먹은 것으로" 자동 채운다. 이미 뭔가 기록돼 있으면(수동이든 이전 자동이든) 건드리지 않는다. */
+function reconcileAssumedDoses(){
+  const sets=db.medSets||[];
+  const now=Date.now();
+  let changed=false;
+  sets.forEach(set=>{
+    if(!set.schedTime) return;
+    const schedTs=todayScheduledTs(set.schedTime);
+    if(now<schedTs) return; /* 아직 예정 시각 전이면 손대지 않음 */
+    const existing=assumedEventsForSetToday(set);
+    if(existing.length) return; /* 이미 기록(수동/자동/스킵표시) 있으면 건드리지 않음 */
+    if(set.skippedToday===dkey(new Date())) return; /* 오늘 "안 먹었어요"로 명시적으로 표시된 경우 */
+    set.items.forEach(it=>{
+      db.events.push({ id:uid(), type:"med", drug:it.name, dose:it.dose||null, ts:schedTs, memo:"", assumed:true, fromSet:set.id });
+    });
+    changed=true;
+  });
+  if(changed){ db.events.sort((a,b)=>a.ts-b.ts); save(); }
+}
+function markSetSkippedToday(setId){
+  const set=(db.medSets||[]).find(s=>s.id===setId); if(!set) return;
+  /* 오늘 그 세트로 자동 기록된(assumed) 이벤트가 있으면 지우고, 스킵 표시를 남겨
+     reconcileAssumedDoses가 오늘 다시 채우지 않게 한다. */
+  db.events=db.events.filter(e=>!(e.type==="med" && e.assumed && e.fromSet===setId));
+  set.skippedToday=dkey(new Date());
+  save(); renderToday();
+  toast(`${set.name} · ${L("오늘 복용 안 함으로 표시됨","marked as not taken today")}`);
+}
+function openSetTimeCorrection(setId){
+  const set=(db.medSets||[]).find(s=>s.id===setId); if(!set) return;
+  openSheet(`
+    <h2>${escapeHtml(set.name)} · ${L("실제 복용 시각","Actual time taken")}</h2>
+    <div class="hint" style="margin-bottom:10px">${L("예정 시각과 다르게 드셨다면 실제 시각으로 바꿔주세요.","If you took it at a different time, correct it here.")}</div>
+    ${timeFieldHtml("msetTime", Date.now())}
+    <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="msetTimeSave">${L("저장","Save")}</button></div>
+  `);
+  bindTimeField("msetTime");
+  document.getElementById("msetTimeSave").onclick=()=>{
+    const ts=tsFromTimeField("msetTime", Date.now());
+    const todays=assumedEventsForSetToday(set);
+    if(todays.length){ todays.forEach(e=>{ e.ts=ts; e.assumed=false; }); }
+    else { set.items.forEach(it=>{ db.events.push({ id:uid(), type:"med", drug:it.name, dose:it.dose||null, ts, memo:"", fromSet:set.id }); }); }
+    db.events.sort((a,b)=>a.ts-b.ts); save(); closeSheet(); renderToday();
+    toast(`${set.name} · ${L("시각 수정됨","time corrected")} · ${hm(ts)}`);
+  };
+}
+function renderMedSetQuickRow(){
+  const row=document.getElementById("medSetQuickRow"); if(!row) return;
+  reconcileAssumedDoses();
+  const sets=db.medSets||[];
+  row.style.display = sets.length? "flex" : "none";
+  row.innerHTML = sets.map(s=>{
+    if(!s.schedTime){
+      /* 예정 시각이 없는 세트는 기존처럼 누를 때마다 지금 시각으로 기록(원터치) */
+      return `<button class="recent-med-chip" data-set="${s.id}"><span class="r-ic">💊</span>${escapeHtml(s.name)} (${s.items.length})</button>`;
+    }
+    const todays=assumedEventsForSetToday(s);
+    const isSkipped = s.skippedToday===dkey(new Date()) && !todays.length;
+    const isAssumed = todays.length && todays.every(e=>e.assumed);
+    if(isSkipped){
+      return `<button class="recent-med-chip" data-undo-skip="${s.id}" style="opacity:.6"><span class="r-ic">➖</span>${escapeHtml(s.name)} · ${L("안 먹음","not taken")}</button>`;
+    }
+    if(!todays.length){
+      /* 예정 시각이 아직 안 지남 — 다가올 예정으로만 표시 */
+      return `<span class="recent-med-chip" style="opacity:.55; pointer-events:none"><span class="r-ic">🕐</span>${escapeHtml(s.name)} · ${s.schedTime} ${L("예정","scheduled")}</span>`;
+    }
+    return `<span style="display:inline-flex; align-items:center; gap:4px">
+      <span class="recent-med-chip" style="pointer-events:none; ${isAssumed?"":"font-weight:800"}"><span class="r-ic">${isAssumed?"✅":"💊"}</span>${escapeHtml(s.name)} · ${hm(todays[0].ts)}${isAssumed?` (${L("자동 기록","auto")})`:""}</span>
+      <button class="btn ghost" data-fix="${s.id}" style="width:auto; padding:4px 8px; font-size:12px">${L("시각 수정","fix time")}</button>
+      <button class="btn ghost" data-skip="${s.id}" style="width:auto; padding:4px 8px; font-size:12px">${L("안 먹었어요","didn't take")}</button>
+    </span>`;
+  }).join("");
+  row.querySelectorAll("button[data-set]").forEach(b=>{ b.onclick=()=>addMedSet(b.dataset.set); });
+  row.querySelectorAll("button[data-fix]").forEach(b=>{ b.onclick=()=>openSetTimeCorrection(b.dataset.fix); });
+  row.querySelectorAll("button[data-skip]").forEach(b=>{ b.onclick=()=>markSetSkippedToday(b.dataset.skip); });
+  row.querySelectorAll("button[data-undo-skip]").forEach(b=>{ b.onclick=()=>{
+    const s=sets.find(x=>x.id===b.dataset.undoSkip); if(s){ s.skippedToday=null; save(); renderToday(); }
+  }; });
 }
 function addLife(kind, data={}){
   const ts = data.ts || Date.now();
@@ -2000,6 +2174,7 @@ function renderToday(){
     b.onclick=()=>toggleSymptomTimer(sq.key); symGrid.appendChild(b);
   });
   renderRecentMedRow();
+  renderMedSetQuickRow(); /* v2.9 */
   renderQuickLifeGrid();
   const lgrid=document.getElementById("lifeGrid"); lgrid.innerHTML="";
   Object.entries(LIFE).forEach(([k,lf])=>{
@@ -3550,6 +3725,7 @@ window.addQ=()=>{ const t=prompt(L("질문을 입력하세요","Enter your quest
 /* ---------- render: SETTINGS ---------- */
 function renderMeds(){
   renderUnregisteredDrugList(); /* v2.7 */
+  renderMedSets(); /* v2.9 */
   const el=document.getElementById("medList"); el.innerHTML="";
   if(!db.meds.length){ el.innerHTML=`<div class="li"><div class="grow"><div class="meta">${L("아직 등록된 약이 없어요. 아래에서 추가하세요.","No medications registered yet. Add one below.")}</div></div></div>`; }
   const ordered = db.meds.map((m,i)=>({m,i})).sort((a,b)=>(b.m.fav?1:0)-(a.m.fav?1:0));
@@ -4124,6 +4300,92 @@ function openAddMed(fromMedFlow){
   };
 }
 
+/* v2.10: 처방전으로 한 번에 등록 — 실사용 요청: 약을 하나씩 "+약 추가"로 등록하는 대신,
+   처방전에 적힌 대로 여러 약을 한 화면에서 한 번에 등록한다. 처방전은 보통 "1일 O회"로
+   복용 횟수를 적지, 정확한 시각을 안 적으므로 흔한 기본 시각(1회=아침, 2회=아침·저녁,
+   3회=아침·점심·저녁, 4회=6시간 간격)으로 자동 배정한다 — 실제와 다르면 나중에 "내 약"
+   에서 개별 수정하면 된다.
+   같은 횟수(=같은 시각대)로 등록된 약들은 어차피 같은 시각에 같이 먹게 되므로, 그 시각대
+   묶음마다 복용 세트를 자동으로 만들어 준다(자동기록 여부는 켜지 않은 채로 — 그건
+   사람이 며칠 써보고 믿음이 생긴 뒤에 직접 켜는 게 안전하다). */
+const FREQ_TIMES = {
+  1: ["08:00"],
+  2: ["08:00","20:00"],
+  3: ["08:00","13:00","19:00"],
+  4: ["06:00","12:00","17:00","22:00"],
+};
+const FREQ_LABEL = {1:L("1일 1회","Once daily"), 2:L("1일 2회","Twice daily"), 3:L("1일 3회","3x daily"), 4:L("1일 4회","4x daily")};
+function prescriptionRowHtml(idx){
+  const freqOpts=[1,2,3,4].map(n=>`<option value="${n}">${FREQ_LABEL[n]}</option>`).join("");
+  return `<div class="li" data-row="${idx}" style="align-items:flex-start; gap:8px; flex-wrap:wrap">
+    <input type="text" class="rx-name" placeholder="${L("약 이름","Medication name")}" style="flex:2; min-width:120px">
+    <input type="number" class="rx-dose" placeholder="${L("용량(mg)","Dose (mg)")}" style="flex:1; min-width:80px">
+    <select class="rx-freq" style="flex:1; min-width:100px">${freqOpts}</select>
+    <button class="btn ghost" data-rmrow="${idx}" style="width:auto">✕</button>
+  </div>`;
+}
+/* v2.10.1: 처방전 사진 — 실사용 요청: "사진 찍어서 입력해도 되게". 자동 글자인식(OCR)은
+   약 이름·용량을 하나라도 잘못 읽으면 그대로 복약 기록에 들어갈 수 있어 의료 데이터에는
+   위험이 크다고 판단해, 지금은 "사진을 옆에 띄워두고 보면서 사람이 직접 입력"하는 방식으로
+   만든다 — 입력 부담은 줄이되, 정확성 확인은 계속 사람이 한다. 사진은 입력하는 동안만
+   화면에 보이고 따로 저장되지 않는다(개인 처방전 이미지를 계속 남겨두지 않기 위해). */
+function openPrescriptionEntry(){
+  let rowCount=2;
+  openSheet(`
+    <h2>${L("처방전으로 한 번에 등록","Add from a prescription")}</h2>
+    <div class="hint" style="margin-bottom:10px">${L("처방전에 적힌 약을 한 줄씩 입력하세요. 복용 횟수를 고르면 흔한 시각으로 자동 배정되고, 나중에 '내 약'에서 시각을 직접 고칠 수 있어요. 같은 횟수로 등록한 약들은 같은 시각에 먹는 세트로 자동 묶입니다.","Enter each medication on its own line. Frequency picks common default times, which you can fine-tune later. Medications with the same frequency are automatically grouped into a set.")}</div>
+    <div class="field">
+      <label>${L("처방전 사진 (선택 — 보면서 입력하는 용도, 저장되지 않음)","Prescription photo (optional — for reference only, not saved)")}</label>
+      <input type="file" id="rxPhotoInput" accept="image/*" capture="environment">
+      <img id="rxPhotoPreview" style="display:none; max-width:100%; border-radius:10px; margin-top:8px">
+    </div>
+    <div id="rxRows">${prescriptionRowHtml(0)}${prescriptionRowHtml(1)}</div>
+    <button class="btn ghost" id="rxAddRow" style="margin:8px 0">${L("+ 약 한 줄 추가","+ Add another line")}</button>
+    <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="rxSave">${L("전부 등록","Register all")}</button></div>
+  `);
+  document.getElementById("rxPhotoInput").onchange=(e)=>{
+    const file=e.target.files&&e.target.files[0]; if(!file) return;
+    const reader=new FileReader();
+    reader.onload=()=>{ const img=document.getElementById("rxPhotoPreview"); img.src=reader.result; img.style.display="block"; };
+    reader.readAsDataURL(file);
+  };
+  document.getElementById("rxAddRow").onclick=()=>{
+    document.getElementById("rxRows").insertAdjacentHTML("beforeend", prescriptionRowHtml(rowCount++));
+    bindRxRemove();
+  };
+  function bindRxRemove(){
+    document.querySelectorAll("#rxRows button[data-rmrow]").forEach(b=>{
+      b.onclick=()=>{ const row=b.closest("[data-row]"); if(row) row.remove(); };
+    });
+  }
+  bindRxRemove();
+  document.getElementById("rxSave").onclick=()=>{
+    const rows=[...document.querySelectorAll("#rxRows [data-row]")];
+    const entries=rows.map(r=>({
+      name:r.querySelector(".rx-name").value.trim(),
+      dose:(+r.querySelector(".rx-dose").value)||null,
+      freq:+r.querySelector(".rx-freq").value,
+    })).filter(e=>e.name);
+    if(!entries.length){ toast(L("약 이름을 하나 이상 입력하세요","Enter at least one medication name")); return; }
+    const createdMedIdx=[];
+    entries.forEach(e=>{
+      const sched=(FREQ_TIMES[e.freq]||FREQ_TIMES[1]).slice();
+      const idx=db.meds.push({ id:uid(), name:e.name, dose:e.dose, note:"", sched }) - 1;
+      createdMedIdx.push({idx, freq:e.freq});
+    });
+    /* 같은 횟수(=같은 시각대)끼리 묶어서 세트를 자동 생성 — 2개 이상일 때만 의미가 있음 */
+    const byFreq={};
+    createdMedIdx.forEach(({idx,freq})=>{ (byFreq[freq]=byFreq[freq]||[]).push(idx); });
+    if(!db.medSets) db.medSets=[];
+    Object.entries(byFreq).forEach(([freq,idxs])=>{
+      if(idxs.length<2) return;
+      const items=idxs.map(i=>({name:db.meds[i].name, dose:db.meds[i].dose}));
+      db.medSets.push({ id:uid(), name:`${L("처방 세트","Prescription set")} (${FREQ_LABEL[freq]})`, items, schedTime:null });
+    });
+    save(); closeSheet(); renderMeds(); renderToday();
+    toast(`${entries.length}${L("개 약 등록됨","medications registered")}`);
+  };
+}
 function openAddPast(editingEvent, presetTs){
   const isEdit = !!editingEvent;
   const now = isEdit ? new Date(editingEvent.ts) : (presetTs? new Date(presetTs) : new Date());
@@ -4412,6 +4674,8 @@ function switchTab(name){
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
 /* v1.2.1: 중복이던 하단 "약 먹음" 버튼은 제거됨 (상단 [약 복용 기록]이 같은 기능) */
 document.getElementById("addMedBtn").onclick=()=>openAddMed(false);
+document.getElementById("addMedSetBtn").onclick=()=>openMedSetEditor(null);
+document.getElementById("addRxBtn").onclick=()=>openPrescriptionEntry();
 document.getElementById("addPastBtn").onclick=openAddPast;
 /* v1.2.1: 용어 설명은 출력 카드의 [ⓘ 도움말] 안으로 이동 */
 document.getElementById("qoMinus").onclick=()=>qoAdjust(-5);
