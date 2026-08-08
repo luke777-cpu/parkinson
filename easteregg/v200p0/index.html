@@ -723,7 +723,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음",
-    versionLabel:"약효일지 · 비공개 시험판 2.10.1-rx",
+    versionLabel:"약효일지 · 비공개 시험판 2.10.6-rx",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -793,7 +793,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests",
-    versionLabel:"Med Log · Test build 2.10.1-rx",
+    versionLabel:"Med Log · Test build 2.10.6-rx",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -3735,7 +3735,8 @@ function renderMeds(){
     const fav=document.createElement("button"); fav.className="del"; fav.style.fontSize="18px"; fav.style.color=m.fav?"var(--accent)":"var(--ink-2)";
     fav.innerHTML = m.fav? "★" : "☆"; fav.title=L("즐겨찾기","Favorite");
     fav.onclick=()=>{ m.fav=!m.fav; save(); renderMeds(); };
-    li.innerHTML=`<div class="grow"><div class="name">${escapeHtml(m.name)}${m.dose?` <span class="meta">${m.dose}mg</span>`:""}</div>${m.note?`<div class="meta">${escapeHtml(m.note)}</div>`:""}
+    const doseLabel = m.tabletMg? `${m.tabletMg}mg × ${m.tabletCount}${L("정","tab")} = ${m.dose}mg` : (m.dose? `${m.dose}mg` : "");
+    li.innerHTML=`<div class="grow"><div class="name">${escapeHtml(m.name)}${doseLabel?` <span class="meta">${doseLabel}</span>`:""}</div>${m.note?`<div class="meta">${escapeHtml(m.note)}</div>`:""}
       <div class="sched-row">${chips}<button class="sched-chip" style="background:transparent;border:1px dashed var(--line);color:var(--accent-ink);font-weight:800" data-addsched="${i}">＋ ${L("시간 예약","Add time")}</button></div></div>`;
     li.appendChild(fav);
     const del=document.createElement("button"); del.className="del"; del.innerHTML="✕"; del.style.fontSize="18px"; del.style.color="var(--ink-2)";
@@ -4283,18 +4284,98 @@ function openMedSheet(){
   };
 }
 
+/* v2.10.4: 용량 추천 — 실사용 요청: "실재 존재하는 용량을 목록에 올릴 수 없나".
+   두 가지를 섞어서 보여준다: ①형님이 이미 등록하신 값(그 이름으로 예전에 실제 등록한
+   강도) — 이건 확실하니 그냥 추천. ②검색으로 확인한 참고값 — 제가 조사한 정보라 시장
+   철수·규격 변경 등으로 달라질 수 있어 "참고(다를 수 있음)"이라고 항상 표시하고, 확인
+   안 된 약은 아예 안 보여준다(모르면 추측하지 않는다는 원칙 — 반대방향으로 틀린 정보를
+   주면 지금 고친 문제를 되풀이하는 셈이라 검증 안 된 건 절대 채우지 않는다). */
+const REFERENCE_TABLET_MG = {
+  /* 2026-08 식약처·약학정보원 검색으로 확인 — 향후 시장 변경(품목 철수·규격 변경 등)
+     가능성이 있으니 "참고용"이며 처방 확인용으로 대체할 수 없다. 확인 안 된 약(아만타딘·
+     아질렉트·온젠티스·뉴프로 등)은 추측하지 않고 목록에서 아예 뺀다 — 형님이 등록하시면
+     그때부터 "전에 등록하신 값"으로 학습된다. */
+  "퍼킨": [100, 250],
+  "트리레보": [50, 75, 100, 125, 150, 200],
+  "스타레보": [50, 75, 100, 125, 150, 200],
+  "미라펙스": [0.125, 0.25, 0.5, 1],
+  "프라펙솔": [0.125, 0.25, 0.5, 1], /* 미라펙스 제네릭, 같은 규격으로 확인됨 */
+  "리큅 피디": [2, 4, 8], /* 서방형(PD) — 먼저 검사해야 "리큅"보다 우선 매칭됨 */
+  "리큅피디": [2, 4, 8],
+  "리큅": [0.25], /* 즉방형 — 국내 확인은 0.25mg만, 다른 규격은 미확인이라 안 넣음 */
+  "마도파 HBS": [100], /* 서방형 — 100mg(레보도파 기준)만 확인됨. "마도파"보다 먼저 검사해야 함 */
+  "마도파HBS": [100],
+  "마도파": [100, 200], /* 즉방형/확산정 — 명도파(현재 판매 제네릭) 25/100·50/200 규격으로 확인 */
+};
+/* "리큅 피디"가 "리큅"의, "마도파 HBS"가 "마도파"의 부분집합이라 순서가 중요 —
+   더 구체적인(제형까지 포함한) 이름을 먼저 검사해야 서방형을 즉방형으로 잘못
+   매칭하지 않는다. */
+const REFERENCE_KEY_ORDER = ["리큅 피디","리큅피디","리큅","트리레보","스타레보","미라펙스","프라펙솔","마도파 HBS","마도파HBS","마도파","퍼킨"];
+function learnedTabletMg(name){
+  const vals=new Set();
+  (db.meds||[]).forEach(m=>{ if(m.name===name && m.tabletMg!=null) vals.add(m.tabletMg); });
+  return [...vals].sort((a,b)=>a-b);
+}
+function referenceTabletMg(name){
+  const key=REFERENCE_KEY_ORDER.find(k=>name.includes(k));
+  return key? REFERENCE_TABLET_MG[key] : [];
+}
+function tabletSuggestChipsHtml(name){
+  const learned=learnedTabletMg(name), ref=referenceTabletMg(name).filter(v=>!learned.includes(v));
+  if(!learned.length && !ref.length) return "";
+  const learnedChips=learned.map(v=>`<button type="button" class="chip" data-mg="${v}">${v}mg</button>`).join("");
+  const refChips=ref.map(v=>`<button type="button" class="chip" data-mg="${v}" style="opacity:.7; border-style:dashed">${v}mg</button>`).join("");
+  return `<div class="hint" style="margin-top:6px">
+    ${learned.length? `<div>${L("전에 등록하신 값","Previously used")}: ${learnedChips}</div>`:""}
+    ${ref.length? `<div style="margin-top:4px">${L("검색 참고값(다를 수 있음)","Reference (may differ)")}: ${refChips}</div>`:""}
+  </div>`;
+}
+function bindTabletSuggestChips(containerId, targetInputId){
+  document.querySelectorAll(`#${containerId} [data-mg]`).forEach(b=>{
+    b.onclick=()=>{ document.getElementById(targetInputId).value=b.dataset.mg;
+      document.getElementById(targetInputId).dispatchEvent(new Event("input")); };
+  });
+}
 function openAddMed(fromMedFlow){
-  const chips=MED_PRESETS.map(n=>`<button class="chip" onclick="document.getElementById('m_name').value='${n}'">${n}</button>`).join("");
+  const chips=MED_PRESETS.map(n=>`<button class="chip" onclick="document.getElementById('m_name').value='${n}'; document.getElementById('m_name').dispatchEvent(new Event('input'))">${n}</button>`).join("");
   openSheet(`
     <h2>${L("약 추가","Add medication")}</h2><div class="hint">${L("자주 먹는 약을 등록해두면 복약 기록이 한 번에 끝나요.","Registering meds you take often makes logging them a single tap.")}</div>
     <div class="field"><label>${L("약 이름","Medication name")}</label><input id="m_name" placeholder="${L("예: 마도파 HBS","e.g. Madopar HBS")}"></div>
     <div class="field"><label>${L("자주 쓰는 약","Common medications")}</label><div class="chips">${chips}</div></div>
-    <div class="field"><label>${L("기본 용량 (mg, 선택)","Default dose (mg, optional)")}</label><input id="m_dose" type="number" inputmode="numeric" placeholder="${L("예: 100","e.g. 100")}"></div>
+    <div class="field"><label>${L("정제 강도 (mg, 실제 나오는 알약 기준)","Tablet strength (mg, as manufactured)")}</label><input id="m_strength" type="number" inputmode="decimal" placeholder="${L("예: 100 (50mg 정제가 없으면 100 입력)","e.g. 100 (enter 100 if there's no 50mg tablet)")}">
+      <div id="m_strengthSuggest"></div>
+    </div>
+    <div class="field"><label>${L("한 번에 먹는 개수 (정, 반 알이면 0.5)","Count per dose (tablets, 0.5 for half)")}</label><input id="m_count" type="number" inputmode="decimal" step="0.5" value="1"></div>
+    <div class="hint" id="m_doseCalc">${L("실제 용량: —","Actual dose: —")}</div>
     <div class="field"><label>${L("메모 (선택)","Memo (optional)")}</label><input id="m_note" placeholder="${L("예: 아침 기저용","e.g. morning baseline dose")}"></div>
     <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="m_save">${L("추가","Add")}</button></div>`);
+  const updateCalc=()=>{
+    const strength=+document.getElementById("m_strength").value, count=+document.getElementById("m_count").value;
+    const calc=document.getElementById("m_doseCalc");
+    calc.textContent = (strength>0 && count>0)
+      ? L(`실제 용량: ${strength}mg × ${count}정 = ${Math.round(strength*count*1000)/1000}mg`,`Actual dose: ${strength}mg × ${count} = ${Math.round(strength*count*1000)/1000}mg`)
+      : L("실제 용량: —","Actual dose: —");
+  };
+  document.getElementById("m_strength").addEventListener("input", updateCalc);
+  document.getElementById("m_count").addEventListener("input", updateCalc);
+  const refreshSuggest=()=>{
+    const name=document.getElementById("m_name").value.trim();
+    document.getElementById("m_strengthSuggest").innerHTML = name? tabletSuggestChipsHtml(name) : "";
+    bindTabletSuggestChips("m_strengthSuggest", "m_strength");
+  };
+  document.getElementById("m_name").addEventListener("input", refreshSuggest);
+  document.getElementById("m_name").addEventListener("blur", refreshSuggest);
   document.getElementById("m_save").onclick=()=>{
     const name=document.getElementById("m_name").value.trim(); if(!name){ toast(L("약 이름을 입력하세요","Please enter a medication name")); return; }
-    db.meds.push({ id:uid(), name, dose:(+document.getElementById("m_dose").value)||null, note:document.getElementById("m_note").value.trim() });
+    const strength=+document.getElementById("m_strength").value||null;
+    const count=+document.getElementById("m_count").value||1;
+    /* 검토(2026-08-08, 실사용): "퍼킨 50mg"으로 기록해 오셨는데 실제론 50mg 정제가
+       존재하지 않고 100mg 정제를 반 쪼갠 것이었다는 걸 확인 — mg만 받으면 실재하지
+       않는 강도의 약이 등록된 것처럼 보인다. 이제 실제 정제 강도와 개수를 따로 받아,
+       그 둘을 곱한 최종 mg만 dose에 저장한다(LEDD·곡선 계산은 그대로 mg을 쓰므로
+       하위 계산에는 영향 없음) — 화면 표시만 "100mg × 0.5정"처럼 정확해진다. */
+    const dose = strength? Math.round(strength*count*1000)/1000 : null;
+    db.meds.push({ id:uid(), name, dose, tabletMg:strength, tabletCount:strength?count:null, note:document.getElementById("m_note").value.trim() });
     save(); renderMeds(); closeSheet();
     if(fromMedFlow) openMedSheet();
   };
@@ -4315,11 +4396,21 @@ const FREQ_TIMES = {
   4: ["06:00","12:00","17:00","22:00"],
 };
 const FREQ_LABEL = {1:L("1일 1회","Once daily"), 2:L("1일 2회","Twice daily"), 3:L("1일 3회","3x daily"), 4:L("1일 4회","4x daily")};
+/* openPrescriptionEntry(약 목록 입력)와 runRxOcr(인식 결과로 목록을 다시 그림) 둘 다에서
+   써야 해서 전역으로 둔다 — 지역함수로 두면 runRxOcr에서 참조하지 못해 조용히 실패한다
+   (실제로 겪은 버그: bindRxRemove가 openPrescriptionEntry 안에만 있어서 runRxOcr이
+   부를 때 ReferenceError가 나고, 그게 catch에 먹혀 "인식 실패"로만 보였다). */
+function bindRxRemove(){
+  document.querySelectorAll("#rxRows button[data-rmrow]").forEach(b=>{
+    b.onclick=()=>{ const row=b.closest("[data-row]"); if(row) row.remove(); };
+  });
+}
 function prescriptionRowHtml(idx){
   const freqOpts=[1,2,3,4].map(n=>`<option value="${n}">${FREQ_LABEL[n]}</option>`).join("");
   return `<div class="li" data-row="${idx}" style="align-items:flex-start; gap:8px; flex-wrap:wrap">
     <input type="text" class="rx-name" placeholder="${L("약 이름","Medication name")}" style="flex:2; min-width:120px">
-    <input type="number" class="rx-dose" placeholder="${L("용량(mg)","Dose (mg)")}" style="flex:1; min-width:80px">
+    <input type="number" class="rx-strength" placeholder="${L("정제 강도(mg)","Tablet mg")}" style="flex:1; min-width:80px">
+    <input type="number" class="rx-count" placeholder="${L("개수(정)","Count")}" value="1" step="0.5" style="flex:1; min-width:70px">
     <select class="rx-freq" style="flex:1; min-width:100px">${freqOpts}</select>
     <button class="btn ghost" data-rmrow="${idx}" style="width:auto">✕</button>
   </div>`;
@@ -4329,6 +4420,72 @@ function prescriptionRowHtml(idx){
    위험이 크다고 판단해, 지금은 "사진을 옆에 띄워두고 보면서 사람이 직접 입력"하는 방식으로
    만든다 — 입력 부담은 줄이되, 정확성 확인은 계속 사람이 한다. 사진은 입력하는 동안만
    화면에 보이고 따로 저장되지 않는다(개인 처방전 이미지를 계속 남겨두지 않기 위해). */
+/* v2.10.2: OCR(글자 인식) — 실사용 요청: "OCR로 채워두고 사람이 확인을 누르게".
+   Tesseract.js를 CDN에서 필요할 때만 불러온다(앱 기본 동작은 계속 오프라인으로 되어야
+   하므로, 평소엔 이 라이브러리를 안 받는다 — 인식 버튼을 눌렀을 때만 인터넷이 필요함을
+   안내한다). 인식 결과는 절대 그대로 저장하지 않는다 — 칸에 채워 넣기만 하고, "사진과
+   대조해서 확인했다"는 걸 사람이 직접 체크해야만 등록 버튼이 활성화된다. */
+let _tesseractLoading=null;
+function loadTesseract(){
+  if(window.Tesseract) return Promise.resolve(window.Tesseract);
+  if(_tesseractLoading) return _tesseractLoading;
+  _tesseractLoading=new Promise((resolve,reject)=>{
+    const s=document.createElement("script");
+    s.src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js";
+    s.onload=()=>resolve(window.Tesseract);
+    s.onerror=()=>reject(new Error("Tesseract load failed"));
+    document.head.appendChild(s);
+  });
+  return _tesseractLoading;
+}
+/* 인식된 원문 텍스트를 줄 단위로 훑어, 약 이름·용량(mg)·복용횟수를 최대한 추측한다.
+   추측이 틀릴 수 있다는 전제 자체가 설계다 — 그래서 결과를 그대로 믿지 않고 사람이
+   보고 고치게 한다. */
+function parseRxText(text){
+  const lines=text.split(/\n+/).map(l=>l.trim()).filter(Boolean);
+  return lines.map(line=>{
+    const doseMatch=line.match(/([0-9]+(?:\.[0-9]+)?)\s*mg/i);
+    const freqMatch=line.match(/1일\s*([1-4])\s*회|하루\s*([1-4])\s*회|([1-4])\s*회/);
+    const freq=freqMatch? +(freqMatch[1]||freqMatch[2]||freqMatch[3]) : null;
+    let name=line;
+    if(doseMatch) name=name.replace(doseMatch[0],"");
+    if(freqMatch) name=name.replace(freqMatch[0],"");
+    name=name.replace(/[0-9]+정|1일|하루|mg|,|·/gi,"").trim();
+    return { name, dose: doseMatch? +doseMatch[1] : null, freq: freq||null };
+  }).filter(r=>r.name);
+}
+function runRxOcr(){
+  const img=document.getElementById("rxPhotoPreview");
+  if(!img || !img.src || img.style.display==="none"){ toast(L("먼저 사진을 선택해 주세요","Please choose a photo first")); return; }
+  const btn=document.getElementById("rxOcrBtn");
+  const origLabel=btn.textContent; btn.disabled=true; btn.textContent=L("인식 중… (인터넷 필요)","Recognizing… (needs internet)");
+  loadTesseract().then(Tesseract=>Tesseract.recognize(img.src, "kor+eng"))
+    .then(result=>{
+      const parsed=parseRxText(result.data.text||"");
+      if(!parsed.length){ toast(L("글자를 읽지 못했어요. 손으로 입력해 주세요.","Couldn't read any text — please enter manually.")); return; }
+      const rowsWrap=document.getElementById("rxRows"); rowsWrap.innerHTML="";
+      let idx=0;
+      parsed.forEach(p=>{
+        rowsWrap.insertAdjacentHTML("beforeend", prescriptionRowHtml(idx++));
+      });
+      [...rowsWrap.querySelectorAll("[data-row]")].forEach((row,i)=>{
+        const p=parsed[i];
+        row.querySelector(".rx-name").value=p.name;
+        if(p.dose!=null) row.querySelector(".rx-strength").value=p.dose; /* OCR은 정제강도만 추측 — 개수(기본 1)는 사람이 확인해서 고침 */
+        if(p.freq) row.querySelector(".rx-freq").value=String(p.freq);
+        /* 인식된 줄임을 시각적으로 표시 — "확신하지 못하는 값"이라는 신호를 계속 남겨둔다 */
+        row.style.background="var(--surface-2)"; row.style.borderLeft="3px solid #E0A030"; row.dataset.fromOcr="1";
+      });
+      bindRxRemove();
+      const confirmWrap=document.getElementById("rxConfirmWrap");
+      confirmWrap.style.display="block";
+      document.getElementById("rxConfirmed").checked=false;
+      document.getElementById("rxSave").disabled=true;
+      toast(L(`${parsed.length}줄 인식됨 — 사진과 비교해 확인해 주세요`,`${parsed.length} line(s) recognized — please review against the photo`));
+    })
+    .catch(()=>{ toast(L("인식에 실패했어요(인터넷 연결을 확인해 주세요). 손으로 입력해 주세요.","Recognition failed (check your connection) — please enter manually.")); })
+    .finally(()=>{ btn.disabled=false; btn.textContent=origLabel; });
+}
 function openPrescriptionEntry(){
   let rowCount=2;
   openSheet(`
@@ -4338,39 +4495,49 @@ function openPrescriptionEntry(){
       <label>${L("처방전 사진 (선택 — 보면서 입력하는 용도, 저장되지 않음)","Prescription photo (optional — for reference only, not saved)")}</label>
       <input type="file" id="rxPhotoInput" accept="image/*" capture="environment">
       <img id="rxPhotoPreview" style="display:none; max-width:100%; border-radius:10px; margin-top:8px">
+      <button class="btn ghost" id="rxOcrBtn" style="display:none; margin-top:8px">${L("🔍 사진에서 글자 인식하기","🔍 Recognize text from photo")}</button>
+      <div class="hint" style="margin-top:4px">${L("인식은 참고용입니다 — 틀릴 수 있으니 반드시 사진과 비교해 확인해 주세요.","Recognition is a starting point only — always compare it against the photo before saving.")}</div>
     </div>
     <div id="rxRows">${prescriptionRowHtml(0)}${prescriptionRowHtml(1)}</div>
     <button class="btn ghost" id="rxAddRow" style="margin:8px 0">${L("+ 약 한 줄 추가","+ Add another line")}</button>
+    <div id="rxConfirmWrap" style="display:none; margin:8px 0">
+      <label style="display:flex; align-items:center; gap:6px"><input type="checkbox" id="rxConfirmed"> ${L("사진과 비교해서 위 내용을 확인했습니다","I compared the above against the photo and confirmed it")}</label>
+    </div>
     <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="rxSave">${L("전부 등록","Register all")}</button></div>
   `);
   document.getElementById("rxPhotoInput").onchange=(e)=>{
     const file=e.target.files&&e.target.files[0]; if(!file) return;
     const reader=new FileReader();
-    reader.onload=()=>{ const img=document.getElementById("rxPhotoPreview"); img.src=reader.result; img.style.display="block"; };
+    reader.onload=()=>{
+      const img=document.getElementById("rxPhotoPreview"); img.src=reader.result; img.style.display="block";
+      document.getElementById("rxOcrBtn").style.display="block";
+    };
     reader.readAsDataURL(file);
   };
+  document.getElementById("rxOcrBtn").onclick=runRxOcr;
+  document.getElementById("rxConfirmed").onchange=(e)=>{ document.getElementById("rxSave").disabled=!e.target.checked; };
   document.getElementById("rxAddRow").onclick=()=>{
     document.getElementById("rxRows").insertAdjacentHTML("beforeend", prescriptionRowHtml(rowCount++));
     bindRxRemove();
   };
-  function bindRxRemove(){
-    document.querySelectorAll("#rxRows button[data-rmrow]").forEach(b=>{
-      b.onclick=()=>{ const row=b.closest("[data-row]"); if(row) row.remove(); };
-    });
-  }
   bindRxRemove();
   document.getElementById("rxSave").onclick=()=>{
     const rows=[...document.querySelectorAll("#rxRows [data-row]")];
-    const entries=rows.map(r=>({
-      name:r.querySelector(".rx-name").value.trim(),
-      dose:(+r.querySelector(".rx-dose").value)||null,
-      freq:+r.querySelector(".rx-freq").value,
-    })).filter(e=>e.name);
+    const entries=rows.map(r=>{
+      const strength=+r.querySelector(".rx-strength").value||null;
+      const count=+r.querySelector(".rx-count").value||1;
+      return {
+        name:r.querySelector(".rx-name").value.trim(),
+        strength, count,
+        dose: strength? Math.round(strength*count*1000)/1000 : null,
+        freq:+r.querySelector(".rx-freq").value,
+      };
+    }).filter(e=>e.name);
     if(!entries.length){ toast(L("약 이름을 하나 이상 입력하세요","Enter at least one medication name")); return; }
     const createdMedIdx=[];
     entries.forEach(e=>{
       const sched=(FREQ_TIMES[e.freq]||FREQ_TIMES[1]).slice();
-      const idx=db.meds.push({ id:uid(), name:e.name, dose:e.dose, note:"", sched }) - 1;
+      const idx=db.meds.push({ id:uid(), name:e.name, dose:e.dose, tabletMg:e.strength, tabletCount:e.strength?e.count:null, note:"", sched }) - 1;
       createdMedIdx.push({idx, freq:e.freq});
     });
     /* 같은 횟수(=같은 시각대)끼리 묶어서 세트를 자동 생성 — 2개 이상일 때만 의미가 있음 */
