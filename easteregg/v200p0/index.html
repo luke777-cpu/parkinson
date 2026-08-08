@@ -728,7 +728,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음",
-    versionLabel:"약효일지 · 비공개 시험판 2.11.1-dupguard",
+    versionLabel:"약효일지 · 비공개 시험판 2.11.2-schedfix",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -799,7 +799,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests",
-    versionLabel:"Med Log · Test build 2.11.1-dupguard",
+    versionLabel:"Med Log · Test build 2.11.2-schedfix",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -1409,10 +1409,15 @@ function addMedSet(setId){
   db.events.sort((a,b)=>a.ts-b.ts); save(); renderAll();
   toast(`${set.name} · ${set.items.length}${L("개 약 동시 기록됨","items recorded together")} · ${hm(ts)}`);
 }
-function saveMedSet(name, items, existingId){
+function saveMedSet(name, items, existingId, schedTime){
+  /* 검토 발견(2026-08-09, 실사용): 이 함수가 schedTime 매개변수를 아예 안 받고 있었다 —
+     호출부(openMedSetEditor)는 4번째 인자로 schedTime을 넘기고 있었지만, 여기서
+     정의 자체에 그 매개변수가 없어 조용히 버려졌다. 화면에서 체크박스·시각을 뭘로
+     바꾸든 기존 세트는 절대 schedTime이 안 바뀌던 진짜 원인이 이거였다(화면 쪽
+     체크박스 비활성화 문제와는 별개의, 더 근본적인 버그). */
   if(!db.medSets) db.medSets=[];
-  if(existingId){ const s=db.medSets.find(x=>x.id===existingId); if(s){ s.name=name; s.items=items; } }
-  else db.medSets.push({id:uid(), name, items});
+  if(existingId){ const s=db.medSets.find(x=>x.id===existingId); if(s){ s.name=name; s.items=items; s.schedTime=schedTime||null; } }
+  else db.medSets.push({id:uid(), name, items, schedTime:schedTime||null});
   save();
 }
 function deleteMedSet(setId){
@@ -1434,17 +1439,26 @@ function openMedSetEditor(existingId){
     <div class="field">
       <label style="display:flex; align-items:center; gap:6px"><input type="checkbox" id="msetSchedOn" ${existing&&existing.schedTime?"checked":""}> ${L("매일 정해진 시각에 자동으로 '복용함'으로 기록","Automatically record as taken at a set time each day")}</label>
       <div class="hint" style="margin:4px 0 8px">${L("이 시각이 지나면 따로 안 눌러도 먹은 것으로 기록됩니다. 실제로 안 드셨거나 시각이 다르면 그때 고치면 됩니다.","Once this time passes, it's recorded as taken automatically — correct it only if you skipped it or took it at a different time.")}</div>
-      <input type="time" id="msetSchedTime" value="${existing&&existing.schedTime?existing.schedTime:"06:00"}" style="width:100%">
+      <input type="time" id="msetSchedTime" value="${existing&&existing.schedTime?existing.schedTime:"06:00"}" style="width:100%" ${existing&&existing.schedTime?"":"disabled"}>
     </div>
     <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="msetSave">${L("저장","Save")}</button></div>
   `);
   multiChipToggle("msetChips");
+  /* 검토 발견(2026-08-09, 실사용): 체크박스가 꺼진 채로 시각 칸만 고치고 저장하면,
+     저장 시 체크 여부만 보고 schedTime을 null로 덮어써서 "시각을 고쳤는데 반영이
+     안 되는" 혼란스러운 상황이 실제로 발생함(회색으로 흐려 보이지도 않아서 활성화된
+     칸처럼 보였다). 이제 ①체크 꺼져 있으면 시각 칸을 눈에 띄게 비활성화하고,
+     ②시각 칸을 직접 만지면 "자동기록을 켜고 싶다"는 뜻으로 보고 체크박스도 같이 켠다. */
+  const schedCk=document.getElementById("msetSchedOn"), schedTimeInput=document.getElementById("msetSchedTime");
+  schedCk.onchange=()=>{ schedTimeInput.disabled=!schedCk.checked; schedTimeInput.style.opacity=schedCk.checked?"1":".5"; };
+  schedTimeInput.addEventListener("input",()=>{ if(!schedCk.checked){ schedCk.checked=true; schedTimeInput.disabled=false; schedTimeInput.style.opacity="1"; } });
+  schedTimeInput.style.opacity = schedCk.checked? "1" : ".5";
   document.getElementById("msetSave").onclick=()=>{
     const name=document.getElementById("msetName").value.trim();
     const idxs=selectedChips("msetChips").map(Number);
     if(!name || !idxs.length){ toast(L("이름과 약을 선택해 주세요","Please enter a name and select medications")); return; }
     const items=idxs.map(i=>({name:db.meds[i].name, dose:db.meds[i].dose}));
-    const schedTime = document.getElementById("msetSchedOn").checked? document.getElementById("msetSchedTime").value : null;
+    const schedTime = schedCk.checked? schedTimeInput.value : null;
     saveMedSet(name, items, existingId, schedTime);
     closeSheet(); renderMedSets(); renderToday();
   };
