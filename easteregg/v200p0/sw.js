@@ -1,4 +1,4 @@
-const CACHE = "yakhyo-eggbeta-tempnote-v1";
+const CACHE = "yakhyo-eggbeta-dupguard-v1";
 const APP_SHELL = [
   "./",
   "./index.html",
