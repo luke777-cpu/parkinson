@@ -1,6 +1,6 @@
 {
   "name": "yakhyo-ilji",
-  "version": "2.11.1-dupguard",
+  "version": "2.11.2-schedfix",
   "private": true,
   "description": "약효일지 — 파킨슨 출력 중심 복약 일지 PWA",
   "scripts": {
