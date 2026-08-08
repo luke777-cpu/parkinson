@@ -345,6 +345,10 @@ body{font-size:calc(15px*var(--app-font-scale))}
       <div id="todayInterpretBody" style="font-size:13.5px; line-height:1.95"></div>
     </div>
 
+    <!-- v2.11: 임시 기록 — 순간엔 방향만 남기고, 점수는 시간 날 때 몰아서 매김 -->
+    <div class="grid-title" data-i18n="tempNoteTitle">🕐 임시 기록 — 지금은 방향만, 점수는 나중에</div>
+    <div class="quick-grid" id="tempNoteGrid"></div>
+
     <div class="grid-title" data-i18n="symptomTitle">⚡ 증상 기록 — 시작할 때 누르고, 끝나면 한 번 더</div>
     <div class="quick-grid" id="symptomGrid"></div>
 
@@ -719,11 +723,12 @@ const I18N = {
     trendPickAlert:"현재 몸 상태가 상승 중인지, 유지 중인지, 하강 중인지 선택해 주세요.",
     pastDateSaved:"기록을 추가했습니다", viewAddedRecord:"추가한 기록 보기", refState:"참고 상태",
     symptomTitle:"⚡ 증상 기록 — 시작할 때 누르고, 끝나면 한 번 더", medLifeTitle:"약·생활 기록", quickLifeTitle:"🍽 빠른 생활기록",
+    tempNoteTitle:"🕐 임시 기록 — 지금은 방향만, 점수는 나중에",
     outputOverlayTitle:"출력 곡선 + 생활기록 + 이벤트", overlayTapHint:"그래프를 눌러 그 시각의 출력·약효·이벤트를 확인하세요",
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음",
-    versionLabel:"약효일지 · 비공개 시험판 2.10.6-rx",
+    versionLabel:"약효일지 · 비공개 시험판 2.11.0-tempnote",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -789,11 +794,12 @@ const I18N = {
     trendPickAlert:"Please choose whether your body is currently rising, stable, or falling.",
     pastDateSaved:"Record added", viewAddedRecord:"View added record", refState:"Reference state",
     symptomTitle:"⚡ Symptoms — tap to start, tap again to end", medLifeTitle:"Medication & life records", quickLifeTitle:"🍽 Quick life log",
+    tempNoteTitle:"🕐 Quick notes — direction now, score later",
     outputOverlayTitle:"Output curve + life records + events", overlayTapHint:"Tap the chart to see output, drug level, and events at that time",
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests",
-    versionLabel:"Med Log · Test build 2.10.6-rx",
+    versionLabel:"Med Log · Test build 2.11.0-tempnote",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -1272,6 +1278,93 @@ function fmtDateK(k){ const[a,b,c]=k.split("-");
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 
 /* ---------- event ops ---------- */
+/* v2.11: 임시 기록 — 실사용 설계 논의: "약 먹은 후 증상이 생기거나 없어지는 순간마다
+   0~100점을 바로 매기긴 부담스럽다. 그 순간엔 방향(좋아짐/나빠짐/그대로)만 짧게
+   남기고, 오전·오후처럼 시간 날 때 그 메모들을 나란히 놓고 비교하며 점수를 매기면
+   더 정확하다"는 결론 — 시뮬레이션으로 확인한 "하루 8~20개 기록"이라는 목표는
+   그대로 지키면서(각 순간의 시각은 그대로 보존), 점수 매기는 부담만 뒤로 미룬다.
+   임시 기록은 type:"tempnote"로 저장되고, 점수를 매기면 정식 출력 기록(type:"state")
+   으로 전환되며 원래 시각은 그대로 유지된다 — 나중에 몰아서 매겨도 그래프상 위치는
+   정확하다. */
+const TEMPNOTE_DIRS = [
+  {key:"up",   ko:"좋아짐", en:"Better", ic:"↑"},
+  {key:"down", ko:"나빠짐", en:"Worse",  ic:"↓"},
+  {key:"same", ko:"그대로", en:"Same",   ic:"→"},
+];
+function addTempNote(dir, memo){
+  const ev={ id:uid(), type:"tempnote", ts:Date.now(), dir:dir||null, memo:memo||"" };
+  db.events.push(ev); db.events.sort((a,b)=>a.ts-b.ts); save(); renderAll();
+  toast(`${L("임시 기록됨","noted")} · ${hm(ev.ts)}`);
+  return ev;
+}
+function openTempNoteQuick(){
+  openSheet(`
+    <h2>${L("🕐 지금 느낌만 짧게","🕐 Quick note")}</h2>
+    <div class="hint" style="margin-bottom:10px">${L("점수는 나중에 몰아서 매길게요 — 지금은 방향만 눌러 주세요.","Score it later — just pick a direction for now.")}</div>
+    <div class="chips" style="display:flex; gap:8px">
+      ${TEMPNOTE_DIRS.map((d,i)=>`<button class="btn ghost" data-dir="${d.key}" style="flex:1"><span style="font-size:20px">${d.ic}</span><br>${L(d.ko,d.en)}</button>`).join("")}
+    </div>
+    <div class="field" style="margin-top:10px"><label>${L("메모 (선택)","Memo (optional)")}</label><input id="tn_memo" placeholder="${L("예: 손이 떨림","e.g. hand tremor")}"></div>
+    <button class="btn ghost" style="margin-top:8px" onclick="closeSheet()">${L("취소","Cancel")}</button>
+  `);
+  document.querySelectorAll("[data-dir]").forEach(b=>{
+    b.onclick=()=>{ addTempNote(b.dataset.dir, document.getElementById("tn_memo").value.trim()); closeSheet(); };
+  });
+}
+function todayTempNotes(){
+  const k=todayKey();
+  return db.events.filter(e=>e.type==="tempnote" && dkey(new Date(e.ts))===k)
+    .sort((a,b)=>a.ts-b.ts);
+}
+function openTempNoteReview(){
+  const notes=todayTempNotes();
+  if(!notes.length){ toast(L("오늘 임시 기록이 없어요","No notes for today")); return; }
+  const DIRLABEL={up:"↑ "+L("좋아짐","Better"), down:"↓ "+L("나빠짐","Worse"), same:"→ "+L("그대로","Same")};
+  openSheet(`
+    <h2>${L("임시 기록 점수 매기기","Score today's notes")}</h2>
+    <div class="hint" style="margin-bottom:10px">${L("시각순으로 나란히 놓았어요. 서로 비교하면서 점수를 매기면 더 정확해요.","Notes are lined up by time — compare them as you score each one.")}</div>
+    <div id="tnReviewRows">
+      ${notes.map((n,i)=>`<div class="li" data-tn="${n.id}" style="flex-wrap:wrap; align-items:center; gap:8px">
+        <div style="min-width:70px; font-weight:800">${hm(n.ts)}</div>
+        <div style="flex:1; min-width:100px">${DIRLABEL[n.dir]||""}${n.memo?` · ${escapeHtml(n.memo)}`:""}</div>
+        <input type="number" class="tn-score" min="0" max="100" placeholder="${L("점수","Score")}" style="width:76px">
+      </div>`).join("")}
+    </div>
+    <div class="btn-row" style="margin-top:10px"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="tnSaveAll">${L("전부 저장","Save all")}</button></div>
+  `);
+  document.getElementById("tnSaveAll").onclick=()=>{
+    const rows=[...document.querySelectorAll("#tnReviewRows [data-tn]")];
+    let saved=0;
+    rows.forEach(row=>{
+      const val=row.querySelector(".tn-score").value;
+      if(val==="") return;
+      const id=row.dataset.tn;
+      const note=db.events.find(e=>e.id===id); if(!note) return;
+      /* 검토 발견: type:"state" 이벤트는 evRow가 SMAP[e.state]로 색을 찾으므로 state 필드가
+         반드시 있어야 한다(없으면 실제로 화면이 깨짐) — 메모를 남길 때 고른 방향(dir)을
+         기존 stateFromTrend()가 쓰는 trend 값으로 그대로 매핑해서 재사용한다. */
+      const trend = note.dir==="up" ? "rising" : note.dir==="down" ? "falling" : "stable";
+      const state = stateFromTrend(trend, +val);
+      db.events.push({ id:uid(), type:"state", state, ts:note.ts, output:+val, trend,
+        memo:note.memo||"", symptoms:[], customSymptom:"", riseResult:null,
+        inputMethod:"tempnote_review", retrospective:false });
+      db.events=db.events.filter(e=>e.id!==id);
+      saved++;
+    });
+    db.events.sort((a,b)=>a.ts-b.ts); save(); closeSheet(); renderAll();
+    toast(saved? L(`${saved}건 정식 기록으로 전환됨`,`${saved} converted`) : L("점수를 매긴 항목이 없어요","No scores entered"));
+  };
+}
+function renderTempNoteGrid(){
+  const grid=document.getElementById("tempNoteGrid"); if(!grid) return;
+  const pending=todayTempNotes().length;
+  grid.innerHTML=`
+    <button class="quick-btn" id="tnQuickBtn"><span class="qic">🕐</span><span>${L("지금 느낌 메모","Quick note")}</span></button>
+    <button class="quick-btn${pending?" sel":""}" id="tnReviewBtn"><span class="qic">📋</span><span>${L("점수 매기기","Score notes")}${pending? ` · ${pending}`:""}</span></button>
+  `;
+  document.getElementById("tnQuickBtn").onclick=openTempNoteQuick;
+  document.getElementById("tnReviewBtn").onclick=openTempNoteReview;
+}
 function addState(key, extra={}){
   const ts = extra.ts || Date.now();
   const ev = { id:uid(), type:"state", state:key, ts,
@@ -2166,6 +2259,7 @@ function renderDaySummary(tEvents){
 }
 /* ---------- render: TODAY ---------- */
 function renderToday(){
+  renderTempNoteGrid(); /* v2.11 */
   const symGrid=document.getElementById("symptomGrid"); symGrid.innerHTML="";
   SYMPTOM_QUICK.forEach(sq=>{
     const isOpen = !!openSymptomState(sq.key);
@@ -2280,6 +2374,13 @@ function evRow(e){
   } else if(e.type==="challenge"){
     row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">🧪 ${escapeHtml(e.title||"Medication Challenge")}</div>${(e.lines&&e.lines.length)?`<div class="m">${escapeHtml(e.lines.join(" · "))}</div>`:""}</div>
       <span class="pill" style="background:#8e44ad">${tr("chgPillLabel")}</span>`;
+  } else if(e.type==="tempnote"){
+    /* 검토 발견(2026-08-08): tempnote가 기존 if-chain 어디에도 안 걸려 마지막 생활기록
+       분기(LIFE[e.kind].color)로 떨어지면, e.kind가 없어서 LIFE[undefined]가 undefined가
+       되고 그 .color를 읽으려다 실제로 에러가 났을 상황 — 전용 분기를 만들어 막는다. */
+    const DIRLABEL={up:"↑ "+L("좋아짐","Better"), down:"↓ "+L("나빠짐","Worse"), same:"→ "+L("그대로","Same")};
+    row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">🕐 ${DIRLABEL[e.dir]||L("임시 기록","Note")}</div>${e.memo?`<div class="m">${escapeHtml(e.memo)}</div>`:""}</div>
+      <span class="pill" style="background:var(--ink-2)">${L("임시","Note")}</span>`;
   } else {
     const {s, extraTxt} = lifeRowInfo(e);
     const memoLine=[extraTxt, e.memo].filter(Boolean).join(" · ");
