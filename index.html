@@ -653,7 +653,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음 (INSUF)",
-    versionLabel:"파킨슨 약효 기록 · 1.3.1",
+    versionLabel:"파킨슨 약효 기록 · 1.3.2",
     privacyPolicyLink:"개인정보처리방침 보기",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
@@ -4005,7 +4005,70 @@ document.getElementById("qoTrendRow").addEventListener("click", e=>{
 document.getElementById("qoHelpBtn").onclick=openTodayHelp;
 document.getElementById("onoffOnBtn").onclick=()=>addState("on", {output:90, trend:"stable"});
 document.getElementById("onoffOffBtn").onclick=()=>addState("off", {output:10, trend:"stable"});
-document.getElementById("printBtn").onclick=()=>window.print();
+/* v1.3.2: TWA(Play Store 설치판) 안에서 window.print()가 응답하지 않는 문제 —
+   실사용 신고(카카오톡 공유 링크로 여러 명이 동시에 겪음, GitHub 웹에서는 정상 작동해
+   TWA/WebView 환경 특유의 문제로 확인됨). window.print()에 의존하지 않고 앱 안에서
+   직접 PDF 파일을 만들어 다운로드하는 방식으로 바꾼다(html2canvas로 화면을 그대로
+   캡처해 jsPDF로 각 페이지를 조립) — PC·GitHub 웹·설치판 전부 같은 방식으로 동작한다.
+   라이브러리는 버튼을 실제로 눌렀을 때만 CDN에서 불러온다(평소엔 오프라인 유지). */
+let _pdfLibsLoading=null;
+function loadPdfLibs(){
+  if(window.jspdf && window.html2canvas) return Promise.resolve();
+  if(_pdfLibsLoading) return _pdfLibsLoading;
+  const loadScript=(src)=>new Promise((resolve,reject)=>{
+    const s=document.createElement("script"); s.src=src;
+    s.onload=resolve; s.onerror=()=>reject(new Error("load failed: "+src));
+    document.head.appendChild(s);
+  });
+  _pdfLibsLoading=loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js")
+    .then(()=>loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"));
+  return _pdfLibsLoading;
+}
+/* pageEls가 여러 개면 각각을 한 페이지씩(예: PHS의 phs-page들), 하나뿐이면 세로로 긴
+   내용을 A4 높이 단위로 잘라 여러 페이지로 나눈다(예: 보고서 탭 전체). */
+async function exportAsPdf(pageEls, filename, onDone){
+  const { jsPDF }=window.jspdf;
+  const pdf=new jsPDF({ unit:"mm", format:"a4" });
+  const pageW=210, pageH=297, margin=8;
+  const usableW=pageW-margin*2;
+  for(let i=0;i<pageEls.length;i++){
+    const canvas=await window.html2canvas(pageEls[i], { scale:2, useCORS:true, backgroundColor:"#ffffff" });
+    const imgH=canvas.height * (usableW/canvas.width);
+    if(imgH<=pageH-margin*2){
+      if(i>0) pdf.addPage();
+      pdf.addImage(canvas.toDataURL("image/jpeg",0.92),"JPEG", margin, margin, usableW, imgH);
+    } else {
+      /* 한 페이지보다 긴 요소(예: 보고서 탭 전체) — 캔버스를 세로로 잘라 여러 장으로 */
+      const pxPerMm=canvas.width/usableW;
+      const pageHeightPx=Math.floor((pageH-margin*2)*pxPerMm);
+      let y=0, first=true;
+      while(y<canvas.height){
+        const sliceH=Math.min(pageHeightPx, canvas.height-y);
+        const sliceCanvas=document.createElement("canvas");
+        sliceCanvas.width=canvas.width; sliceCanvas.height=sliceH;
+        sliceCanvas.getContext("2d").drawImage(canvas, 0, y, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+        if(!(i===0&&first)) pdf.addPage();
+        pdf.addImage(sliceCanvas.toDataURL("image/jpeg",0.92),"JPEG", margin, margin, usableW, sliceH/pxPerMm);
+        y+=sliceH; first=false;
+      }
+    }
+  }
+  pdf.save(filename);
+  if(onDone) onDone();
+}
+document.getElementById("printBtn").onclick=async ()=>{
+  const btn=document.getElementById("printBtn"); const orig=btn.textContent;
+  btn.disabled=true; btn.textContent=L("PDF 만드는 중…","Creating PDF…");
+  try{
+    await loadPdfLibs();
+    const target=document.getElementById("tab-report");
+    const fname=(currentLang()==="en"? "Output_Report_" : "출력_보고서_")+todayKey()+".pdf";
+    await exportAsPdf([target], fname);
+  }catch(e){
+    toast(L("PDF 생성에 실패했어요 — 인터넷 연결을 확인해 주세요","Failed to create PDF — please check your connection"));
+    if(typeof window.print==="function") window.print();
+  }finally{ btn.disabled=false; btn.textContent=orig; }
+};
 document.getElementById("repRange").onchange=renderReport;
 
 let toastT;
@@ -4591,15 +4654,25 @@ function phsRenderReport(report, analysis, note){
     </div>`;
   ov.classList.add("open");
   document.getElementById("phsCloseBtn").onclick=()=>ov.classList.remove("open");
-  document.getElementById("phsPrintBtn").onclick=()=>{
-    if(typeof window.print!=="function"){ toast(L("이 환경에서는 인쇄가 지원되지 않아요 — 텍스트 복사나 JSON 저장을 이용해주세요","Printing is not supported here — use Copy Text or Save JSON")); return; }
-    const oldTitle=document.title;
-    document.title = currentLang()==="en"? `Patient_History_Summary_${report.period.end}` : `환자병력요약_${report.period.end}`; /* PDF 저장 시 기본 파일명 */
-    document.body.classList.add("phs-print");
-    const done=()=>{ document.body.classList.remove("phs-print"); document.title=oldTitle; window.removeEventListener("afterprint",done); };
-    window.addEventListener("afterprint",done);
-    /* 그래프(SVG) 렌더가 화면에 반영된 뒤 인쇄 — 빈 그래프 방지 */
-    requestAnimationFrame(()=>requestAnimationFrame(()=>{ window.print(); setTimeout(done, 3000); }));
+  document.getElementById("phsPrintBtn").onclick=async ()=>{
+    const btn=document.getElementById("phsPrintBtn"); const orig=btn.textContent;
+    btn.disabled=true; btn.textContent=L("PDF 만드는 중…","Creating PDF…");
+    const fname=(currentLang()==="en"? `Patient_History_Summary_${report.period.end}` : `환자병력요약_${report.period.end}`)+".pdf";
+    try{
+      await loadPdfLibs();
+      const pages=[...ov.querySelectorAll(".phs-page")];
+      /* 그래프(SVG) 렌더가 화면에 반영된 뒤 캡처 — 빈 그래프 방지 */
+      await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+      await exportAsPdf(pages, fname);
+    }catch(e){
+      toast(L("PDF 생성에 실패했어요 — 인터넷 연결을 확인해 주세요. 인쇄로 다시 시도합니다.","Failed to create PDF — check your connection. Falling back to print."));
+      if(typeof window.print==="function"){
+        document.body.classList.add("phs-print");
+        const done=()=>{ document.body.classList.remove("phs-print"); window.removeEventListener("afterprint",done); };
+        window.addEventListener("afterprint",done);
+        requestAnimationFrame(()=>requestAnimationFrame(()=>{ window.print(); setTimeout(done, 3000); }));
+      }
+    }finally{ btn.disabled=false; btn.textContent=orig; }
   };
   document.getElementById("phsCopyBtn").onclick=()=>{
     const txt=phsReportText(report);
