@@ -728,7 +728,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음",
-    versionLabel:"약효일지 · 비공개 시험판 2.11.2-schedfix",
+    versionLabel:"약효일지 · 비공개 시험판 2.12.2-graph",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -799,7 +799,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests",
-    versionLabel:"Med Log · Test build 2.11.2-schedfix",
+    versionLabel:"Med Log · Test build 2.12.2-graph",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -1286,30 +1286,146 @@ function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(
    임시 기록은 type:"tempnote"로 저장되고, 점수를 매기면 정식 출력 기록(type:"state")
    으로 전환되며 원래 시각은 그대로 유지된다 — 나중에 몰아서 매겨도 그래프상 위치는
    정확하다. */
+/* v2.12: 앵커+이벤트 기반 그래프 — 작업지시서 반영. 기존 3종(좋아짐/나빠짐/그대로)을
+   설계도의 5가지 곡선 모양 이벤트로 확장한다. "재상승"은 별도 타입을 안 만들고
+   "상승"을 다시 쓰는 것으로 처리한다(하강 뒤에 상승이 오면 문맥상 재상승이라는 게
+   시각에 나타남 — 종류를 하나 더 늘리는 것보다 재사용이 더 단순하고 안전하다). */
 const TEMPNOTE_DIRS = [
-  {key:"up",   ko:"좋아짐", en:"Better", ic:"↑"},
-  {key:"down", ko:"나빠짐", en:"Worse",  ic:"↓"},
-  {key:"same", ko:"그대로", en:"Same",   ic:"→"},
+  {key:"signal", ko:"첫 신호",  en:"First signal", ic:"⚡", trend:"rising"},
+  {key:"up",     ko:"상승",     en:"Rising",       ic:"↗", trend:"rising"},
+  {key:"peak",   ko:"피크",     en:"Peak",         ic:"△", trend:"stable"},
+  {key:"down",   ko:"하강",     en:"Falling",      ic:"↘", trend:"falling"},
+  {key:"same",   ko:"유지",     en:"Same",         ic:"→", trend:"stable"},
 ];
-function addTempNote(dir, memo){
-  const ev={ id:uid(), type:"tempnote", ts:Date.now(), dir:dir||null, memo:memo||"" };
+/* 설계도 7번: 상세 증상은 메인 화면에 항상 노출하지 않고, 이벤트 기록 후 필요할 때만
+   펼쳐서 선택한다. 기존 증상 사전(SYMPTOM_QUICK)의 라벨을 그대로 재사용해 새 목록을
+   따로 만들지 않는다 — incomplete ON만 여기 고유로 추가한다. */
+const TEMPNOTE_TAGS = [
+  {key:"incomplete_on", ko:"불완전 ON", en:"Incomplete ON"},
+  {key:"dysk",   ko:"이상운동증", en:"Dyskinesia"},
+  {key:"dyst",   ko:"근긴장이상", en:"Dystonia"},
+  {key:"freeze", ko:"동결",       en:"Freezing"},
+  {key:"weak",   ko:"힘 빠짐",    en:"Weakness"},
+  {key:"tremor", ko:"떨림",       en:"Tremor"},
+  {key:"pain",   ko:"통증",       en:"Pain"},
+];
+function tempNoteDirTrend(dirKey){ const d=TEMPNOTE_DIRS.find(x=>x.key===dirKey); return d? d.trend : "stable"; }
+function addTempNote(dir, memo, ts, tags){
+  const ev={ id:uid(), type:"tempnote", ts:ts||Date.now(), dir:dir||null, memo:memo||"", tags:tags||[] };
   db.events.push(ev); db.events.sort((a,b)=>a.ts-b.ts); save(); renderAll();
   toast(`${L("임시 기록됨","noted")} · ${hm(ev.ts)}`);
   return ev;
 }
+/* 설계도 10번(몰아 기록): 시간을 "지금" 외에 "30분 전"·"1시간 전"으로도 바로 고를 수
+   있게 한다 — 나중에 몰아서 여러 개를 입력할 때 매번 시계를 돌리지 않아도 되게. */
+const TEMPNOTE_TIME_PRESETS = [
+  {key:"now",   ko:"지금",     en:"Now",     min:0},
+  {key:"m30",   ko:"30분 전",  en:"30m ago", min:30},
+  {key:"h1",    ko:"1시간 전", en:"1h ago",  min:60},
+];
 function openTempNoteQuick(){
+  let pickedTimeMin=0; /* TEMPNOTE_TIME_PRESETS 기준 분(0=지금); "직접 선택" 누르면 timeFieldHtml로 전환 */
   openSheet(`
     <h2>${L("🕐 지금 느낌만 짧게","🕐 Quick note")}</h2>
-    <div class="hint" style="margin-bottom:10px">${L("점수는 나중에 몰아서 매길게요 — 지금은 방향만 눌러 주세요.","Score it later — just pick a direction for now.")}</div>
-    <div class="chips" style="display:flex; gap:8px">
-      ${TEMPNOTE_DIRS.map((d,i)=>`<button class="btn ghost" data-dir="${d.key}" style="flex:1"><span style="font-size:20px">${d.ic}</span><br>${L(d.ko,d.en)}</button>`).join("")}
+    <div class="hint" style="margin-bottom:10px">${L("점수는 나중에 몰아서 매길게요 — 지금은 모양만 눌러 주세요.","Score it later — just pick a shape for now.")}</div>
+    <div class="chips" style="display:flex; gap:6px; flex-wrap:wrap">
+      ${TEMPNOTE_DIRS.map((d,i)=>`<button class="btn ghost" data-dir="${d.key}" style="flex:1; min-width:60px"><span style="font-size:20px">${d.ic}</span><br>${L(d.ko,d.en)}</button>`).join("")}
     </div>
-    <div class="field" style="margin-top:10px"><label>${L("메모 (선택)","Memo (optional)")}</label><input id="tn_memo" placeholder="${L("예: 손이 떨림","e.g. hand tremor")}"></div>
+    <div class="field" style="margin-top:10px"><label>${L("시각","Time")}</label>
+      <div class="chips" id="tnTimeChips" style="display:flex; gap:6px">
+        ${TEMPNOTE_TIME_PRESETS.map((t,i)=>`<button type="button" class="chip${i===0?" sel":""}" data-tmin="${t.min}">${L(t.ko,t.en)}</button>`).join("")}
+      </div>
+    </div>
+    <div class="field"><label>${L("증상 태그 (선택)","Symptom tags (optional)")}</label>
+      <div class="chips" id="tnTagChips">${TEMPNOTE_TAGS.map((t,i)=>`<button type="button" class="chip" data-t="${t.key}">${L(t.ko,t.en)}</button>`).join("")}</div>
+    </div>
+    <div class="field"><label>${L("메모 (선택)","Memo (optional)")}</label><input id="tn_memo" placeholder="${L("예: 손이 떨림","e.g. hand tremor")}"></div>
     <button class="btn ghost" style="margin-top:8px" onclick="closeSheet()">${L("취소","Cancel")}</button>
   `);
+  multiChipToggle("tnTagChips");
+  singleChipToggle("tnTimeChips");
   document.querySelectorAll("[data-dir]").forEach(b=>{
-    b.onclick=()=>{ addTempNote(b.dataset.dir, document.getElementById("tn_memo").value.trim()); closeSheet(); };
+    b.onclick=()=>{
+      const tmin=+(document.querySelector("#tnTimeChips .chip.sel")?.dataset.tmin || 0);
+      const ts=Date.now()-tmin*60000;
+      const tags=selectedChips("tnTagChips");
+      addTempNote(b.dataset.dir, document.getElementById("tn_memo").value.trim(), ts, tags);
+      closeSheet();
+    };
   });
+}
+/* v2.12.1: 앵커+이벤트 곡선 추정 — 작업지시서 3번(그래프에 실제로 그리기)의 계산 부분.
+   확정 앵커(숫자로 기록된 출력값) 사이에 방향 이벤트(첫신호·상승·피크·하강·유지)가
+   있으면, 그 모양을 반영해서 중간값을 추정한다. 추정값은 estimated:true로 표시해
+   실측(anchor)과 절대 섞이지 않게 한다(설계도 9번 원칙).
+   신뢰도를 두 단계로 나눈다:
+   - high: 이벤트 앞뒤로 실측 앵커가 둘 다 있음(구간이 양쪽으로 고정됨) → 그 구간
+     안에서 선형보간 기준선에 이벤트별 굴곡(피크는 위로, 하강은 아래로)을 얹는다.
+   - low: 한쪽에만 앵커가 있음(형님 예시처럼 이벤트가 먼저 오고 앵커가 나중에 하나만
+     있는 경우) → **각 이벤트를 "그 직전 지점 대비 얼마나 변했는지"(STEP)로 사슬처럼
+     누적**해 상대적 모양(무엇이 가장 높고 낮은지)을 먼저 만든 다음, 마지막에 실측
+     앵커 하나로 전체를 통째로 밀어 올리거나 내린다(shift). 처음에 각 이벤트를 앵커
+     하나만으로 개별 역산했더니 "피크"가 "하강"보다 낮게 나오는 오류가 있었음(검산
+     중 발견) — 사슬 누적 방식으로 교체해 상대적 순서가 항상 맞도록 고쳤다. */
+const CURVE_EVENT_BUMP = { signal:8, up:12, peak:22, down:-18, same:0 };   /* high 신뢰도: 두 앵커 사이 굴곡 폭 */
+const CURVE_EVENT_STEP = { signal:8, up:15, peak:15, down:-25, same:0 };  /* low 신뢰도: 직전 지점 대비 변화량(사슬용) */
+function dayAnchorsAndEvents(dayKey){
+  const dayEvs=db.events.filter(e=>dkey(new Date(e.ts))===dayKey);
+  const anchors=dayEvs.filter(e=>e.type==="state" && e.output!=null)
+    .map(e=>({ts:e.ts, value:e.output})).sort((a,b)=>a.ts-b.ts);
+  const events=dayEvs.filter(e=>e.type==="tempnote")
+    .map(e=>({ts:e.ts, dir:e.dir, tags:e.tags||[], memo:e.memo||""})).sort((a,b)=>a.ts-b.ts);
+  return {anchors, events};
+}
+function estimateDailyCurve(dayKey){
+  const {anchors, events}=dayAnchorsAndEvents(dayKey);
+  const points=[...anchors.map(a=>({ts:a.ts, value:a.value, estimated:false, confidence:"measured"}))];
+
+  /* high 신뢰도 구간(양쪽 앵커 있음)은 개별 선형보간+굴곡으로 바로 계산 */
+  const highEvents=events.filter(ev=>{
+    const before=anchors.filter(a=>a.ts<ev.ts).pop();
+    const after=anchors.find(a=>a.ts>ev.ts);
+    return before && after;
+  });
+  highEvents.forEach(ev=>{
+    const before=anchors.filter(a=>a.ts<ev.ts).pop();
+    const after=anchors.find(a=>a.ts>ev.ts);
+    const frac=(ev.ts-before.ts)/(after.ts-before.ts||1);
+    const base=before.value+(after.value-before.value)*frac;
+    const value=Math.max(0,Math.min(100, base+(CURVE_EVENT_BUMP[ev.dir]||0)));
+    points.push({ts:ev.ts, value, estimated:true, confidence:"high", dir:ev.dir, tags:ev.tags, memo:ev.memo});
+  });
+
+  /* low 신뢰도 구간: 뒤쪽에만 앵커가 있는 사슬(형님 예시가 이 경우) */
+  const beforeOnlyChain=events.filter(ev=>!anchors.some(a=>a.ts<ev.ts) && anchors.some(a=>a.ts>ev.ts));
+  if(beforeOnlyChain.length){
+    const after=anchors.find(a=>a.ts>beforeOnlyChain[0].ts);
+    let rel=0; const relSeq=beforeOnlyChain.map(ev=>{ rel+=CURVE_EVENT_STEP[ev.dir]||0; return rel; });
+    const offset=after.value-relSeq[relSeq.length-1];
+    beforeOnlyChain.forEach((ev,i)=>{
+      const value=Math.max(0,Math.min(100, relSeq[i]+offset));
+      points.push({ts:ev.ts, value, estimated:true, confidence:"low", dir:ev.dir, tags:ev.tags, memo:ev.memo});
+    });
+  }
+  /* low 신뢰도 구간: 앞쪽에만 앵커가 있는 사슬(그날의 마지막 이벤트들, 그 뒤로 앵커 없음) */
+  const afterOnlyChain=events.filter(ev=>anchors.some(a=>a.ts<ev.ts) && !anchors.some(a=>a.ts>ev.ts));
+  if(afterOnlyChain.length){
+    const before=anchors.filter(a=>a.ts<afterOnlyChain[0].ts).pop();
+    let rel=0;
+    afterOnlyChain.forEach(ev=>{
+      rel+=CURVE_EVENT_STEP[ev.dir]||0;
+      const value=Math.max(0,Math.min(100, before.value+rel));
+      points.push({ts:ev.ts, value, estimated:true, confidence:"low", dir:ev.dir, tags:ev.tags, memo:ev.memo});
+    });
+  }
+  /* 그 날 앵커가 하나도 없는 경우: 절대값 추정 근거가 전혀 없어 숫자를 만들지 않는다 */
+  if(!anchors.length){
+    events.forEach(ev=>{
+      points.push({ts:ev.ts, value:null, estimated:true, confidence:"none", dir:ev.dir, tags:ev.tags, memo:ev.memo});
+    });
+  }
+  points.sort((a,b)=>a.ts-b.ts);
+  return points;
 }
 function todayTempNotes(){
   const k=todayKey();
@@ -1319,14 +1435,15 @@ function todayTempNotes(){
 function openTempNoteReview(){
   const notes=todayTempNotes();
   if(!notes.length){ toast(L("오늘 임시 기록이 없어요","No notes for today")); return; }
-  const DIRLABEL={up:"↑ "+L("좋아짐","Better"), down:"↓ "+L("나빠짐","Worse"), same:"→ "+L("그대로","Same")};
+  const DIRLABEL=Object.fromEntries(TEMPNOTE_DIRS.map(d=>[d.key, `${d.ic} ${L(d.ko,d.en)}`]));
+  const tagLabel=(k)=>{ const t=TEMPNOTE_TAGS.find(x=>x.key===k); return t? L(t.ko,t.en) : k; };
   openSheet(`
     <h2>${L("임시 기록 점수 매기기","Score today's notes")}</h2>
     <div class="hint" style="margin-bottom:10px">${L("시각순으로 나란히 놓았어요. 서로 비교하면서 점수를 매기면 더 정확해요.","Notes are lined up by time — compare them as you score each one.")}</div>
     <div id="tnReviewRows">
       ${notes.map((n,i)=>`<div class="li" data-tn="${n.id}" style="flex-wrap:wrap; align-items:center; gap:8px">
         <div style="min-width:70px; font-weight:800">${hm(n.ts)}</div>
-        <div style="flex:1; min-width:100px">${DIRLABEL[n.dir]||""}${n.memo?` · ${escapeHtml(n.memo)}`:""}</div>
+        <div style="flex:1; min-width:100px">${DIRLABEL[n.dir]||""}${(n.tags&&n.tags.length)?` · ${n.tags.map(tagLabel).join(", ")}`:""}${n.memo?` · ${escapeHtml(n.memo)}`:""}</div>
         <input type="number" class="tn-score" min="0" max="100" placeholder="${L("점수","Score")}" style="width:76px">
       </div>`).join("")}
     </div>
@@ -1335,6 +1452,7 @@ function openTempNoteReview(){
   document.getElementById("tnSaveAll").onclick=()=>{
     const rows=[...document.querySelectorAll("#tnReviewRows [data-tn]")];
     let saved=0;
+    const KNOWN_SYMPTOM_KEYS=["dysk","dyst","tremor","freeze","pain"]; /* 기존 SYMPTOMS 사전과 겹치는 것만 symptoms 배열로, 나머지(불완전ON·힘빠짐)는 메모에 덧붙인다 */
     rows.forEach(row=>{
       const val=row.querySelector(".tn-score").value;
       if(val==="") return;
@@ -1343,10 +1461,14 @@ function openTempNoteReview(){
       /* 검토 발견: type:"state" 이벤트는 evRow가 SMAP[e.state]로 색을 찾으므로 state 필드가
          반드시 있어야 한다(없으면 실제로 화면이 깨짐) — 메모를 남길 때 고른 방향(dir)을
          기존 stateFromTrend()가 쓰는 trend 값으로 그대로 매핑해서 재사용한다. */
-      const trend = note.dir==="up" ? "rising" : note.dir==="down" ? "falling" : "stable";
+      const trend = tempNoteDirTrend(note.dir);
       const state = stateFromTrend(trend, +val);
+      const tags=note.tags||[];
+      const symptoms=tags.filter(t=>KNOWN_SYMPTOM_KEYS.includes(t));
+      const extraTags=tags.filter(t=>!KNOWN_SYMPTOM_KEYS.includes(t)).map(tagLabel);
+      const memo=[note.memo, ...extraTags].filter(Boolean).join(" · ");
       db.events.push({ id:uid(), type:"state", state, ts:note.ts, output:+val, trend,
-        memo:note.memo||"", symptoms:[], customSymptom:"", riseResult:null,
+        memo, symptoms, customSymptom:"", riseResult:null,
         inputMethod:"tempnote_review", retrospective:false });
       db.events=db.events.filter(e=>e.id!==id);
       saved++;
@@ -2406,9 +2528,13 @@ function evRow(e){
   } else if(e.type==="tempnote"){
     /* 검토 발견(2026-08-08): tempnote가 기존 if-chain 어디에도 안 걸려 마지막 생활기록
        분기(LIFE[e.kind].color)로 떨어지면, e.kind가 없어서 LIFE[undefined]가 undefined가
-       되고 그 .color를 읽으려다 실제로 에러가 났을 상황 — 전용 분기를 만들어 막는다. */
-    const DIRLABEL={up:"↑ "+L("좋아짐","Better"), down:"↓ "+L("나빠짐","Worse"), same:"→ "+L("그대로","Same")};
-    row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">🕐 ${DIRLABEL[e.dir]||L("임시 기록","Note")}</div>${e.memo?`<div class="m">${escapeHtml(e.memo)}</div>`:""}</div>
+       되고 그 .color를 읽으려다 실제로 에러가 났을 상황 — 전용 분기를 만들어 막는다.
+       v2.12: 로컬에 낡은 3종 맵을 따로 두지 않고 TEMPNOTE_DIRS/TAGS를 그대로 재사용해,
+       이벤트 종류를 늘릴 때마다 이 표시 로직도 같이 고쳐야 하는 걸 막는다. */
+    const dirInfo=TEMPNOTE_DIRS.find(d=>d.key===e.dir);
+    const dirLabel=dirInfo? `${dirInfo.ic} ${L(dirInfo.ko,dirInfo.en)}` : L("임시 기록","Note");
+    const tagTxt=(e.tags&&e.tags.length)? e.tags.map(k=>{ const t=TEMPNOTE_TAGS.find(x=>x.key===k); return t?L(t.ko,t.en):k; }).join(", ") : "";
+    row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">🕐 ${dirLabel}</div>${(tagTxt||e.memo)?`<div class="m">${[tagTxt,e.memo].filter(Boolean).map(escapeHtml).join(" · ")}</div>`:""}</div>
       <span class="pill" style="background:var(--ink-2)">${L("임시","Note")}</span>`;
   } else {
     const {s, extraTxt} = lifeRowInfo(e);
@@ -2966,7 +3092,36 @@ function svgCurve(dayKey){
   const linePts = pts.map(p=>`${x(p.t)},${y(p.val)}`).join(" ");
   const areaPts = `${padL},${y(0)} ${linePts} ${x(t1)},${y(0)}`;
 
-  const outputPts = overlay.filter(o=>o.output!=null).map(o=>`${x(o.t)},${y(o.output*10)}`);
+  /* v2.12.2: 예전엔 여기서 y(o.output*10)로 output(이미 0~100)에 10을 또 곱해 차트
+     밖으로 벗어나는 기존 버그가 있었다(검토 중 발견, 이번 작업과 무관하게 존재하던
+     결함) — 새 레이어는 이 값을 안 쓰고 estimateDailyCurve()로 직접 정확한 스케일로
+     그린다. 실측 구간은 실선, 추정이 섞인 구간은 점선으로 구분하고, 이벤트 지점에는
+     모양 아이콘(⚡↗△↘→)을 마커로 찍는다(작업지시서 5번: "확정점은 실선, 이벤트는
+     아이콘 마커"). */
+  const anchorEventLayer = (()=>{
+    const curvePts=estimateDailyCurve(dayKey).filter(p=>p.value!=null && p.ts>=t0 && p.ts<=t1);
+    if(curvePts.length<1) return "";
+    let segs="", markers="";
+    for(let i=0;i<curvePts.length-1;i++){
+      const a=curvePts[i], b=curvePts[i+1];
+      const bothMeasured = !a.estimated && !b.estimated;
+      const dash = bothMeasured? "" : `stroke-dasharray="${a.confidence==="low"||b.confidence==="low"?"2,4":"5,3"}"`;
+      const col = "#2C6FBF";
+      segs += `<line x1="${x(a.ts)}" y1="${y(a.value)}" x2="${x(b.ts)}" y2="${y(b.value)}" stroke="${col}" stroke-width="2" ${dash} opacity="${bothMeasured?1:.75}"/>`;
+    }
+    curvePts.forEach(p=>{
+      const cx=x(p.ts), cy=y(p.value);
+      if(!p.estimated){
+        markers += `<circle cx="${cx}" cy="${cy}" r="3.6" fill="#2C6FBF"/>`;
+      } else {
+        const dirInfo=TEMPNOTE_DIRS.find(d=>d.key===p.dir);
+        const ic=dirInfo? dirInfo.ic : "•";
+        markers += `<circle cx="${cx}" cy="${cy}" r="8" fill="var(--card-bg,#fff)" stroke="#2C6FBF" stroke-width="1.4" opacity="${p.confidence==='low'?.7:.9}"/>
+          <text x="${cx}" y="${cy+4}" font-size="10" text-anchor="middle">${ic}</text>`;
+      }
+    });
+    return segs+markers;
+  })();
   const gaitPts = overlay.filter(o=>o.gait!=null).map(o=>`${x(o.t)},${y(o.gait*10)}`);
 
   let medMarks="";
@@ -2989,7 +3144,7 @@ function svgCurve(dayKey){
     ${shading}
     <polygon points="${areaPts}" fill="#1FA971" opacity=".16"/>
     <polyline points="${linePts}" fill="none" stroke="#1FA971" stroke-width="2.4"/>
-    ${outputPts.length>1? `<polyline points="${outputPts.join(" ")}" fill="none" stroke="#5C93D6" stroke-width="1.6" stroke-dasharray="4,3"/>`:""}
+    ${anchorEventLayer}
     ${gaitPts.length>1? `<polyline points="${gaitPts.join(" ")}" fill="none" stroke="#E0A030" stroke-width="1.6" stroke-dasharray="1,3"/>`:""}
     ${medMarks}
     ${axisLabels}
