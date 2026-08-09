@@ -1,4 +1,4 @@
-const CACHE = "yakhyo-v60-onoff";
+const CACHE = "yakhyo-v61-pdfsave";
 const APP_SHELL = [
   "./",
   "./index.html",
