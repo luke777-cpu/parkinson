@@ -728,7 +728,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음",
-    versionLabel:"약효일지 · 비공개 시험판 2.12.2-graph",
+    versionLabel:"약효일지 · 비공개 시험판 2.12.3-customtime",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -799,7 +799,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests",
-    versionLabel:"Med Log · Test build 2.12.2-graph",
+    versionLabel:"Med Log · Test build 2.12.3-customtime",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -1324,7 +1324,6 @@ const TEMPNOTE_TIME_PRESETS = [
   {key:"h1",    ko:"1시간 전", en:"1h ago",  min:60},
 ];
 function openTempNoteQuick(){
-  let pickedTimeMin=0; /* TEMPNOTE_TIME_PRESETS 기준 분(0=지금); "직접 선택" 누르면 timeFieldHtml로 전환 */
   openSheet(`
     <h2>${L("🕐 지금 느낌만 짧게","🕐 Quick note")}</h2>
     <div class="hint" style="margin-bottom:10px">${L("점수는 나중에 몰아서 매길게요 — 지금은 모양만 눌러 주세요.","Score it later — just pick a shape for now.")}</div>
@@ -1332,9 +1331,11 @@ function openTempNoteQuick(){
       ${TEMPNOTE_DIRS.map((d,i)=>`<button class="btn ghost" data-dir="${d.key}" style="flex:1; min-width:60px"><span style="font-size:20px">${d.ic}</span><br>${L(d.ko,d.en)}</button>`).join("")}
     </div>
     <div class="field" style="margin-top:10px"><label>${L("시각","Time")}</label>
-      <div class="chips" id="tnTimeChips" style="display:flex; gap:6px">
+      <div class="chips" id="tnTimeChips" style="display:flex; gap:6px; flex-wrap:wrap">
         ${TEMPNOTE_TIME_PRESETS.map((t,i)=>`<button type="button" class="chip${i===0?" sel":""}" data-tmin="${t.min}">${L(t.ko,t.en)}</button>`).join("")}
+        <button type="button" class="chip" id="tnTimeCustomBtn">${L("직접 선택","Pick time")}</button>
       </div>
+      <div id="tnTimeCustomField" style="display:none; margin-top:8px"></div>
     </div>
     <div class="field"><label>${L("증상 태그 (선택)","Symptom tags (optional)")}</label>
       <div class="chips" id="tnTagChips">${TEMPNOTE_TAGS.map((t,i)=>`<button type="button" class="chip" data-t="${t.key}">${L(t.ko,t.en)}</button>`).join("")}</div>
@@ -1344,10 +1345,27 @@ function openTempNoteQuick(){
   `);
   multiChipToggle("tnTagChips");
   singleChipToggle("tnTimeChips");
+  /* v2.12.3: 작업지시서(몰아 기록) 4번째 옵션 "시간 직접 선택"이 주석에만 있고 실제
+     구현이 빠져 있던 걸 발견해 채운다 — 프리셋(지금/30분전/1시간전)에 없는 시각은
+     기존 timeFieldHtml 위젯을 그대로 재사용해 시·분을 직접 고르게 한다. */
+  document.getElementById("tnTimeCustomBtn").onclick=()=>{
+    document.querySelectorAll("#tnTimeChips .chip").forEach(c=>c.classList.remove("sel"));
+    document.getElementById("tnTimeCustomBtn").classList.add("sel");
+    const field=document.getElementById("tnTimeCustomField");
+    field.style.display="block";
+    field.innerHTML=timeFieldHtml("tnCustomTime", Date.now());
+    bindTimeField("tnCustomTime");
+  };
+  document.querySelectorAll("#tnTimeChips [data-tmin]").forEach(b=>{
+    b.onclick=()=>{ document.getElementById("tnTimeCustomBtn").classList.remove("sel");
+      document.getElementById("tnTimeCustomField").style.display="none"; };
+  });
   document.querySelectorAll("[data-dir]").forEach(b=>{
     b.onclick=()=>{
-      const tmin=+(document.querySelector("#tnTimeChips .chip.sel")?.dataset.tmin || 0);
-      const ts=Date.now()-tmin*60000;
+      const customOn=document.getElementById("tnTimeCustomBtn").classList.contains("sel");
+      const ts = customOn
+        ? tsFromTimeField("tnCustomTime", Date.now())
+        : Date.now()-(+(document.querySelector("#tnTimeChips .chip.sel")?.dataset.tmin || 0))*60000;
       const tags=selectedChips("tnTagChips");
       addTempNote(b.dataset.dir, document.getElementById("tn_memo").value.trim(), ts, tags);
       closeSheet();
