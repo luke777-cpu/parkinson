@@ -728,7 +728,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음",
-    versionLabel:"약효일지 · 비공개 시험판 2.12.3-customtime",
+    versionLabel:"약효일지 · 비공개 시험판 2.12.4-smooth",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -799,7 +799,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests",
-    versionLabel:"Med Log · Test build 2.12.3-customtime",
+    versionLabel:"Med Log · Test build 2.12.4-smooth",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -3119,13 +3119,22 @@ function svgCurve(dayKey){
   const anchorEventLayer = (()=>{
     const curvePts=estimateDailyCurve(dayKey).filter(p=>p.value!=null && p.ts>=t0 && p.ts<=t1);
     if(curvePts.length<1) return "";
+    /* v2.12.4: 실사용 신고 — "그래프는 곡선으로 보정해서 그린 것은 없나". 지금까지는
+       점과 점을 직선(<line>)으로만 이어서 뾰족뾰족하게 보였다. 카트멀롬(Catmull-Rom)
+       스플라인을 3차 베지어로 변환해, 각 구간을 부드러운 곡선으로 그린다 — 앞뒤 이웃
+       점의 기울기를 반영해 자연스럽게 휘어지도록 한다(끝 구간은 이웃이 없으니 자기
+       자신으로 대체). 실측/추정 구분(실선/점선)은 구간별로 그대로 유지한다. */
+    const P=curvePts.map(p=>({x:x(p.ts), y:y(p.value)}));
     let segs="", markers="";
     for(let i=0;i<curvePts.length-1;i++){
       const a=curvePts[i], b=curvePts[i+1];
+      const p0=P[i-1]||P[i], p1=P[i], p2=P[i+1], p3=P[i+2]||P[i+1];
+      const c1x=p1.x+(p2.x-p0.x)/6, c1y=p1.y+(p2.y-p0.y)/6;
+      const c2x=p2.x-(p3.x-p1.x)/6, c2y=p2.y-(p3.y-p1.y)/6;
       const bothMeasured = !a.estimated && !b.estimated;
       const dash = bothMeasured? "" : `stroke-dasharray="${a.confidence==="low"||b.confidence==="low"?"2,4":"5,3"}"`;
       const col = "#2C6FBF";
-      segs += `<line x1="${x(a.ts)}" y1="${y(a.value)}" x2="${x(b.ts)}" y2="${y(b.value)}" stroke="${col}" stroke-width="2" ${dash} opacity="${bothMeasured?1:.75}"/>`;
+      segs += `<path d="M${p1.x},${p1.y} C${c1x},${c1y} ${c2x},${c2y} ${p2.x},${p2.y}" fill="none" stroke="${col}" stroke-width="2" ${dash} opacity="${bothMeasured?1:.75}"/>`;
     }
     curvePts.forEach(p=>{
       const cx=x(p.ts), cy=y(p.value);
