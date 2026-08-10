@@ -83,14 +83,16 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
 .quick-btn.sel{border-color:var(--dysk); background:color-mix(in srgb,var(--dysk) 16%,transparent)}
 .quick-btn .qic{font-size:24px; line-height:1}
 .recent-med-row{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
-.recent-med-chip{display:inline-flex; align-items:center; gap:6px; background:var(--surface); box-shadow:var(--shadow); border-radius:999px; padding:9px 14px; font-weight:700; font-size:14px}
+.recent-med-chip{display:inline-flex; align-items:center; gap:6px; background:var(--surface); box-shadow:var(--shadow); border-radius:999px; padding:9px 14px; font-weight:700; font-size:14px; transition:transform .08s ease, opacity .15s}
+.recent-med-chip:active{transform:scale(.94); opacity:.8}
 .recent-med-chip .r-ic{font-size:15px}
 .life-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(90px,1fr)); gap:10px}
 .life-btn{min-height:60px; border-radius:16px; background:var(--surface); box-shadow:var(--shadow); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-size:14px; font-weight:800; transition:transform .08s}
 .life-btn:active{transform:scale(.95)} .life-btn .ic{font-size:22px}
 .life-btn small{font-size:10px; font-weight:600; color:var(--ink-2)}
 .sched-row{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:8px}
-.sched-chip{display:inline-flex; align-items:center; gap:6px; background:var(--surface-2); border-radius:999px; padding:6px 8px 6px 12px; font-weight:700; font-variant-numeric:tabular-nums}
+.sched-chip{display:inline-flex; align-items:center; gap:6px; background:var(--surface-2); border-radius:999px; padding:6px 8px 6px 12px; font-weight:700; font-variant-numeric:tabular-nums; transition:transform .08s ease, opacity .15s}
+.sched-chip:active{transform:scale(.95); opacity:.8}
 .sched-chip button{color:var(--ink-2); font-size:15px; padding:0 2px}
 .intensity-wrap{display:none}
 .intensity-wrap.show{display:block; animation:fade .2s}
@@ -143,7 +145,8 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
 .li .grow{flex:1; min-width:0}
 .li .name{font-weight:700} .li .meta{font-size:13px; color:var(--ink-2)}
 .section-label{font-size:13px; font-weight:800; color:var(--ink-2); margin:18px 2px 8px; letter-spacing:.02em}
-.btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:max(50px,calc(48px*var(--app-font-scale))); padding:0 18px; border-radius:13px; font-weight:800; font-size:calc(16px*var(--app-font-scale)); background:var(--surface-2); color:var(--ink); width:100%; box-shadow:var(--shadow)}
+.btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:max(50px,calc(48px*var(--app-font-scale))); padding:0 18px; border-radius:13px; font-weight:800; font-size:calc(16px*var(--app-font-scale)); background:var(--surface-2); color:var(--ink); width:100%; box-shadow:var(--shadow); transition:transform .08s ease, opacity .15s}
+.btn:active{transform:scale(.97); opacity:.8}
 .btn.primary{background:var(--accent); color:#04130C}
 .btn.ghost{background:transparent; box-shadow:none; border:1px solid var(--line)}
 .btn.danger{background:transparent; color:var(--dysk); box-shadow:none; border:1px solid color-mix(in srgb,var(--dysk) 40%,transparent)}
@@ -198,7 +201,8 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
 .slider-row input[type=range]{flex:1; accent-color:var(--accent)}
 .slider-row .v{width:46px; text-align:right; font-weight:800; font-variant-numeric:tabular-nums}
 .chips{display:flex; flex-wrap:wrap; gap:8px}
-.chip{padding:10px 14px; border-radius:999px; background:var(--surface-2); font-weight:700; font-size:15px; border:1.5px solid transparent}
+.chip{padding:10px 14px; border-radius:999px; background:var(--surface-2); font-weight:700; font-size:15px; border:1.5px solid transparent; transition:transform .08s ease, opacity .15s}
+.chip:active{transform:scale(.95); opacity:.8}
 .chip.sel{border-color:var(--accent); background:color-mix(in srgb,var(--accent) 14%,transparent); color:var(--accent-ink)}
 /* 방향(+/=/-) 선택 — 손이 불편한 사용자를 고려해 크고 간격 넓게, +10/-10 조절 버튼과 다른 색으로 구분 */
 .trend-row{display:flex; gap:10px; margin-top:10px}
@@ -728,7 +732,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음",
-    versionLabel:"약효일지 · 비공개 시험판 2.12.4-smooth",
+    versionLabel:"약효일지 · 비공개 시험판 2.13.0-tapfeedback",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -799,7 +803,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests",
-    versionLabel:"Med Log · Test build 2.12.4-smooth",
+    versionLabel:"Med Log · Test build 2.13.0-tapfeedback",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
