@@ -422,6 +422,39 @@ body{font-size:calc(15px*var(--app-font-scale))}
     <div id="curveEventList"></div>
   </section>
 
+  <!-- ANALYSIS (Phase0 재현성 · Phase2 치료구간 · Phase3 과부족분석) — 숨김 기능, navAnalysisBtn이 열려야 도달 가능 -->
+  <section class="tab" id="tab-analysis">
+    <div class="disclaimer" style="margin-bottom:12px">
+      같은 약을 여러 날 복용했을 때 반응이 얼마나 일관되는지를 보여줍니다. 이 화면은 약효 추정 곡선을 전혀 사용하지 않으며, 실제 기록만으로 계산합니다. 여기서 나오는 판정은 확정 진단이 아니라 기록 패턴 요약입니다.
+    </div>
+    <div class="chart-card" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px">
+      <div class="card-title"><span data-i18n="analysisTitle">기록 분석 · 재현성 확인</span></div>
+      <div class="btn-row no-print" style="margin:8px 0">
+        <select id="anPeriod" class="btn" style="font-weight:700; flex:1">
+          <option value="7">최근 7일</option>
+          <option value="14" selected>최근 14일</option>
+          <option value="30">최근 30일</option>
+        </select>
+        <select id="anGroup" class="btn" style="font-weight:700; flex:1.4"></select>
+      </div>
+      <div id="anSummary"></div>
+      <div id="anContext"></div>
+      <div id="anTable" style="overflow-x:auto; margin-top:10px"></div>
+    </div>
+
+    <div class="chart-card" id="anWindowCard" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px; display:none">
+      <div class="card-title"><span data-i18n="anWindowTitle">치료 구간 추정 (하한·상한)</span></div>
+      <div class="disclaimer" style="margin-bottom:10px" data-i18n="anWindowDisclaimer">이 구간은 회원님이 실제로 기록한 OFF 시각·이상운동증 시각을 근거로 추정한 값이며, 절대 기준이 아닙니다. 표본이 부족하면 추정하지 않습니다.</div>
+      <div id="anWindowBody"></div>
+    </div>
+
+    <div class="chart-card" id="anCoverageCard" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px; display:none">
+      <div class="card-title"><span data-i18n="anCoverageTitle">치료 구간 안에 머문 시간</span></div>
+      <div class="disclaimer" style="margin-bottom:10px" data-i18n="anCoverageDisclaimer">이 계산은 추정된 치료 구간과 약효 추정곡선을 비교한 것으로, 처방을 권고하지 않습니다. 약물 조정은 담당 의료진과 상의하세요.</div>
+      <div id="anCoverageBody"></div>
+    </div>
+  </section>
+
   <!-- SIM (LEDD 복약 시뮬레이션) -->
   <section class="tab" id="tab-sim">
     <div class="disclaimer" style="margin-bottom:12px" data-i18n="simTopDisclaimer">
@@ -572,6 +605,9 @@ body{font-size:calc(15px*var(--app-font-scale))}
     <button class="btn danger no-print" id="resetBtn" style="margin-top:14px" data-i18n="resetAll">모든 기록 삭제</button>
     <div class="hint no-print" style="text-align:center; margin:14px 0 2px"><a href="privacy.html" target="_blank" rel="noopener" data-i18n="privacyPolicyLink">개인정보처리방침 보기</a></div>
     <div id="versionLabel" style="text-align:center; color:var(--ink-2); font-size:12px; margin:18px 0 8px" data-i18n="versionLabel">약효일지 · 테스트판 0.9.2</div>
+    <div style="text-align:center; margin-bottom:20px">
+      <input type="password" id="hiddenCodeInput" placeholder="" autocomplete="off" style="width:70px; font-size:11px; padding:3px 6px; border:1px solid var(--surface-2); border-radius:6px; background:var(--surface); color:var(--ink-2); text-align:center; opacity:.5">
+    </div>
   </section>
 
 </main>
@@ -582,6 +618,7 @@ body{font-size:calc(15px*var(--app-font-scale))}
     <button data-tab="log"><span class="ic">📋</span><span data-i18n="navLog">기록</span></button>
     <button data-tab="trend"><span class="ic">📈</span><span data-i18n="navTrend">추이</span></button>
     <button data-tab="curve"><span class="ic">🌊</span><span data-i18n="navCurve">곡선</span></button>
+    <button data-tab="analysis" id="navAnalysisBtn" style="display:none"><span class="ic">🔬</span><span data-i18n="navAnalysis">분석</span></button>
     <button data-tab="sim"><span class="ic">🧪</span><span data-i18n="navSim">시뮬</span></button>
     <button data-tab="report"><span class="ic">🩺</span><span data-i18n="navReport">보고서</span></button>
     <button data-tab="set"><span class="ic">⚙️</span><span data-i18n="navSet">설정</span></button>
@@ -597,6 +634,9 @@ body{font-size:calc(15px*var(--app-font-scale))}
 <script src="phs-engine.js"></script>
 <script src="phs-report.js"></script>
 <script src="simulation-drugmodel.js"></script>
+<script src="analysis-clinical.js"></script>
+<script src="analysis-threshold.js"></script>
+<script src="analysis-coverage.js"></script>
 <script>
 "use strict";
 /* ---------- i18n ---------- */
@@ -629,7 +669,12 @@ const I18N = {
     guideText:"<b>약효일지는 증상과 약효 패턴을 기록·관찰하는 도구입니다.</b> 의학적 진단이나 처방을 대체하지 않습니다. 약물 용량·복용 간격 조정은 반드시 주치의와 상의하세요. 모든 기록은 이 기기 안에만 저장되며, 다른 곳으로 전송되지 않습니다.",
     resetAll:"모든 기록 삭제",
     lang:"언어", langDesc:"한국어 / English",
-    navToday:"오늘", navLog:"기록", navTrend:"추이", navCurve:"곡선", navSim:"시뮬", navReport:"보고서", navSet:"설정",
+    navToday:"오늘", navLog:"기록", navTrend:"추이", navCurve:"곡선", navAnalysis:"분석", navSim:"시뮬", navReport:"보고서", navSet:"설정",
+    analysisTitle:"기록 분석 · 재현성 확인",
+    anWindowTitle:"치료 구간 추정 (하한·상한)",
+    anWindowDisclaimer:"이 구간은 회원님이 실제로 기록한 OFF 시각·이상운동증 시각을 근거로 추정한 값이며, 절대 기준이 아닙니다. 표본이 부족하면 추정하지 않습니다.",
+    anCoverageTitle:"치료 구간 안에 머문 시간",
+    anCoverageDisclaimer:"이 계산은 추정된 치료 구간과 약효 추정곡선을 비교한 것으로, 처방을 권고하지 않습니다. 약물 조정은 담당 의료진과 상의하세요.",
     simPlanTitle:"현재 복약안 (선택한 날짜의 실제 기록)",
     simVirtualTitle:"가상 변경안",
     simAddDose:"+ 복용 추가",
@@ -657,7 +702,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음 (INSUF)",
-    versionLabel:"파킨슨 약효 기록 · 2.13.4",
+    versionLabel:"파킨슨 약효 기록 · 2.13.5",
     privacyPolicyLink:"개인정보처리방침 보기",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
@@ -726,7 +771,12 @@ const I18N = {
     guideText:"<b>Med Log is a tool for recording and observing symptom and medication-response patterns.</b> It does not replace medical diagnosis or prescription. Always consult your doctor before adjusting dosage or timing. All records are stored only on this device and are never transmitted anywhere.",
     resetAll:"Delete all records",
     lang:"Language", langDesc:"한국어 / English",
-    navToday:"Today", navLog:"Log", navTrend:"Trend", navCurve:"Curve", navSim:"Sim", navReport:"Report", navSet:"Settings",
+    navToday:"Today", navLog:"Log", navTrend:"Trend", navCurve:"Curve", navAnalysis:"Analysis", navSim:"Sim", navReport:"Report", navSet:"Settings",
+    analysisTitle:"Record Analysis · Reproducibility",
+    anWindowTitle:"Estimated therapeutic window (lower/upper bound)",
+    anWindowDisclaimer:"This window is estimated from your own recorded OFF times and dyskinesia times — it is not an absolute standard. It is not estimated when there isn't enough data.",
+    anCoverageTitle:"Time within the therapeutic window",
+    anCoverageDisclaimer:"This is a comparison of your estimated window against the effect-estimate curve. It does not recommend a prescription. Discuss medication changes with your clinician.",
     simPlanTitle:"Current plan (actual record for selected date)",
     simVirtualTitle:"Virtual (what-if) plan",
     simAddDose:"+ Add dose",
@@ -754,7 +804,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests (INSUF)",
-    versionLabel:"Parkinson's Medication Diary · 2.13.4",
+    versionLabel:"Parkinson's Medication Diary · 2.13.5",
     privacyPolicyLink:"View Privacy Policy",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
@@ -2683,6 +2733,278 @@ function medsForSimulationDay(dayKey){
   const carry=carryoverDosesFor(dayKey);
   return {today, carry, all:carry.concat(today)};
 }
+
+/* ========== 분석탭(Phase0 재현성 · Phase2 치료구간 · Phase3 과부족분석) — 시험판(easteregg/v200p0) 이식, 숨김 기능 ========== */
+function anCollectDoses(dayKeys){
+  const days=byDay();
+  const doses=[], byKeyOutputs={}, byKeyEvents={};
+  dayKeys.forEach(k=>{
+    const evs=days[k]||[];
+    byKeyOutputs[k]=evs.filter(e=>e.type==="state"&&e.output!=null)
+      .map(e=>({timeMin:new Date(e.ts).getHours()*60+new Date(e.ts).getMinutes(), val:e.output, ts:e.ts}))
+      .sort((a,b)=>a.timeMin-b.timeMin);
+    byKeyEvents[k]=evs.filter(e=>e.type==="life"&&e.kind==="meal").map(e=>{
+      const timeMin=new Date(e.ts).getHours()*60+new Date(e.ts).getMinutes();
+      const isProtein = e.mealType && /육류|고기|단백/.test(e.mealType);
+      return {kind: isProtein? "protein":"meal", timeMin};
+    });
+    evs.filter(e=>e.type==="med").forEach(e=>{
+      doses.push({dayKey:k, name:e.drug, dose:(e.dose==null||e.dose==="")?null:+e.dose,
+        timeMin:new Date(e.ts).getHours()*60+new Date(e.ts).getMinutes(), ts:e.ts});
+    });
+  });
+  return {doses, byKeyOutputs, byKeyEvents};
+}
+function anGroupRole(name){
+  const model = (typeof SIMDRUG!=="undefined" && SIMDRUG.classify)? SIMDRUG.classify(name) : null;
+  return model? model.role : null;
+}
+function anAnalyze(periodDays, groupId){
+  const period=SIMCLIN.calendarPeriod(Object.keys(byDay()), periodDays);
+  const {doses, byKeyOutputs, byKeyEvents}=anCollectDoses(period.keys);
+  const groups=SIMCLIN.groupDoses(doses);
+  if(!groups.length) return {groups:[], group:null, period};
+  const group=groups.find(g=>g.id===groupId)||groups[0];
+  const role=anGroupRole(group.name);
+  const unfit = role==="background" || role==="adjunct";
+  if(unfit) return {groups, group, period, role, unfit, episodes:[], repro:null, baseline:null};
+  const episodes=group.items.map(item=>{
+    const outs=byKeyOutputs[item.dayKey]||[];
+    const sameDay=doses.filter(d=>d.dayKey===item.dayKey && d.timeMin>item.timeMin).sort((a,b)=>a.timeMin-b.timeMin);
+    const next=sameDay.length? sameDay[0].timeMin : null;
+    return SIMCLIN.analyzeEpisode(item, outs, null, next, byKeyEvents[item.dayKey]||[]);
+  });
+  const repro=SIMCLIN.reproducibility(episodes);
+  const baseline=SIMCLIN.personalBaseline(episodes);
+  const classified=episodes.map(e=>SIMCLIN.classifyEpisode(e, baseline));
+  const counts={};
+  classified.forEach(c=>{ counts[c.classification]=(counts[c.classification]||0)+1; });
+  const topProblem=["delayed_on","incomplete_on","on_failure"].filter(k=>counts[k]>0).sort((a,b)=>counts[b]-counts[a])[0]||null;
+  const context = topProblem? SIMCLIN.contextComparison(classified, topProblem) : null;
+  return {groups, group, period, role, unfit:false, episodes:classified, repro, baseline, topProblem, context};
+}
+function renderAnalysis(){
+  const psel=document.getElementById("anPeriod");
+  if(!psel._bound){ psel._bound=true; psel.onchange=()=>{ _anGroupId=null; renderAnalysis(); }; }
+  const periodDays=+psel.value||14;
+  const r=anAnalyze(periodDays, _anGroupId);
+  const gsel=document.getElementById("anGroup");
+
+  if(!r.groups.length){
+    gsel.innerHTML=`<option>${L("복약 기록 없음","No medication records")}</option>`;
+    document.getElementById("anSummary").innerHTML=`<div class="hint">${L(`최근 ${periodDays}일에 복약 기록이 없습니다.`,`No medication records in the last ${periodDays} days.`)}</div>`;
+    document.getElementById("anTable").innerHTML="";
+    document.getElementById("anWindowCard").style.display="none";
+    document.getElementById("anCoverageCard").style.display="none";
+    return;
+  }
+  const ROLE_TAG={background:L(" (배경형)"," (background)"), adjunct:L(" (보조형)"," (adjunct)")};
+  gsel.innerHTML=r.groups.map(g=>{
+    const role=anGroupRole(g.name);
+    const tag=ROLE_TAG[role]||"";
+    return `<option value="${escapeHtml(g.id)}" ${g.id===r.group.id?"selected":""}>${escapeHtml(g.timeLabel)} ${escapeHtml(g.name)}${tag} · ${g.occurrences}${L("회","x")}</option>`;
+  }).join("");
+  gsel.onchange=()=>{ _anGroupId=gsel.value; renderAnalysis(); };
+
+  if(r.unfit){
+    const ROLE_LABEL={background:L("배경효과형 (도파민 작용제 등)","background-effect type (dopamine agonists, etc.)"),
+      adjunct:L("보조형 (곡선을 만들지 않는 약)","adjunct type (does not form a curve)")};
+    document.getElementById("anSummary").innerHTML=`
+      <div style="font-size:12.5px; margin-bottom:8px">
+        ${L(`분석 대상: ${r.group.timeLabel} ${r.group.name} ${doseLabel(r.group.dose)}`,`Target: ${r.group.timeLabel} ${r.group.name} ${doseLabel(r.group.dose)}`)}
+      </div>
+      <div class="hint" style="padding:10px 12px; background:var(--surface-2); border-radius:10px">
+        ${L(`이 약은 ${ROLE_LABEL[r.role]}이라 뚜렷한 봉우리를 만들지 않습니다. 이 화면의 "ON 도달" 분석은 봉우리가 생기는 약(레보도파 계열)에 맞는 방식이라, 이 약에는 "미도달"이 많이 나오는 것이 오히려 정상입니다.`,
+             `This medication is ${ROLE_LABEL[r.role]} and does not form a sharp peak. The "ON latency" analysis here is designed for medications that do form a peak (levodopa-type), so frequent "not reached" results are expected and normal for this medication.`)}
+      </div>`;
+    document.getElementById("anTable").innerHTML="";
+    renderTherapeuticWindow(r.period);
+    return;
+  }
+
+  const s=r.repro;
+  const LV={good:L("양호","Good"), moderate:L("보통","Moderate"), poor:L("낮음","Low"), insufficient:L("판정 불가","Not enough data")};
+  const LVCOLOR={good:"#1FA971", moderate:"#E0A030", poor:"#B3261E", insufficient:"var(--ink-2)"};
+  const b=r.baseline;
+  const peaks=r.episodes.filter(e=>e.peakOutput!=null).map(e=>e.peakOutput);
+  const durs=r.episodes.filter(e=>e.dwellAboveOnMin!=null && e.dwellAboveOnMin>0).map(e=>e.dwellAboveOnMin);
+  const rangeTxt=(arr)=>arr.length? `${Math.min(...arr)}~${Math.max(...arr)}`:"–";
+
+  document.getElementById("anSummary").innerHTML=`
+    <div style="font-size:12.5px; margin-bottom:8px">
+      ${L(`분석기간: ${r.period.startKey} ~ ${r.period.endKey} · 기록 존재일 ${r.period.recordedDays}일`,
+          `Period: ${r.period.startKey} – ${r.period.endKey} · ${r.period.recordedDays} days with records`)}<br>
+      ${L("분석 대상","Target")}: <b>${escapeHtml(r.group.timeLabel)} ${escapeHtml(r.group.name)} ${doseLabel(r.group.dose)}</b>
+      · ${L("분석 가능","analyzable")} <b>${s.n}${L("회","x")}</b>
+      ${r.group.mixedDose? `<div class="hint" style="margin-top:2px">${L(
+        `이 시간대 기록 중 용량 표기가 달랐던 경우가 있어요 (${r.group.doseVariants.map(v=>`${doseLabel(v.dose)} ${v.count}${L("회","x")}`).join(", ")}). 같은 복용으로 보고 함께 분석했습니다.`,
+        `Some entries at this time had different recorded doses (${r.group.doseVariants.map(v=>`${doseLabel(v.dose)} ${v.count}x`).join(", ")}). Treated as the same dose event.`
+      )}</div>`:""}
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px">
+      <div style="background:var(--surface-2); border-radius:10px; padding:10px 12px">
+        <div style="font-size:11.5px; color:var(--ink-2)">${L("ON 도달","ON latency")}</div>
+        <div style="font-weight:800; font-size:17px">${s.medianOnLatencyMin!=null? s.medianOnLatencyMin+L("분","min") : "–"}</div>
+        <div style="font-size:11px; color:var(--ink-2)">${s.range? L(`범위 ${s.range[0]}~${s.range[1]}분`,`range ${s.range[0]}–${s.range[1]} min`) : ""}</div>
+      </div>
+      <div style="background:var(--surface-2); border-radius:10px; padding:10px 12px">
+        <div style="font-size:11.5px; color:var(--ink-2)">${L("최고 출력","Peak output")}</div>
+        <div style="font-weight:800; font-size:17px">${b.medianPeakOutput!=null? Math.round(b.medianPeakOutput):"–"}</div>
+        <div style="font-size:11px; color:var(--ink-2)">${peaks.length? L(`범위 ${rangeTxt(peaks)}`,`range ${rangeTxt(peaks)}`):""}</div>
+      </div>
+      <div style="background:var(--surface-2); border-radius:10px; padding:10px 12px">
+        <div style="font-size:11.5px; color:var(--ink-2)">${L("유지시간","Dwell time")}</div>
+        <div style="font-weight:800; font-size:17px">${durs.length? Math.round(median(durs))+L("분","min") : "–"}</div>
+        <div style="font-size:11px; color:var(--ink-2)">${durs.length? L(`범위 ${rangeTxt(durs)}분`,`range ${rangeTxt(durs)} min`):""}</div>
+      </div>
+      <div style="background:var(--surface-2); border-radius:10px; padding:10px 12px; border-left:3px solid ${LVCOLOR[s.level]}">
+        <div style="font-size:11.5px; color:var(--ink-2)">${L("재현성","Reproducibility")}</div>
+        <div style="font-weight:800; font-size:17px; color:${LVCOLOR[s.level]}">${LV[s.level]}</div>
+        ${s.reasons.length? `<div style="font-size:11px; color:var(--ink-2)">${escapeHtml(s.reasons.join(" · "))}</div>`:""}
+      </div>
+    </div>
+    ${(s.level==="poor"||s.level==="insufficient")? `<div class="hint" style="margin-top:8px; color:var(--danger)">${L("이 복용은 날마다 반응이 달라 아직 안정된 패턴으로 보기 어렵습니다. 기록이 더 쌓이면 다시 확인해 주세요.","This medication's response varies day to day — not yet a stable pattern. Check again once more records accumulate.")}</div>`:""}
+  `;
+
+  function median(a){ const s2=a.slice().sort((x,y)=>x-y); const m=Math.floor(s2.length/2); return s2.length%2? s2[m] : (s2[m-1]+s2[m])/2; }
+
+  const PROBLEM_LABEL={delayed_on:L("지연","Delayed"), incomplete_on:L("미도달","Incomplete"), on_failure:L("무반응","No response")};
+  document.getElementById("anContext").innerHTML = r.context? `
+    <div style="background:var(--surface-2); border-radius:10px; padding:10px 12px; margin-top:10px">
+      <div style="font-weight:800; font-size:13px; margin-bottom:4px">${L("동반 변수 비교","Associated factors")} — ${PROBLEM_LABEL[r.topProblem]||r.topProblem}</div>
+      ${r.context.items.map(it=>`<div style="font-size:12.5px; margin-top:3px">· ${escapeHtml(it.label)} — ${escapeHtml(it.note)}</div>`).join("")}
+      <div class="hint" style="margin-top:4px">${escapeHtml(r.context.caution)}</div>
+    </div>` : "";
+
+  const LABELS={delayed_on:L("지연","Delayed"), incomplete_on:L("미도달","Incomplete"), on_failure:L("무반응","No response"),
+    adequate:L("충분","Adequate"), insufficient_data:L("판정 불가","N/A")};
+  const rows=r.episodes.map(e=>`<tr>
+    <td style="padding:4px 6px">${escapeHtml(e.dayKey.slice(5))}</td>
+    <td style="padding:4px 6px; text-align:right">${e.preDoseOutput==null?"—":e.preDoseOutput}</td>
+    <td style="padding:4px 6px; text-align:right">${e.onLatencyMin==null? L("미도달","N/A") : e.onLatencyMin+L("분","min")}</td>
+    <td style="padding:4px 6px; text-align:right">${e.peakOutput==null?"—":e.peakOutput}</td>
+    <td style="padding:4px 6px">${LABELS[e.classification]||e.classification}</td></tr>`).join("");
+  document.getElementById("anTable").innerHTML = r.episodes.length? `<table style="width:100%; font-size:12px; border-collapse:collapse">
+    <tr style="color:var(--ink-2)"><td style="padding:4px 6px">${L("날짜","Date")}</td>
+      <td style="padding:4px 6px; text-align:right">${L("직전 출력","Pre-dose")}</td>
+      <td style="padding:4px 6px; text-align:right">${L("ON 도달","ON latency")}</td>
+      <td style="padding:4px 6px; text-align:right">${L("최고 출력","Peak")}</td>
+      <td style="padding:4px 6px">${L("판정","Result")}</td></tr>
+    ${rows}</table>
+    <div class="hint" style="margin-top:4px">${L("이 분류는 앱 내부 패턴 요약이며 확정 진단이 아닙니다.","This classification is an internal pattern summary, not a diagnosis.")}</div>` : "";
+
+  renderTherapeuticWindow(r.period);
+}
+function anGatherThresholdSamples(period){
+  const days=byDay();
+  const offSamples=[], dyskSamples=[];
+  period.keys.forEach(k=>{
+    const evs=days[k]||[];
+    const outs=evs.filter(e=>e.type==="state"&&e.output!=null)
+      .map(e=>({timeMin:new Date(e.ts).getHours()*60+new Date(e.ts).getMinutes(), val:e.output}))
+      .sort((a,b)=>a.timeMin-b.timeMin);
+    const offTag=evs.find(e=>e.type==="symptom" && e.key==="off" && e.phase==="start");
+    const offPt=outs.find(o=>o.val<=20 && o.timeMin>=360);
+    const offTimeMin = offTag? (new Date(offTag.ts).getHours()*60+new Date(offTag.ts).getMinutes())
+                              : (offPt? offPt.timeMin : null);
+    const dyskEvs=evs.filter(e=>e.type==="symptom" && e.key==="dysk" && e.phase==="start");
+    const {today, carry}=medsForSimulationDay(k);
+    const doses=carry.concat(today);
+    if(!doses.length) return;
+    const composite=SIMDRUG.compositeCurve(doses, 0, 1440, 10);
+    if(offTimeMin!=null) offSamples.push({dayKey:k, offTimeMin, rawPoints:composite.rawPoints});
+    dyskEvs.forEach(e=>{
+      const t=new Date(e.ts).getHours()*60+new Date(e.ts).getMinutes();
+      dyskSamples.push({dayKey:k, dyskOnsetTimeMin:t, rawPoints:composite.rawPoints});
+    });
+  });
+  return {offSamples, dyskSamples};
+}
+function renderTherapeuticWindow(period){
+  const card=document.getElementById("anWindowCard");
+  if(typeof SIMTHR==="undefined"){ card.style.display="none"; document.getElementById("anCoverageCard").style.display="none"; return; }
+  const {offSamples, dyskSamples}=anGatherThresholdSamples(period);
+  const lower=SIMTHR.estimateLowerBound(offSamples);
+  const upper=SIMTHR.estimateUpperBound(dyskSamples);
+  const win=SIMTHR.therapeuticWindow(lower, upper);
+  card.style.display="block";
+
+  const CONF_LABEL={good:L("양호","Good"), moderate:L("보통","Moderate"), low:L("낮음","Low"), insufficient:L("판정 불가","N/A")};
+  const CONF_COLOR={good:"#1FA971", moderate:"#E0A030", low:"#B3261E", insufficient:"var(--ink-2)"};
+  const boundCard=(title, b)=>`<div style="background:var(--surface-2); border-radius:10px; padding:10px 12px; border-left:3px solid ${CONF_COLOR[b.confidence]}">
+    <div style="font-size:11.5px; color:var(--ink-2)">${title}</div>
+    <div style="font-weight:800; font-size:17px">${b.value!=null? (Math.round(b.value*100)/100) : "–"}</div>
+    <div style="font-size:11px; color:var(--ink-2)">${L("표본","n")} ${b.n}${L("회","x")} · ${CONF_LABEL[b.confidence]}</div>
+    ${b.reasons.length? `<div style="font-size:11px; color:var(--ink-2); margin-top:2px">${escapeHtml(b.reasons.join(" · "))}</div>`:""}
+  </div>`;
+
+  document.getElementById("anWindowBody").innerHTML=`
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+      ${boundCard(L("상한 (이상운동증 역치)","Upper bound (dyskinesia threshold)"), upper)}
+      ${boundCard(L("하한 (OFF 역치)","Lower bound (OFF threshold)"), lower)}
+    </div>
+    ${win.valid? `<div class="hint" style="margin-top:8px; color:var(--accent)">${L(`치료 구간이 추정되었습니다 (폭 ${Math.round(win.width*100)/100}).`,`Therapeutic window estimated (width ${Math.round(win.width*100)/100}).`)}</div>`
+      : `<div class="hint" style="margin-top:8px; color:var(--danger)">${escapeHtml(win.reasons.join(" "))}</div>`}
+  `;
+  renderCoverage(period, lower, upper);
+}
+function anGatherCoverageForPeriod(period, lower, upper){
+  const window={lower: lower&&lower.value!=null? lower.value : null, upper: upper&&upper.value!=null? upper.value : null};
+  const dayResults=[];
+  period.keys.forEach(k=>{
+    const {today, carry}=medsForSimulationDay(k);
+    const doses=carry.concat(today);
+    if(!doses.length) return;
+    const composite=SIMDRUG.compositeCurve(doses, 0, 1440, 10);
+    const cov=SIMCOV.analyze(composite.rawPoints, window, {step:10});
+    dayResults.push(Object.assign({dayKey:k}, cov));
+  });
+  return SIMCOV.aggregate(dayResults);
+}
+function fmtDurMin(min){
+  min=Math.round(min);
+  const h=Math.floor(min/60), m=min%60;
+  return h? `${h}${L("시간","h")} ${m}${L("분","min")}` : `${m}${L("분","min")}`;
+}
+function renderCoverage(period, lower, upper){
+  const card=document.getElementById("anCoverageCard");
+  if(typeof SIMCOV==="undefined"){ card.style.display="none"; return; }
+  const agg=anGatherCoverageForPeriod(period, lower, upper);
+  if(!agg.valid){ card.style.display="none"; return; }
+  card.style.display="block";
+
+  const totalMin=agg.inWindowMin+agg.underMin+agg.overMin;
+  const pct=(m)=> totalMin? Math.round(m/totalMin*100) : 0;
+  const segLine=(seg, label, unitLabel)=> seg
+    ? `<div style="font-size:12px; margin-top:2px">${L("가장 큰 차이","Largest gap")}: ${escapeHtml(seg.dayKey)} ${simFmtTime(seg.startMin)}~${simFmtTime(seg.endMin)} · ${label} ${Math.round(seg.maxDeficitLed!=null? seg.maxDeficitLed*100 : seg.maxExcessLed*100)/100}${unitLabel}</div>`
+    : "";
+
+  document.getElementById("anCoverageBody").innerHTML=`
+    <div style="font-size:12.5px; margin-bottom:8px">${L(`분석기간: ${period.startKey} ~ ${period.endKey} · 계산된 날 ${agg.dayCount}일`,`Period: ${period.startKey} – ${period.endKey} · ${agg.dayCount} days calculated`)}</div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:8px">
+      <div style="background:var(--surface-2); border-radius:10px; padding:10px 12px; border-left:3px solid #1FA971">
+        <div style="font-size:11.5px; color:var(--ink-2)">${L("구간 안에 머문 시간","Time within window")}</div>
+        <div style="font-weight:800; font-size:16px">${fmtDurMin(agg.inWindowMin)}</div>
+        <div style="font-size:11px; color:var(--ink-2)">${pct(agg.inWindowMin)}%</div>
+      </div>
+      <div style="background:var(--surface-2); border-radius:10px; padding:10px 12px; border-left:3px solid #C98A4B">
+        <div style="font-size:11.5px; color:var(--ink-2)">${L("낮은 구간","Below window")}</div>
+        <div style="font-weight:800; font-size:16px">${fmtDurMin(agg.underMin)}</div>
+        <div style="font-size:11px; color:var(--ink-2)">${pct(agg.underMin)}%</div>
+        ${segLine(agg.worstUnder, L("부족","deficit"), "")}
+      </div>
+      ${agg.hasUpper? `<div style="background:var(--surface-2); border-radius:10px; padding:10px 12px; border-left:3px solid #E8663C">
+        <div style="font-size:11.5px; color:var(--ink-2)">${L("높은 구간","Above window")}</div>
+        <div style="font-weight:800; font-size:16px">${fmtDurMin(agg.overMin)}</div>
+        <div style="font-size:11px; color:var(--ink-2)">${pct(agg.overMin)}%</div>
+        ${segLine(agg.worstOver, L("초과","excess"), "")}
+      </div>` : `<div style="background:var(--surface-2); border-radius:10px; padding:10px 12px; color:var(--ink-2); font-size:12px; display:flex; align-items:center">
+        ${L("이상운동증 기록이 없어 높은 구간은 계산하지 않았습니다","No dyskinesia records — the above-window range was not calculated")}
+      </div>`}
+    </div>
+  `;
+}
+let _anGroupId=null;
 function outputsForDay(dayKey){
   const days=byDay();
   return (days[dayKey]||[]).filter(e=>e.type==="state" && e.output!=null).map(e=>({time:hm(e.ts), val:e.output}));
@@ -3921,7 +4243,7 @@ function afterPastSave(ts, msg){
 function switchTab(name){
   document.querySelectorAll("section.tab").forEach(s=>s.classList.toggle("active",s.id==="tab-"+name));
   document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.tab===name));
-  if(name==="log") renderLog(); if(name==="trend") renderTrend(); if(name==="curve") renderCurve(); if(name==="sim") renderSim(); if(name==="report") renderReport(); if(name==="set") renderMeds();
+  if(name==="log") renderLog(); if(name==="trend") renderTrend(); if(name==="curve") renderCurve(); if(name==="analysis") renderAnalysis(); if(name==="sim") renderSim(); if(name==="report") renderReport(); if(name==="set") renderMeds();
   window.scrollTo(0,0);
 }
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
@@ -4178,6 +4500,30 @@ document.getElementById("importFile").onchange=function(){
 document.getElementById("resetBtn").onclick=()=>{
   if(confirm(L("모든 기록과 약 목록이 삭제됩니다. 계속할까요?","All records and medications will be deleted. Continue?"))){ localStorage.removeItem(KEY); db=load(); applyTheme(); applyI18nStatic(); renderLangToggle(); renderAll(); switchTab("today"); toast(L("초기화했어요","Reset complete")); }
 };
+
+/* 숨김 기능(분석탭) 잠금해제 — 코드 맞으면 nav 버튼 노출, localStorage에 저장해 다음부터 자동 유지 */
+const HIDDEN_UNLOCK_KEY="yakhyo_hidden_unlock";
+function applyHiddenUnlock(){
+  if(localStorage.getItem(HIDDEN_UNLOCK_KEY)==="1"){
+    document.getElementById("navAnalysisBtn").style.display="";
+  }
+}
+applyHiddenUnlock();
+(function(){
+  const inp=document.getElementById("hiddenCodeInput");
+  if(!inp) return;
+  inp.addEventListener("keydown", e=>{
+    if(e.key!=="Enter") return;
+    if(inp.value==="y7992734@@"){
+      localStorage.setItem(HIDDEN_UNLOCK_KEY,"1");
+      applyHiddenUnlock();
+      inp.value=""; inp.blur();
+      toast(L("열렸어요","Unlocked"));
+    } else {
+      inp.value="";
+    }
+  });
+})();
 
 /* ---------- boot ---------- */
 function renderAll(){ renderToday();
