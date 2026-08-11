@@ -1,4 +1,4 @@
-const CACHE = "yakhyo-v61-pdfsave";
+const CACHE = "yakhyo-v62-buttoncleanup";
 const APP_SHELL = [
   "./",
   "./index.html",
