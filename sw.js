@@ -1,4 +1,4 @@
-const CACHE = "yakhyo-v2131-buttoncleanup";
+const CACHE = "yakhyo-v2132-importfix";
 const APP_SHELL = [
   "./",
   "./index.html",
