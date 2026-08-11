@@ -657,7 +657,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음 (INSUF)",
-    versionLabel:"파킨슨 약효 기록 · 2.13.3",
+    versionLabel:"파킨슨 약효 기록 · 2.13.4",
     privacyPolicyLink:"개인정보처리방침 보기",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
@@ -754,7 +754,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests (INSUF)",
-    versionLabel:"Parkinson's Medication Diary · 2.13.3",
+    versionLabel:"Parkinson's Medication Diary · 2.13.4",
     privacyPolicyLink:"View Privacy Policy",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
@@ -2557,7 +2557,7 @@ function svgCurve(dayKey){
   const linePts = pts.map(p=>`${x(p.t)},${y(p.val)}`).join(" ");
   const areaPts = `${padL},${y(0)} ${linePts} ${x(t1)},${y(0)}`;
 
-  const outputPts = overlay.filter(o=>o.output!=null).map(o=>`${x(o.t)},${y(o.output*10)}`);
+  const outputPts = overlay.filter(o=>o.output!=null).map(o=>`${x(o.t)},${y(o.output)}`); /* v2.13.4: output은 0~100 — 옛 0~10 스케일 잔재(×10)로 좌표가 화면 밖으로 나가 실측선이 안 보이던 버그 수정 */
   const gaitPts = overlay.filter(o=>o.gait!=null).map(o=>`${x(o.t)},${y(o.gait*10)}`);
 
   let medMarks="";
