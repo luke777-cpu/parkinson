@@ -1142,40 +1142,6 @@ const QUICK_ACTIONS = [
    peakMin: 투여 후 피크까지 걸리는 시간(분)
    durMin: 전체 지속시간(분, 반감기 기반 근사)
    amp: 상대적 기여도(1.0 = 표준 1회 용량 기준) */
-const MED_KINETICS = {
-  "퍼킨":               {type:"fast",  peakMin:35,  durMin:150, amp:1.0},
-  "시네메트":            {type:"fast",  peakMin:40,  durMin:150, amp:1.0},
-  "마도파":              {type:"fast",  peakMin:40,  durMin:150, amp:1.0},
-  "스타레보":            {type:"fast",  peakMin:45,  durMin:200, amp:1.1},
-  "마도파 HBS":          {type:"slow",  peakMin:90,  durMin:300, amp:0.9},
-  "시네메트 CR":         {type:"slow",  peakMin:100, durMin:300, amp:0.9},
-  "온젠티스(오피카폰)":   {type:"extend",peakMin:0,   durMin:0,   amp:0.25},
-  "컴탄":                {type:"extend",peakMin:0,   durMin:0,   amp:0.25},
-  "아질렉트":            {type:"extend",peakMin:0,   durMin:0,   amp:0.15},
-  "미라펙스":            {type:"flat",  peakMin:180, durMin:480, amp:0.5},
-  "리큅":                {type:"flat",  peakMin:180, durMin:480, amp:0.5},
-  "아만타딘":            {type:"flat",  peakMin:120, durMin:360, amp:0.3},
-};
-function kineticFor(name){
-  if(MED_KINETICS[name]) return MED_KINETICS[name];
-  const n=name||"";
-  if(n.includes("HBS")||n.includes("CR")||n.includes("서방")) return {type:"slow",peakMin:90,durMin:300,amp:0.9};
-  if(n.includes("온젠티스")||n.includes("오피카폰")||n.includes("엔타카폰")||n.includes("컴탄")||n.includes("콤탄")) return {type:"extend",peakMin:0,durMin:0,amp:0.25};
-  if(n.includes("아질렉트")||n.includes("셀레길린")) return {type:"extend",peakMin:0,durMin:0,amp:0.15};
-  if(n.includes("미라펙스")||n.includes("리큅")||n.includes("프라미펙솔")||n.includes("로피니롤")) return {type:"flat",peakMin:180,durMin:480,amp:0.5};
-  if(n.includes("아만타딘")) return {type:"flat",peakMin:120,durMin:360,amp:0.3};
-  return {type:"fast",peakMin:40,durMin:150,amp:1.0};
-}
-function doseCurve(prof, t){
-  if(t<0) return 0;
-  const {peakMin,durMin,amp,type}=prof;
-  if(type==="extend") return 0;
-  const k = peakMin<=0? 1 : t/peakMin;
-  const rise = 1-Math.exp(-3*k);
-  const fallTau = Math.max(durMin-peakMin, 30);
-  const fall = Math.exp(-Math.max(0,t-peakMin)/fallTau);
-  return amp*rise*fall;
-}
 const KEY = "yakhyo_log_v1";
 
 /* ---------- LEDD 환산계수 (parkinsonsmeasurement.org LEDD 계산기 참고) ----------
@@ -3074,32 +3040,14 @@ function computeCurve(dayEvents, dayKey){
   const [Y,Mo,Da] = dayKey.split("-").map(Number);
   const dayStart = new Date(Y,Mo-1,Da,5,0,0).getTime();
   const dayEnd   = new Date(Y,Mo-1,Da,26,0,0).getTime();
-  const step = 10*60*1000;
+  const midnight = new Date(Y,Mo-1,Da,0,0,0).getTime();
   const meds = dayEvents.filter(e=>e.type==="med");
   const states = outputStates(dayEvents); /* v0.9.17: legacy 제외 */
-  function extendMultiplier(t){
-    let m=1;
-    meds.forEach(me=>{
-      const prof=kineticFor(me.drug);
-      if(prof.type==="extend" && t>=me.ts){
-        const hrs=(t-me.ts)/3600000;
-        if(hrs<5) m += prof.amp*(1-hrs/5);
-      }
-    });
-    return m;
-  }
-  const pts=[];
-  for(let t=dayStart; t<=dayEnd; t+=step){
-    let base=0;
-    meds.forEach(me=>{
-      const prof=kineticFor(me.drug);
-      if(prof.type==="extend") return;
-      const minsSince=(t-me.ts)/60000;
-      base += doseCurve(prof, minsSince) * (me.dose? Math.min(2,me.dose/100) : 1);
-    });
-    const val = Math.max(0, Math.min(100, base*extendMultiplier(t)*45));
-    pts.push({t,val});
-  }
+  /* v2.13.3: 라이브와 동일하게 SIMDRUG.compositeCurve로 통일 (일관성) */
+  const {all:doses} = medsForSimulationDay(dayKey);
+  const t0Min = (dayStart-midnight)/60000, t1Min = (dayEnd-midnight)/60000;
+  const composite = SIMDRUG.compositeCurve(doses, t0Min, t1Min, 10);
+  const pts = composite.points.map(p=>({ t: midnight + p.t*60000, val: p.val }));
   function nearestState(t){
     let best=null, bestDiff=Infinity;
     states.forEach(s=>{ const d=Math.abs(s.ts-t); if(s.ts<=t+15*60000 && d<bestDiff){ bestDiff=d; best=s; } });
