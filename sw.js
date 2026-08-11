@@ -1,9 +1,12 @@
-const CACHE = "yakhyo-v2134-outputscale";
+const CACHE = "yakhyo-v2135-hiddenanalysis";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./shared-profile.js",
   "./simulation-drugmodel.js",
+  "./analysis-clinical.js",
+  "./analysis-threshold.js",
+  "./analysis-coverage.js",
   "./drug-dictionary.json",
   "./phs-engine.js",
   "./phs-report.js",
