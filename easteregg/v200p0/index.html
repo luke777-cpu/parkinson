@@ -732,7 +732,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음",
-    versionLabel:"약효일지 · 비공개 시험판 2.13.3-periodicreconcile",
+    versionLabel:"약효일지 · 비공개 시험판 2.13.4-tempnotediscard",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -803,7 +803,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests",
-    versionLabel:"Med Log · Test build 2.13.3-periodicreconcile",
+    versionLabel:"Med Log · Test build 2.13.4-tempnotediscard",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -1439,10 +1439,24 @@ function openTempNoteReview(){
         <div style="min-width:${spansMultipleDays?"96":"70"}px; font-weight:800">${timeLabel(n)}</div>
         <div style="flex:1; min-width:100px">${DIRLABEL[n.dir]||""}${(n.tags&&n.tags.length)?` · ${n.tags.map(tagLabel).join(", ")}`:""}${n.memo?` · ${escapeHtml(n.memo)}`:""}</div>
         <input type="number" class="tn-score" min="0" max="100" placeholder="${L("점수","Score")}" style="width:76px">
+        <button type="button" class="edit tn-discard" data-tn-del="${n.id}" title="${L("버리기(점수 안 매기고 삭제)","Discard (delete without scoring)")}">🗑</button>
       </div>`).join("")}
     </div>
     <div class="btn-row" style="margin-top:10px"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="tnSaveAll">${L("전부 저장","Save all")}</button></div>
   `);
+  /* v2.13.6: 리뷰 화면에 점수 입력 외엔 없앨 방법이 없어서, 버리고 싶은 임시기록도
+     "가짜 점수"를 넣어야만 사라지던 문제(형님 신고) — 줄마다 버리기(🗑) 버튼을 추가해
+     점수 없이 바로 delEvent로 삭제되게 한다. 전부 버리면 시트를 닫는다. */
+  document.querySelectorAll("#tnReviewRows [data-tn-del]").forEach(btn=>{
+    btn.onclick=()=>{
+      const id=btn.dataset.tnDel;
+      if(!confirm(L("이 임시 기록을 버릴까요? (점수 없이 삭제)","Discard this note without scoring?"))) return;
+      delEvent(id);
+      const row=btn.closest("[data-tn]"); if(row) row.remove();
+      renderTempNoteGrid();
+      if(!document.querySelectorAll("#tnReviewRows [data-tn]").length) closeSheet();
+    };
+  });
   document.getElementById("tnSaveAll").onclick=()=>{
     const rows=[...document.querySelectorAll("#tnReviewRows [data-tn]")];
     let saved=0;
