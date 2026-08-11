@@ -1110,51 +1110,10 @@ const BOWEL_CONSISTENCY = ["딱딱함","보통","묽음"];
 const BOWEL_EXTRAS = ["힘들었음","잔변감"];
 const BODY_SYMPTOMS = ["이상 없음","어지럼","기립 시 어지럼","소변 급박","빈뇨","땀 증가","침 흘림","메스꺼움","극심한 피로","불안","졸림","통증"];
 const MED_PRESETS = ["마도파","마도파 HBS","시네메트","시네메트 CR","스타레보","퍼킨","온젠티스(오피카폰)","아질렉트","미라펙스","리큅","아만타딘","컴탄"];
-
-
-/* ---------- kinetic profiles for curve tab ----------
-   type: "fast"  = 빠른 상승/짧은 지속 (즉시방출 레보도파류: 퍼킨, 시네메트, 마도파(일반), 스타레보)
-         "slow"  = 완만한 상승/긴 지속 (서방정: HBS, CR)
-         "extend"= 곡선을 옆으로 늘려주는 보조제 (온젠티스/컴탄=COMT억제제, 아질렉트=MAO-B억제제)
-         "flat"  = 완만한 기저 상승 (도파민 효능제, 아만타딘)
-   peakMin: 투여 후 피크까지 걸리는 시간(분)
-   durMin: 전체 지속시간(분, 반감기 기반 근사)
-   amp: 상대적 기여도(1.0 = 표준 1회 용량 기준) */
-const MED_KINETICS = {
-  "퍼킨":               {type:"fast",  peakMin:35,  durMin:150, amp:1.0},
-  "시네메트":            {type:"fast",  peakMin:40,  durMin:150, amp:1.0},
-  "마도파":              {type:"fast",  peakMin:40,  durMin:150, amp:1.0},
-  "스타레보":            {type:"fast",  peakMin:45,  durMin:200, amp:1.1},
-  "마도파 HBS":          {type:"slow",  peakMin:90,  durMin:300, amp:0.9},
-  "시네메트 CR":         {type:"slow",  peakMin:100, durMin:300, amp:0.9},
-  "온젠티스(오피카폰)":   {type:"extend",peakMin:0,   durMin:0,   amp:0.25},
-  "컴탄":                {type:"extend",peakMin:0,   durMin:0,   amp:0.25},
-  "아질렉트":            {type:"extend",peakMin:0,   durMin:0,   amp:0.15},
-  "미라펙스":            {type:"flat",  peakMin:180, durMin:480, amp:0.5},
-  "리큅":                {type:"flat",  peakMin:180, durMin:480, amp:0.5},
-  "아만타딘":            {type:"flat",  peakMin:120, durMin:360, amp:0.3},
-};
-function kineticFor(name){
-  if(MED_KINETICS[name]) return MED_KINETICS[name];
-  const n=name||"";
-  if(n.includes("HBS")||n.includes("CR")||n.includes("서방")) return {type:"slow",peakMin:90,durMin:300,amp:0.9};
-  if(n.includes("온젠티스")||n.includes("오피카폰")||n.includes("엔타카폰")||n.includes("컴탄")||n.includes("콤탄")) return {type:"extend",peakMin:0,durMin:0,amp:0.25};
-  if(n.includes("아질렉트")||n.includes("셀레길린")) return {type:"extend",peakMin:0,durMin:0,amp:0.15};
-  if(n.includes("미라펙스")||n.includes("리큅")||n.includes("프라미펙솔")||n.includes("로피니롤")) return {type:"flat",peakMin:180,durMin:480,amp:0.5};
-  if(n.includes("아만타딘")) return {type:"flat",peakMin:120,durMin:360,amp:0.3};
-  return {type:"fast",peakMin:40,durMin:150,amp:1.0};
-}
-function doseCurve(prof, t){
-  if(t<0) return 0;
-  const {peakMin,durMin,amp,type}=prof;
-  if(type==="extend") return 0;
-  const k = peakMin<=0? 1 : t/peakMin;
-  const rise = 1-Math.exp(-3*k);
-  const fallTau = Math.max(durMin-peakMin, 30);
-  const fall = Math.exp(-Math.max(0,t-peakMin)/fallTau);
-  return amp*rise*fall;
-}
 const KEY = "yakhyo_log_v1";
+
+
+
 
 /* ---------- LEDD 환산계수 (parkinsonsmeasurement.org LEDD 계산기 참고) ----------
    레보도파 속방형=1, 서방형=0.75, 프라미펙솔·라사길린 등 효능제/MAO-B는 "표준 1일 용량당" 환산계수를 그대로 곱함 */
@@ -2544,32 +2503,18 @@ function computeCurve(dayEvents, dayKey){
   const [Y,Mo,Da] = dayKey.split("-").map(Number);
   const dayStart = new Date(Y,Mo-1,Da,5,0,0).getTime();
   const dayEnd   = new Date(Y,Mo-1,Da,26,0,0).getTime();
-  const step = 10*60*1000;
+  const midnight = new Date(Y,Mo-1,Da,0,0,0).getTime();
   const meds = dayEvents.filter(e=>e.type==="med");
   const states = outputStates(dayEvents); /* v0.9.17: legacy 제외 */
-  function extendMultiplier(t){
-    let m=1;
-    meds.forEach(me=>{
-      const prof=kineticFor(me.drug);
-      if(prof.type==="extend" && t>=me.ts){
-        const hrs=(t-me.ts)/3600000;
-        if(hrs<5) m += prof.amp*(1-hrs/5);
-      }
-    });
-    return m;
-  }
-  const pts=[];
-  for(let t=dayStart; t<=dayEnd; t+=step){
-    let base=0;
-    meds.forEach(me=>{
-      const prof=kineticFor(me.drug);
-      if(prof.type==="extend") return;
-      const minsSince=(t-me.ts)/60000;
-      base += doseCurve(prof, minsSince) * (me.dose? Math.min(2,me.dose/100) : 1);
-    });
-    const val = Math.max(0, Math.min(100, base*extendMultiplier(t)*45));
-    pts.push({t,val});
-  }
+  /* v2.15: 곡선 탭도 시뮬 탭과 같은 SIMDRUG.compositeCurve 엔진으로 통일.
+     이전엔 이 파일 안의 단순 MED_KINETICS 표를 따로 썼는데, 아만타딘·MAO-B억제제처럼
+     근거값이 없는 약도 임의로 곡선에 포함시켜서 시뮬 탭과 결과가 어긋났음.
+     SIMDRUG는 그런 약을 곡선 계산에서 제외하고, 전날 COMT억제제·배경형 효능제 이월(carryover)도
+     medsForSimulationDay()가 자동 처리해준다(이 파일의 옛 계산은 이월을 아예 안 다뤘음). */
+  const {all:doses} = medsForSimulationDay(dayKey);
+  const t0Min = (dayStart-midnight)/60000, t1Min = (dayEnd-midnight)/60000;
+  const composite = SIMDRUG.compositeCurve(doses, t0Min, t1Min, 10);
+  const pts = composite.points.map(p=>({ t: midnight + p.t*60000, val: p.val }));
   function nearestState(t){
     let best=null, bestDiff=Infinity;
     states.forEach(s=>{ const d=Math.abs(s.ts-t); if(s.ts<=t+15*60000 && d<bestDiff){ bestDiff=d; best=s; } });
