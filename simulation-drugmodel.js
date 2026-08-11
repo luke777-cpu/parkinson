@@ -38,26 +38,24 @@ DM.CURVES = {
    계산용 정보(leddFactor·leddIncluded·refDoseMg)를 함께 가진다.
    같은 성분의 다른 상품명은 aliases 배열에 추가하기만 하면 된다 — 곡선은 새로 만들지 않는다. ---- */
 DM.DRUGS = [
-  {"genericName": "levodopa/carbidopa (즉방형)", "genericNameEn": "levodopa/carbidopa (IR)", "formulation": "IR", "curveId": "LEVO_IR", "roleLabel": "빠른 레보도파 곡선", "roleLabelEn": "Fast-acting levodopa curve", "leddFactor": 1.0, "leddIncluded": true, "refDoseMg": 100, "aliases": ["마도파", "시네메트", "퍼킨", "레보도파", "도파민정", "Madopar", "Sinemet"]},
-  {"genericName": "levodopa/carbidopa (서방형)", "genericNameEn": "levodopa/carbidopa (ER)", "formulation": "HBS/CR", "curveId": "LEVO_HBS", "roleLabel": "지속형 레보도파 곡선", "roleLabelEn": "Extended-release levodopa curve", "leddFactor": 0.75, "leddIncluded": true, "refDoseMg": 100, "aliases": ["마도파 HBS", "시네메트 CR", "Madopar HBS", "Sinemet CR"]},
-  {"genericName": "levodopa/carbidopa/entacapone", "genericNameEn": "levodopa/carbidopa/entacapone", "formulation": "IR 복합", "curveId": "STALEVO", "roleLabel": "빠른 레보도파 곡선 (엔타카폰 포함)", "roleLabelEn": "Fast-acting levodopa curve (with entacapone)", "leddFactor": 1.0, "leddIncluded": true, "refDoseMg": 100, "note": "표기 용량을 레보도파 함량으로 간주한 근사치", "aliases": ["스타레보", "트리레보", "Stalevo"], "source": "식약처: 트리레보정(레보도파/카르비도파/엔타카폰) — 스타레보와 동일 성분·용량비, 1:1 대체 가능"},
-  {"genericName": "apomorphine", "genericNameEn": "apomorphine", "formulation": "주사", "curveId": "APOMORPHINE", "roleLabel": "속효성 구제 요법 곡선", "roleLabelEn": "Fast-acting rescue therapy curve", "leddFactor": 10, "leddIncluded": true, "refDoseMg": 3, "note": "피하주사 구제 요법 — 발현이 매우 빠르고 지속이 짧음", "aliases": ["아포모르핀", "아포카인", "Apokyn"]},
-  {"genericName": "opicapone", "genericNameEn": "opicapone", "formulation": "1일 1회", "curveId": "ONGENTYS", "roleLabel": "레보도파 지속 보정 (COMT 억제제, 1일 1회)", "roleLabelEn": "Levodopa duration extender (COMT inhibitor, once daily)", "leddFactor": 0.5, "leddIncluded": false, "refDoseMg": 50, "note": "COMT 억제제는 자체 mg 환산이 확립되지 않아 LEDD 합계에서 제외", "aliases": ["온젠티스", "오피카폰", "Ongentys"]},
-  {"genericName": "entacapone", "genericNameEn": "entacapone", "formulation": "레보도파 병용", "curveId": "ENTACAPONE", "roleLabel": "레보도파 지속 보정 (COMT 억제제, 매 복용 병용)", "roleLabelEn": "Levodopa duration extender (COMT inhibitor, taken with each dose)", "leddFactor": 0.5, "leddIncluded": false, "refDoseMg": 200, "note": "COMT 억제제는 자체 mg 환산이 확립되지 않아 LEDD 합계에서 제외", "aliases": ["엔타카폰", "컴탄", "콤탄", "Comtan"]},
-  {"genericName": "pramipexole (즉방형)", "genericNameEn": "pramipexole (IR)", "formulation": "IR", "curveId": "PRAMI_IR", "roleLabel": "도파민 작용제 배경효과 (즉방형)", "roleLabelEn": "Dopamine agonist background effect (IR)", "leddFactor": 100, "leddIncluded": false, "refDoseMg": 0.375, "note": "도파민 작용제는 LEDD 합계에서 제외 (배경효과로만 표시)", "aliases": ["미라펙스", "미라팩스", "피디팩솔", "피디펙솔", "프라미펙솔", "프라펙솔", "미라프", "Mirapex", "Sifrol"], "source": "식약처: 피디펙솔정(프라미펙솔염산염일수화물) — 미라펙스와 동일 성분"},
-  {"genericName": "pramipexole (서방형)", "genericNameEn": "pramipexole (ER)", "formulation": "ER", "curveId": "PRAMI_ER", "roleLabel": "도파민 작용제 배경효과 (서방형)", "roleLabelEn": "Dopamine agonist background effect (ER)", "leddFactor": 100, "leddIncluded": false, "refDoseMg": 0.375, "note": "도파민 작용제는 LEDD 합계에서 제외 (배경효과로만 표시)", "aliases": ["미라펙스 ER", "미라펙스ER", "프라미펙솔 ER", "피디펙솔 ER", "Mirapex ER", "Sifrol ER"]},
-  {"genericName": "ropinirole (즉방형)", "genericNameEn": "ropinirole (IR)", "formulation": "IR", "curveId": "ROPI_IR", "roleLabel": "도파민 작용제 배경효과 (즉방형)", "roleLabelEn": "Dopamine agonist background effect (IR)", "leddFactor": 20, "leddIncluded": false, "refDoseMg": 2, "note": "도파민 작용제는 LEDD 합계에서 제외 (배경효과로만 표시)", "aliases": ["리큅", "로피니롤", "Requip"]},
-  {"genericName": "ropinirole (서방형)", "genericNameEn": "ropinirole (ER)", "formulation": "XL/ER", "curveId": "ROPI_ER", "roleLabel": "도파민 작용제 배경효과 (서방형)", "roleLabelEn": "Dopamine agonist background effect (ER)", "leddFactor": 20, "leddIncluded": false, "refDoseMg": 2, "note": "도파민 작용제는 LEDD 합계에서 제외 (배경효과로만 표시)", "aliases": ["리큅 PD", "리큅PD", "리큅 XL", "로피니롤 서방", "Requip XL"]},
-  {"genericName": "rotigotine", "genericNameEn": "rotigotine", "formulation": "패치", "curveId": "ROTIGOTINE", "roleLabel": "도파민 작용제 배경효과 (패치)", "roleLabelEn": "Dopamine agonist background effect (patch)", "leddFactor": 30, "leddIncluded": false, "refDoseMg": 4, "note": "도파민 작용제는 LEDD 합계에서 제외 (배경효과로만 표시)", "aliases": ["뉴프로", "로티고틴", "Neupro"]},
-  {"genericName": "amantadine", "genericNameEn": "amantadine", "formulation": "정", "curveId": "ADJUNCT", "roleLabel": "보조약 (곡선 미포함)", "roleLabelEn": "Adjunct medication (not included in curve)", "leddFactor": 1.0, "leddIncluded": false, "refDoseMg": 100, "note": "아만타딘은 등록된 보정값이 없어 복합 약효 추정곡선 계산에는 포함하지 않습니다", "aliases": ["아만타딘", "피케이멜즈", "Symmetrel", "Gocovri"]},
-  {"genericName": "rasagiline / selegiline (MAO-B 억제제)", "genericNameEn": "rasagiline / selegiline (MAO-B inhibitor)", "formulation": "정", "curveId": "ADJUNCT", "roleLabel": "보조약 (곡선 미포함)", "roleLabelEn": "Adjunct medication (not included in curve)", "leddFactor": 100, "leddIncluded": false, "refDoseMg": 1, "note": "MAO-B 억제제는 등록된 보정값이 없어 복합 약효 추정곡선 계산에는 포함하지 않습니다", "aliases": ["아질렉트", "라사길린", "셀레길린", "마오비", "Azilect", "Eldepryl", "Zelapar"]},
-  {"genericName": "safinamide (MAO-B 억제제)", "genericNameEn": "safinamide (MAO-B inhibitor)", "formulation": "정", "curveId": "ADJUNCT", "roleLabel": "보조약 (곡선 미포함)", "roleLabelEn": "Adjunct medication (not included in curve)", "leddFactor": 100, "leddIncluded": false, "refDoseMg": 50, "note": "MAO-B 억제제는 등록된 보정값이 없어 복합 약효 추정곡선 계산에는 포함하지 않습니다", "aliases": ["사피나미드", "엑스어답션", "자디아고", "Xadago"]},
+  {"genericName": "levodopa/carbidopa (즉방형)", "formulation": "IR", "curveId": "LEVO_IR", "roleLabel": "빠른 레보도파 곡선", "leddFactor": 1.0, "leddIncluded": true, "refDoseMg": 100, "aliases": ["마도파", "시네메트", "퍼킨", "레보도파", "도파민정"]},
+  {"genericName": "levodopa/carbidopa (서방형)", "formulation": "HBS/CR", "curveId": "LEVO_HBS", "roleLabel": "지속형 레보도파 곡선", "leddFactor": 0.75, "leddIncluded": true, "refDoseMg": 100, "aliases": ["마도파 HBS", "시네메트 CR"]},
+  {"genericName": "levodopa/carbidopa/entacapone", "formulation": "IR 복합", "curveId": "STALEVO", "roleLabel": "빠른 레보도파 곡선 (엔타카폰 포함)", "leddFactor": 1.0, "leddIncluded": true, "refDoseMg": 100, "note": "표기 용량을 레보도파 함량으로 간주한 근사치", "aliases": ["스타레보", "트리레보"], "source": "식약처: 트리레보정(레보도파/카르비도파/엔타카폰) — 스타레보와 동일 성분·용량비, 1:1 대체 가능"},
+  {"genericName": "apomorphine", "formulation": "주사", "curveId": "APOMORPHINE", "roleLabel": "속효성 구제 요법 곡선", "leddFactor": 10, "leddIncluded": true, "refDoseMg": 3, "note": "피하주사 구제 요법 — 발현이 매우 빠르고 지속이 짧음", "aliases": ["아포모르핀", "아포카인"]},
+  {"genericName": "opicapone", "formulation": "1일 1회", "curveId": "ONGENTYS", "roleLabel": "레보도파 지속 보정 (COMT 억제제, 1일 1회)", "leddFactor": 0.5, "leddIncluded": false, "refDoseMg": 50, "note": "COMT 억제제는 자체 mg 환산이 확립되지 않아 LEDD 합계에서 제외", "aliases": ["온젠티스", "오피카폰"]},
+  {"genericName": "entacapone", "formulation": "레보도파 병용", "curveId": "ENTACAPONE", "roleLabel": "레보도파 지속 보정 (COMT 억제제, 매 복용 병용)", "leddFactor": 0.5, "leddIncluded": false, "refDoseMg": 200, "note": "COMT 억제제는 자체 mg 환산이 확립되지 않아 LEDD 합계에서 제외", "aliases": ["엔타카폰", "컴탄", "콤탄"]},
+  {"genericName": "pramipexole (즉방형)", "formulation": "IR", "curveId": "PRAMI_IR", "roleLabel": "도파민 작용제 배경효과 (즉방형)", "leddFactor": 100, "leddIncluded": true, "refDoseMg": 0.375, "note": "도파민 작용제는 곡선 모양에서는 완만한 배경효과로만 표시하지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "aliases": ["미라펙스", "미라팩스", "피디팩솔", "피디펙솔", "프라미펙솔", "프라펙솔", "미라프"], "source": "식약처: 피디펙솔정(프라미펙솔염산염일수화물) — 미라펙스와 동일 성분"},
+  {"genericName": "pramipexole (서방형)", "formulation": "ER", "curveId": "PRAMI_ER", "roleLabel": "도파민 작용제 배경효과 (서방형)", "leddFactor": 100, "leddIncluded": true, "refDoseMg": 0.375, "note": "도파민 작용제는 곡선 모양에서는 완만한 배경효과로만 표시하지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "aliases": ["미라펙스 ER", "미라펙스ER", "프라미펙솔 ER", "피디펙솔 ER"]},
+  {"genericName": "ropinirole (즉방형)", "formulation": "IR", "curveId": "ROPI_IR", "roleLabel": "도파민 작용제 배경효과 (즉방형)", "leddFactor": 20, "leddIncluded": true, "refDoseMg": 2, "note": "도파민 작용제는 곡선 모양에서는 완만한 배경효과로만 표시하지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "aliases": ["리큅", "로피니롤"]},
+  {"genericName": "ropinirole (서방형)", "formulation": "XL/ER", "curveId": "ROPI_ER", "roleLabel": "도파민 작용제 배경효과 (서방형)", "leddFactor": 20, "leddIncluded": true, "refDoseMg": 2, "note": "도파민 작용제는 곡선 모양에서는 완만한 배경효과로만 표시하지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "aliases": ["리큅 PD", "리큅PD", "리큅 XL", "로피니롤 서방"]},
+  {"genericName": "rotigotine", "formulation": "패치", "curveId": "ROTIGOTINE", "roleLabel": "도파민 작용제 배경효과 (패치)", "leddFactor": 30, "leddIncluded": true, "refDoseMg": 4, "note": "도파민 작용제는 곡선 모양에서는 완만한 배경효과로만 표시하지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "aliases": ["뉴프로", "로티고틴"]},
+  {"genericName": "amantadine", "formulation": "정", "curveId": "ADJUNCT", "roleLabel": "보조약 (곡선 미포함)", "leddFactor": 1.0, "leddIncluded": true, "refDoseMg": 100, "note": "아만타딘은 등록된 보정값이 없어 복합 약효 추정곡선(곡선 모양)에는 포함하지 않지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "aliases": ["아만타딘", "피케이멜즈"]},
+  {"genericName": "rasagiline / selegiline (MAO-B 억제제)", "formulation": "정", "curveId": "ADJUNCT", "roleLabel": "보조약 (곡선 미포함)", "leddFactor": 100, "leddIncluded": true, "refDoseMg": 1, "note": "MAO-B 억제제는 등록된 보정값이 없어 복합 약효 추정곡선(곡선 모양)에는 포함하지 않지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "aliases": ["아질렉트", "라사길린", "셀레길린", "마오비"]},
+  {"genericName": "safinamide (MAO-B 억제제)", "formulation": "정", "curveId": "ADJUNCT", "roleLabel": "보조약 (곡선 미포함)", "leddFactor": 100, "leddIncluded": true, "refDoseMg": 50, "note": "MAO-B 억제제는 등록된 보정값이 없어 복합 약효 추정곡선(곡선 모양)에는 포함하지 않지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "aliases": ["사피나미드", "엑스어답션", "자디아고"]},
 ];
 
 DM.UNREGISTERED_NOTE = "이 약물은 현재 곡선 모델이 등록되어 있지 않습니다. 실제 복용 기록에는 표시되지만 복합 약효 추정곡선 계산에는 포함되지 않습니다.";
 DM.NOT_FOUND_GUIDANCE = "현재 약물 사전에 등록되지 않은 약입니다. 성분이 동일한 약이 있는지 확인하시겠습니까?";
-DM.UNREGISTERED_NOTE_EN = "This medication doesn't have a registered curve model yet. It still appears in your dose records, but isn't included in the combined medication-response curve.";
-DM.NOT_FOUND_GUIDANCE_EN = "This medication isn't in the drug dictionary yet. Would you like to check whether a matching active ingredient is listed?";
 
 /* ---- 런타임 사전 로딩 (작업지시서 §7) ----
    프로그램은 시작 시 drug-dictionary.json을 실제로 읽어 곡선·별칭을 구성한다.
@@ -100,12 +98,22 @@ DM.buildAliasIndex = function(){
 };
 function aliasIndex(){ if(!_aliasIndex) _aliasIndex=DM.buildAliasIndex(); return _aliasIndex; }
 
-/* 상품명(오타·부분 문자열 포함) → 약물 사전 항목.
-   대소문자 무시(영문 상품명은 사용자가 대/소문자를 섞어 입력할 수 있음 — 한글은 영향 없음). */
+/* 상품명(오타·부분 문자열 포함) → 약물 사전 항목 */
+/* 검토 발견(2026-08-06, 실사용): 부분 문자열 매칭(includes)만 쓰면, 이름에 "서방형"이라고
+   분명히 적혀 있어도 그보다 짧은 즉방형 별칭("프라펙솔")이 먼저 걸려서 즉방형(IR)으로
+   잘못 인식된다("프라펙솔 서방형"→PRAMI_IR로 오분류, "퍼킨cr"→LEVO_IR로 오분류).
+   제형이 틀리면 곡선 모양 자체가 틀려지므로, 이름에 서방형을 가리키는 단어가 있는데
+   매칭된 게 즉방형(IR)이면 그 매칭을 신뢰하지 않고 미등록으로 남긴다 — 확신 없는 잘못된
+   매칭보다는, 성분 선택 화면(개인 별칭)에서 사용자가 정확한 제형을 직접 고르게 하는 편이
+   안전하다("임의 곡선 생성 금지" 원칙의 연장). "확산정"(dispersible)은 서방형이 아니라
+   빠르게 녹는 정제라 이 목록에 넣지 않는다. */
+const ER_HINT_RE=/서방|서방형|CR|ER형|ER|XR|지속형|패치/i;
 DM.findDrug = function(name){
-  const n=String(name||"").toLowerCase();
-  const hit=aliasIndex().find(x=>n.includes(x.alias.toLowerCase()));
-  return hit? hit.drug : null;
+  const n=String(name||"");
+  const hit=aliasIndex().find(x=>n.includes(x.alias));
+  if(!hit) return null;
+  if(ER_HINT_RE.test(n) && hit.drug.formulation==="IR") return null;
+  return hit.drug;
 };
 
 /* 상품명 → 계산에 쓰는 통합 모델 객체 (곡선 파라미터 + 사전 정보를 합침).
@@ -115,8 +123,8 @@ DM.classify = function(name){
   if(!drug) return null;
   const curve=DM.CURVES[drug.curveId] || {};
   return Object.assign({}, curve, {
-    curveId:drug.curveId, genericName:drug.genericName, genericNameEn:drug.genericNameEn||drug.genericName, formulation:drug.formulation,
-    roleLabel:drug.roleLabel, roleLabelEn:drug.roleLabelEn||drug.roleLabel, leddFactor:drug.leddFactor, leddIncluded:drug.leddIncluded,
+    curveId:drug.curveId, genericName:drug.genericName, formulation:drug.formulation,
+    roleLabel:drug.roleLabel, leddFactor:drug.leddFactor, leddIncluded:drug.leddIncluded,
     refDoseMg:drug.refDoseMg, note:drug.note,
     category: drug.curveId==="LEVO_IR"||drug.curveId==="LEVO_HBS"||drug.curveId==="STALEVO" ? "levodopa"
             : (curve.role==="background" ? "dopamine_agonist"
@@ -234,6 +242,10 @@ DM.compositeCurve = function(doses, t0, t1, step){
 
   const SCALE=DM.SATURATION_SCALE||1.6;
   const points=pts.map(p=>({t:p.t, val: 100*(1-Math.exp(-p.raw/SCALE))}));
+  /* Phase 1(치료구간 설계도): 표시용 points(0~100 정규화)는 그대로 두고,
+     LED 원단위(raw)를 rawPoints로 별도 보존한다. "부족분 20 LED" 같은 계산에는
+     정규화된 0~100 값이 아니라 이 원단위가 필요하다. 기존 호출부는 points만 쓰므로 영향 없음. */
+  const rawPoints=pts.map(p=>({t:p.t, led:p.raw}));
 
   let leddTotal=0; const leddBreakdown=[];
   classified.forEach(x=>{
@@ -242,7 +254,7 @@ DM.compositeCurve = function(doses, t0, t1, step){
     leddTotal+=led; leddBreakdown.push({name:x.dose.name, dose:x.dose.dose, ledd:Math.round(led)});
   });
 
-  return { points, perDrug, unregistered, adjuncts, modifiersApplied, leddTotal:Math.round(leddTotal), leddBreakdown };
+  return { points, rawPoints, perDrug, unregistered, adjuncts, modifiersApplied, leddTotal:Math.round(leddTotal), leddBreakdown };
 };
 
 if(typeof module!=="undefined"&&module.exports) module.exports=DM;
