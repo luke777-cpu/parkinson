@@ -1,4 +1,4 @@
-const CACHE = "yakhyo-v2133-curveunify";
+const CACHE = "yakhyo-v2134-outputscale";
 const APP_SHELL = [
   "./",
   "./index.html",
