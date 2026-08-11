@@ -82,14 +82,16 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
 .quick-btn.sel{border-color:var(--dysk); background:color-mix(in srgb,var(--dysk) 16%,transparent)}
 .quick-btn .qic{font-size:24px; line-height:1}
 .recent-med-row{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
-.recent-med-chip{display:inline-flex; align-items:center; gap:6px; background:var(--surface); box-shadow:var(--shadow); border-radius:999px; padding:9px 14px; font-weight:700; font-size:14px}
+.recent-med-chip{display:inline-flex; align-items:center; gap:6px; background:var(--surface); box-shadow:var(--shadow); border-radius:999px; padding:9px 14px; font-weight:700; font-size:14px; transition:transform .08s ease, opacity .08s ease}
+.recent-med-chip:active{transform:scale(.95); opacity:.8}
 .recent-med-chip .r-ic{font-size:15px}
 .life-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(90px,1fr)); gap:10px}
 .life-btn{min-height:60px; border-radius:16px; background:var(--surface); box-shadow:var(--shadow); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-size:14px; font-weight:800; transition:transform .08s}
 .life-btn:active{transform:scale(.95)} .life-btn .ic{font-size:22px}
 .life-btn small{font-size:10px; font-weight:600; color:var(--ink-2)}
 .sched-row{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:8px}
-.sched-chip{display:inline-flex; align-items:center; gap:6px; background:var(--surface-2); border-radius:999px; padding:6px 8px 6px 12px; font-weight:700; font-variant-numeric:tabular-nums}
+.sched-chip{display:inline-flex; align-items:center; gap:6px; background:var(--surface-2); border-radius:999px; padding:6px 8px 6px 12px; font-weight:700; font-variant-numeric:tabular-nums; transition:transform .08s ease, opacity .08s ease}
+.sched-chip:active{transform:scale(.95); opacity:.8}
 .sched-chip button{color:var(--ink-2); font-size:15px; padding:0 2px}
 .intensity-wrap{display:none}
 .intensity-wrap.show{display:block; animation:fade .2s}
@@ -142,7 +144,8 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
 .li .grow{flex:1; min-width:0}
 .li .name{font-weight:700} .li .meta{font-size:13px; color:var(--ink-2)}
 .section-label{font-size:13px; font-weight:800; color:var(--ink-2); margin:18px 2px 8px; letter-spacing:.02em}
-.btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:max(50px,calc(48px*var(--app-font-scale))); padding:0 18px; border-radius:13px; font-weight:800; font-size:calc(16px*var(--app-font-scale)); background:var(--surface-2); color:var(--ink); width:100%; box-shadow:var(--shadow)}
+.btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:max(50px,calc(48px*var(--app-font-scale))); padding:0 18px; border-radius:13px; font-weight:800; font-size:calc(16px*var(--app-font-scale)); background:var(--surface-2); color:var(--ink); width:100%; box-shadow:var(--shadow); transition:transform .08s ease, opacity .08s ease}
+.btn:active{transform:scale(.96); opacity:.8}
 .btn.primary{background:var(--accent); color:#04130C}
 .btn.ghost{background:transparent; box-shadow:none; border:1px solid var(--line)}
 .btn.danger{background:transparent; color:var(--dysk); box-shadow:none; border:1px solid color-mix(in srgb,var(--dysk) 40%,transparent)}
@@ -197,7 +200,8 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
 .slider-row input[type=range]{flex:1; accent-color:var(--accent)}
 .slider-row .v{width:46px; text-align:right; font-weight:800; font-variant-numeric:tabular-nums}
 .chips{display:flex; flex-wrap:wrap; gap:8px}
-.chip{padding:10px 14px; border-radius:999px; background:var(--surface-2); font-weight:700; font-size:15px; border:1.5px solid transparent}
+.chip{padding:10px 14px; border-radius:999px; background:var(--surface-2); font-weight:700; font-size:15px; border:1.5px solid transparent; transition:transform .08s ease, opacity .08s ease}
+.chip:active{transform:scale(.94); opacity:.8}
 .chip.sel{border-color:var(--accent); background:color-mix(in srgb,var(--accent) 14%,transparent); color:var(--accent-ink)}
 /* 방향(+/=/-) 선택 — 손이 불편한 사용자를 고려해 크고 간격 넓게, +10/-10 조절 버튼과 다른 색으로 구분 */
 .trend-row{display:flex; gap:10px; margin-top:10px}
@@ -1107,15 +1111,6 @@ const BOWEL_EXTRAS = ["힘들었음","잔변감"];
 const BODY_SYMPTOMS = ["이상 없음","어지럼","기립 시 어지럼","소변 급박","빈뇨","땀 증가","침 흘림","메스꺼움","극심한 피로","불안","졸림","통증"];
 const MED_PRESETS = ["마도파","마도파 HBS","시네메트","시네메트 CR","스타레보","퍼킨","온젠티스(오피카폰)","아질렉트","미라펙스","리큅","아만타딘","컴탄"];
 
-/* 빠른 기록: 시트 없이 한 번의 탭으로 바로 저장되는 버튼들 (가장 많이 나온 피드백 반영) */
-const QUICK_ACTIONS = [
-  {key:"good",   ic:"😊", ko:"괜찮음",  en:"Okay",       kind:"state", state:"on"},
-  {key:"better", ic:"↗",  ko:"좋아짐",  en:"Better",     kind:"state", state:"rising", riseResult:"reached"},
-  {key:"worse",  ic:"↘",  ko:"나빠짐",  en:"Worse",      kind:"state", state:"falling"},
-  {key:"off",    ic:"⚫", ko:"OFF",     en:"OFF",        kind:"state", state:"off"},
-  {key:"on",     ic:"🟢", ko:"ON",      en:"ON",         kind:"state", state:"on"},
-  {key:"dysk",   ic:"⚡", ko:"이상운동", en:"Dyskinesia", kind:"state", state:"on", symptoms:["dysk"]},
-];
 
 /* ---------- kinetic profiles for curve tab ----------
    type: "fast"  = 빠른 상승/짧은 지속 (즉시방출 레보도파류: 퍼킨, 시네메트, 마도파(일반), 스타레보)
@@ -3435,19 +3430,23 @@ function openLifeSheet(kind){
     const chips=MEAL_TYPES.map(t=>`<button type="button" class="chip" data-t="${t}">${tagLabel(t)}</button>`).join("");
     const amtChips=MEAL_AMOUNTS.map(t=>`<button type="button" class="chip" data-t="${t}">${tagLabel(t)}</button>`).join("");
     const exChips=MEAL_EXTRAS.map(t=>`<button type="button" class="chip" data-t="${t}">${tagLabel(t)}</button>`).join("");
-    openSheet(`<h2>${lf.icon} ${L("식사 기록","Meal log")}</h2><div class="hint">${L("단백질이 많거나 기름진 식사는 약효 흡수에 영향을 줄 수 있어요.","High-protein or fatty meals can affect how well medication is absorbed.")}</div>
+    openSheet(`<h2>${lf.icon} ${L("식사 기록","Meal log")}</h2>
       ${timeFieldHtml("life_time", now)}
       <div class="field"><label>${L("종류","Type")}</label><div class="chips" id="mealChips">${chips}</div></div>
-      <div class="field"><label>${L("식사량 (선택)","Amount (optional)")}</label><div class="chips" id="amtChips">${amtChips}</div></div>
-      <div class="field"><label>${L("추가 (복수 선택 가능)","Additional (multi-select)")}</label><div class="chips" id="mealExChips">${exChips}</div></div>
-      <div class="field"><label>${L("메모 (선택)","Memo (optional)")}</label><textarea id="life_memo" placeholder="${L("예: 아침 겸 약","e.g. breakfast with medication")}"></textarea></div>
+      <details class="field"><summary style="cursor:pointer; font-weight:700; font-size:13px; color:var(--ink-2)">${L("세부 정보 (선택)","Details (optional)")}</summary>
+        <div style="margin-top:10px">
+          <div class="field"><label>${L("식사량","Amount")}</label><div class="chips" id="amtChips">${amtChips}</div></div>
+          <div class="field"><label>${L("추가 (복수 선택 가능)","Additional (multi-select)")}</label><div class="chips" id="mealExChips">${exChips}</div></div>
+          <div class="field"><label>${L("메모","Memo")}</label><textarea id="life_memo" placeholder="${L("예: 단백질 많음, 기름진 식사, 아침 겸 약 등","e.g. high-protein, fatty meal, breakfast with medication")}"></textarea></div>
+        </div>
+      </details>
       <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="life_save" disabled>${L("저장","Save")}</button></div>`);
     singleChipToggle("mealChips"); singleChipToggle("amtChips"); multiChipToggle("mealExChips");
     document.getElementById("mealChips").addEventListener("click",()=>{ document.getElementById("life_save").disabled=false; });
     document.getElementById("life_save").onclick=()=>{
       const mt=selectedChip("mealChips"); const amount=selectedChip("amtChips"); const extras=selectedChips("mealExChips");
       const ts=tsFromTimeField("life_time", now);
-      closeSheet(); addLife("meal",{mealType:mt, amount, extras, protein:extras.includes("단백질 많음"), ts, memo:document.getElementById("life_memo").value.trim()});
+      closeSheet(); addLife("meal",{mealType:mt, amount, extras, protein:extras.includes("단백질 많음"), ts, memo:document.getElementById("life_memo")?.value.trim()||""});
     };
     return;
   }
