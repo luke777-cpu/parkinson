@@ -732,7 +732,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음",
-    versionLabel:"약효일지 · 비공개 시험판 2.13.2-tempnotefix",
+    versionLabel:"약효일지 · 비공개 시험판 2.13.3-periodicreconcile",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -803,7 +803,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests",
-    versionLabel:"Med Log · Test build 2.13.2-tempnotefix",
+    versionLabel:"Med Log · Test build 2.13.3-periodicreconcile",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -5410,6 +5410,13 @@ if(typeof SIMDRUG!=="undefined" && SIMDRUG.loadDictionary){
 
 /* alarm loop: check every 30s while app is open */
 setInterval(alarmLoop, 30000); alarmLoop();
+/* 검토 발견(2026-08-11, 실사용): 예정시각 자동기록(reconcileAssumedDoses)이 화면을
+   다시 그릴 때만(탭 전환 등) 실행돼서, 앱을 켜놓고 그냥 보고만 있으면 예정 시각이
+   지나도 다른 조작을 하기 전까진 "예정" 표시에 멈춰 있었다 — "11시반 약이 입력되지
+   않았다"는 신고의 정확한 원인. 오늘 탭이 떠 있는 동안 1분마다 스스로 확인하도록
+   가벼운 타이머를 추가한다(기존 alarmLoop과 같은 패턴, 세트가 없으면 즉시 리턴이라
+   부담 없음). */
+setInterval(()=>{ if((db.medSets||[]).some(s=>s.schedTime)) renderMedSetQuickRow(); }, 60000);
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden) alarmLoop(); });
 
 /* first-run disclaimer + 용어 튜토리얼 (1분 설명) */
