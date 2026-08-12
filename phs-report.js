@@ -103,6 +103,19 @@ PHS.reasonText = (reason,lang)=>{
   return t? t(reason.params||{}) : reason.code;
 };
 
+/* 검토 발견(2026-08-06, 실사용): "단백질 많은 식사이(가) 1회(일) 기록되어..."처럼
+   조사(이/가) 선택과 단위("회"인지 "일"인지)를 실제로 정하지 않고 두 후보를 괄호로
+   병기한 채로 문장이 나가고 있었다("(INSUF)"라는 내부 표시가 그대로 노출된 것과
+   같은 종류의 실수). 받침 유무로 조사를 고르고, 단위는 supportingEvents가 실제로는
+   "건수"이므로 "회"로 통일한다. */
+function hasBatchim(word){
+  const ch=String(word||"").trim().slice(-1);
+  const code=ch.charCodeAt(0);
+  if(code<0xAC00||code>0xD7A3) return false; /* 한글 음절이 아니면 받침 없다고 간주 */
+  return (code-0xAC00)%28!==0;
+}
+function josaIGa(word){ return hasBatchim(word)? "이":"가"; }
+
 /* ---------- 한국어 문장 템플릿 (결정론적) ---------- */
 PHS.templatesKo = {
   diagnosisHistory: ({years}) => years!=null? `파킨슨병 진단 후 약 ${years}년 경과한 환자입니다.` : `파킨슨병으로 추적 관찰 중인 환자입니다.`,
@@ -129,7 +142,7 @@ PHS.templatesKo = {
     if(relation) s+=` — ${relation}`;
     return s+".";
   },
-  lifestyleLine: ({label,n}) => `${label}이(가) ${n}회(일) 기록되어 출력 변동과의 시간적 연관성 검토가 가능하나, 인과관계는 확정할 수 없습니다.`,
+  lifestyleLine: ({label,n}) => `${label}${josaIGa(label)} ${n}회 기록되어 출력 변동과의 시간적 연관성 검토가 가능하나, 인과관계는 확정할 수 없습니다.`,
   missingDataLimitation: () => `일부 시간대는 기록이 부족하여 체류시간과 약물 반응을 정확히 평가하기 어려웠습니다.`,
   lowRecordLimitation: ({days}) => `기록 일수가 ${days}일로 적어 해석의 신뢰도가 제한적입니다.`,
   confidenceLine: ({level,score}) => `기록 데이터 신뢰도: ${CONF_KO[level]||level} (${score}/100).`,
@@ -164,7 +177,7 @@ PHS.templatesEn = {
     if(relation) s+=` — ${relation}`;
     return s+".";
   },
-  lifestyleLine: ({label,n}) => `${label} was recorded ${n} time(s)/day(s); a temporal association with output change can be reviewed, but causation cannot be established.`,
+  lifestyleLine: ({label,n}) => `${label} was recorded ${n} time(s); a temporal association with output change can be reviewed, but causation cannot be established.`,
   missingDataLimitation: () => `Some periods lack records, limiting accurate assessment of dwell time and medication response.`,
   lowRecordLimitation: ({days}) => `Only ${days} recorded day(s); interpretation reliability is limited.`,
   confidenceLine: ({level,score}) => `Recorded-data confidence: ${CONF_EN[level]||level} (${score}/100).`,
@@ -343,7 +356,7 @@ function buildChallengeSection(tests, lang){
   const title=en? "Medication Response Tests (patient-run comparison)":"약효 반응 시험 (환자 자가 비교 기록)";
   const note=en? "Patient-recorded structured response tests (pre-dose and 30/60/90/120 min). Summary of recorded facts only; not a levodopa challenge test result or treatment judgment."
               : "환자가 복용 전과 30·60·90·120분 시점에 직접 기록한 구조화 시험 요약입니다. 기록 사실의 정리이며, 레보도파 반응 판정이나 치료 판단이 아닙니다.";
-  if(!tests||!tests.length) return {title, note, lines:[en? "No completed tests (INSUF)":"완료된 시험 없음 (INSUF)"]};
+  if(!tests||!tests.length) return {title, note, lines:[en? "No completed tests":"완료된 시험 없음"]};
   const NA=en? "N/A":"평가 불가";
   const lines=tests.slice(-3).reverse().map(t=>{
     const parts=[];
@@ -352,7 +365,7 @@ function buildChallengeSection(tests, lang){
                  : `최초 체감 ${t.firstPerceivedMin!=null? t.firstPerceivedMin+"분":NA} / 분명한 체감 ${t.firstClearMin!=null? t.firstClearMin+"분":NA}`);
     const imps=Object.entries(t.maxImpByGroup||{}).filter(([,v])=>v!=null);
     parts.push(imps.length? (en? "Max score decrease: ":"최대 점수 감소: ")+imps.map(([g,v])=>`${chgLbl("group",g,lang)} ${v}`).join(", ")
-                          : (en? "Max score decrease: INSUF":"최대 점수 감소: 기록 부족 (INSUF)"));
+                          : (en? "Max score decrease: not enough data":"최대 점수 감소: 기록 부족"));
     parts.push(t.worstAdverse? (en? `Max adverse: ${chgLbl("adverse",t.worstAdverse.code,lang)} ${t.worstAdverse.score}/4 at ${t.worstAdverse.minutes} min`
                                   : `부작용 최고: ${chgLbl("adverse",t.worstAdverse.code,lang)} ${t.worstAdverse.score}/4 (${t.worstAdverse.minutes}분)`)
                              : (en? "Max adverse: none recorded":"부작용 최고: 기록 없음"));
@@ -363,7 +376,66 @@ function buildChallengeSection(tests, lang){
 }
 PHS.buildChallengeSection = buildChallengeSection;
 
-PHS.buildReport = function({profile, startSurvey, endSurvey, analysis, confidence, medsList, lang, challengeTests}){
+/* v2.5(치료구간 설계도 Phase 4): 부족 구간을 채우는 후보안 비교.
+   comparison: analysis-candidates.js의 CAND.evaluate() 결과.
+   window: {lower, upper} — Phase 2에서 추정한 치료 구간.
+   이 섹션은 detailedReport(의료진용)에만 들어간다 — 환자 화면(오늘/분석 탭)에는 절대 안 보인다.
+   "추천"·"1위" 표현을 쓰지 않고, 정렬 기준(체류시간 증가량)을 매 줄 함께 밝힌다. */
+function buildTherapeuticWindowSection(comparison, window, lang){
+  const en=lang==="en";
+  const title=en? "Therapeutic Window — Deficit Candidate Comparison" : "치료 구간 — 부족분 채우기 후보안 비교";
+  const note=en? "Simulated comparison only, based on the estimated therapeutic window and effect-estimate curve. Not a prescription recommendation. Candidates are ranked by estimated time-within-window gain, not by how much of the deficit each fills — filling a deficit can overshoot the upper bound. Verify with a medication response test before any change."
+              : "추정된 치료 구간과 약효 추정곡선을 비교한 시뮬레이션 결과입니다. 처방 권고가 아닙니다. 후보는 부족분을 얼마나 채우는지가 아니라 '구간 내 체류시간이 얼마나 느는지'로 정렬했습니다 — 부족분을 채우면 상한을 넘길 수 있습니다. 실제 적용 전 약효 반응 시험으로 확인하세요.";
+  if(!comparison || !comparison.valid){
+    const reason=(comparison&&comparison.reasons&&comparison.reasons[0]) || (en?"Not enough data":"자료 부족");
+    return {title, note, lines:[en? `Not calculated (${reason})` : `계산되지 않음 (${reason})`]};
+  }
+  const fmtH=(min)=>{ min=Math.round(min); const h=Math.floor(Math.abs(min)/60), m=Math.abs(min)%60;
+    const sign=min<0?"-":"+"; return `${sign}${h}${en?"h":"시간"}${m}${en?"m":"분"}`; };
+  const winLine=en? `Estimated window: ${Math.round(window.lower*100)/100} ~ ${window.upper!=null?Math.round(window.upper*100)/100:"N/A"}`
+                   : `추정 구간: ${Math.round(window.lower*100)/100} ~ ${window.upper!=null?Math.round(window.upper*100)/100:"판정 불가"}`;
+  const baseLine=en? `Baseline time within window: ${Math.round(comparison.baseline.inWindowMin/60*10)/10}h`
+                    : `현재안 구간 내 체류시간: ${Math.round(comparison.baseline.inWindowMin/60*10)/10}시간`;
+  const lines=[winLine, baseLine];
+  if(!comparison.candidates.length){
+    lines.push(en? "No candidates could be generated from the current regimen (unregistered drugs, or no applicable pattern)."
+                  : "현재 복약 구성으로는 만들 수 있는 후보안이 없습니다(미등록 약이거나 해당 유형이 없음).");
+  }
+  comparison.candidates.forEach(c=>{
+    if(!c.valid){ lines.push(`${c.label} — ${en?"could not be calculated":"계산할 수 없음"}`); return; }
+    const warn=c.crossesUpper? (en?" ⚠ increases time above upper bound":" ⚠ 상한 초과 시간이 늘어남") : "";
+    lines.push(`${c.label} — ${en?"time within window":"구간 내 체류시간"} ${fmtH(c.deltaMin)}${warn}`);
+  });
+  return {title, note, lines};
+}
+PHS.buildTherapeuticWindowSection = buildTherapeuticWindowSection;
+
+/* v2.6(치료구간 설계도 Phase 5): 과거 보고서에서 제안했던 후보안을 실제로 복용한 뒤의
+   결과와, 그때의 예측을 비교한다. 이 섹션도 detailedReport(의료진용)에만 들어간다 —
+   환자 화면(오늘/분석 탭)에는 어떤 형태로도 노출하지 않는다.
+   validation: {results:[{label,predictedDeltaMin,actualDeltaMin,errorMin,direction,
+   baselineDayKey,appliedDayKey}], pendingCount} — index.html의 anGatherValidationResults()가 만든다. */
+function buildValidationSection(validation, lang){
+  const en=lang==="en";
+  const title=en? "Prediction vs Actual (Applied Candidates)" : "예측 vs 실제 (적용된 후보안)";
+  const note=en? "Compares a candidate suggested in a past report against records from a day it was actually taken. A mismatch is not a failure — the difference is used to refine future estimates. Not a treatment judgment."
+              : "과거 보고서에서 제안했던 후보안을 실제로 복용한 날의 기록과, 그때 예측했던 값을 비교합니다. 예측과 다르다고 잘못된 것이 아니며, 그 차이가 다음 추정을 더 정확하게 만드는 데 쓰입니다. 치료 판단이 아닙니다.";
+  if(!validation || (!validation.results.length && !validation.pendingCount)){
+    return {title, note, lines:[en? "No applied candidates to compare yet." : "아직 실제로 적용해 비교할 수 있는 후보안이 없습니다."]};
+  }
+  const DIR=en? {close:"close to prediction", exceeded:"better than predicted", fell_short:"below prediction"}
+              : {close:"예측과 비슷함", exceeded:"예측보다 좋았음", fell_short:"예측에 못 미침"};
+  const fmtH=(min)=>{ const sign=min<0?"-":"+"; min=Math.round(Math.abs(min));
+    return `${sign}${Math.floor(min/60)}${en?"h":"시간"} ${min%60}${en?"m":"분"}`; };
+  const lines=(validation.results||[]).map(r=>
+    `${r.label} (${r.baselineDayKey}→${r.appliedDayKey}) — ${en?"predicted":"예측"} ${fmtH(r.predictedDeltaMin)} / ${en?"actual":"실제"} ${fmtH(r.actualDeltaMin)} · ${DIR[r.direction]}`);
+  if(validation.pendingCount) lines.push(en? `${validation.pendingCount} more suggested candidate(s) not yet observed in the records.`
+                                            : `아직 기록에서 확인되지 않은 후보안이 ${validation.pendingCount}건 더 있습니다.`);
+  return {title, note, lines};
+}
+PHS.buildValidationSection = buildValidationSection;
+
+PHS.buildReport = function({profile, startSurvey, endSurvey, analysis, confidence, medsList, lang, challengeTests, therapeuticWindow, validation}){
   lang = lang==="en"? "en":"ko";
   const T = lang==="en"? PHS.templatesEn : PHS.templatesKo;
   const cc=buildCC(startSurvey,lang);
@@ -415,6 +487,10 @@ PHS.buildReport = function({profile, startSurvey, endSurvey, analysis, confidenc
       cc, hpi,
       currentMedication,
       medicationResponseTests:buildChallengeSection(challengeTests, lang==="en"?"en":"ko"),
+      /* v2.5 Phase 4: therapeuticWindow가 있을 때만(선택적) 후보안 비교 섹션 삽입 — 없으면 생략(하위 호환) */
+      therapeuticWindowAnalysis: therapeuticWindow? buildTherapeuticWindowSection(therapeuticWindow.comparison, therapeuticWindow.window, lang==="en"?"en":"ko") : null,
+      /* v2.6 Phase 5: validation이 있을 때만(선택적) 예측 검증 섹션 삽입 — 없으면 생략(하위 호환) */
+      predictionValidation: validation? buildValidationSection(validation, lang==="en"?"en":"ko") : null,
       monitoringSummary:{
         recordedDays:analysis.period.recordedDays,
         periodDays:analysis.period.periodDays,
