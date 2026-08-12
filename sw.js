@@ -1,4 +1,4 @@
-const CACHE = "yakhyo-v2135-hiddenanalysis";
+const CACHE = "yakhyo-v2136-simdanger";
 const APP_SHELL = [
   "./",
   "./index.html",
