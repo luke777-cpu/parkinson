@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=0.5, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
 <meta name="theme-color" content="#1FA971">
 <title>약효일지 · 출력기록</title>
+<meta name="robots" content="noindex, nofollow">
 <link rel="manifest" href="manifest.json">
 <style>
 :root{
@@ -82,15 +83,15 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
 .quick-btn.sel{border-color:var(--dysk); background:color-mix(in srgb,var(--dysk) 16%,transparent)}
 .quick-btn .qic{font-size:24px; line-height:1}
 .recent-med-row{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
-.recent-med-chip{display:inline-flex; align-items:center; gap:6px; background:var(--surface); box-shadow:var(--shadow); border-radius:999px; padding:9px 14px; font-weight:700; font-size:14px; transition:transform .08s ease, opacity .08s ease}
-.recent-med-chip:active{transform:scale(.95); opacity:.8}
+.recent-med-chip{display:inline-flex; align-items:center; gap:6px; background:var(--surface); box-shadow:var(--shadow); border-radius:999px; padding:9px 14px; font-weight:700; font-size:14px; transition:transform .08s ease, opacity .15s}
+.recent-med-chip:active{transform:scale(.94); opacity:.8}
 .recent-med-chip .r-ic{font-size:15px}
 .life-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(90px,1fr)); gap:10px}
 .life-btn{min-height:60px; border-radius:16px; background:var(--surface); box-shadow:var(--shadow); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-size:14px; font-weight:800; transition:transform .08s}
 .life-btn:active{transform:scale(.95)} .life-btn .ic{font-size:22px}
 .life-btn small{font-size:10px; font-weight:600; color:var(--ink-2)}
 .sched-row{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:8px}
-.sched-chip{display:inline-flex; align-items:center; gap:6px; background:var(--surface-2); border-radius:999px; padding:6px 8px 6px 12px; font-weight:700; font-variant-numeric:tabular-nums; transition:transform .08s ease, opacity .08s ease}
+.sched-chip{display:inline-flex; align-items:center; gap:6px; background:var(--surface-2); border-radius:999px; padding:6px 8px 6px 12px; font-weight:700; font-variant-numeric:tabular-nums; transition:transform .08s ease, opacity .15s}
 .sched-chip:active{transform:scale(.95); opacity:.8}
 .sched-chip button{color:var(--ink-2); font-size:15px; padding:0 2px}
 .intensity-wrap{display:none}
@@ -144,8 +145,8 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
 .li .grow{flex:1; min-width:0}
 .li .name{font-weight:700} .li .meta{font-size:13px; color:var(--ink-2)}
 .section-label{font-size:13px; font-weight:800; color:var(--ink-2); margin:18px 2px 8px; letter-spacing:.02em}
-.btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:max(50px,calc(48px*var(--app-font-scale))); padding:0 18px; border-radius:13px; font-weight:800; font-size:calc(16px*var(--app-font-scale)); background:var(--surface-2); color:var(--ink); width:100%; box-shadow:var(--shadow); transition:transform .08s ease, opacity .08s ease}
-.btn:active{transform:scale(.96); opacity:.8}
+.btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:max(50px,calc(48px*var(--app-font-scale))); padding:0 18px; border-radius:13px; font-weight:800; font-size:calc(16px*var(--app-font-scale)); background:var(--surface-2); color:var(--ink); width:100%; box-shadow:var(--shadow); transition:transform .08s ease, opacity .15s}
+.btn:active{transform:scale(.97); opacity:.8}
 .btn.primary{background:var(--accent); color:#04130C}
 .btn.ghost{background:transparent; box-shadow:none; border:1px solid var(--line)}
 .btn.danger{background:transparent; color:var(--dysk); box-shadow:none; border:1px solid color-mix(in srgb,var(--dysk) 40%,transparent)}
@@ -200,8 +201,8 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
 .slider-row input[type=range]{flex:1; accent-color:var(--accent)}
 .slider-row .v{width:46px; text-align:right; font-weight:800; font-variant-numeric:tabular-nums}
 .chips{display:flex; flex-wrap:wrap; gap:8px}
-.chip{padding:10px 14px; border-radius:999px; background:var(--surface-2); font-weight:700; font-size:15px; border:1.5px solid transparent; transition:transform .08s ease, opacity .08s ease}
-.chip:active{transform:scale(.94); opacity:.8}
+.chip{padding:10px 14px; border-radius:999px; background:var(--surface-2); font-weight:700; font-size:15px; border:1.5px solid transparent; transition:transform .08s ease, opacity .15s}
+.chip:active{transform:scale(.95); opacity:.8}
 .chip.sel{border-color:var(--accent); background:color-mix(in srgb,var(--accent) 14%,transparent); color:var(--accent-ink)}
 /* 방향(+/=/-) 선택 — 손이 불편한 사용자를 고려해 크고 간격 넓게, +10/-10 조절 버튼과 다른 색으로 구분 */
 .trend-row{display:flex; gap:10px; margin-top:10px}
@@ -327,12 +328,6 @@ body{font-size:calc(15px*var(--app-font-scale))}
       </div>
     </div>
 
-    <div class="btn-row no-print" id="onoffQuickRow" style="margin:10px 0 2px">
-      <button type="button" class="btn ghost" id="onoffOnBtn" style="border-color:#1FA971; color:#1FA971">🟢 <span data-i18n="onoffOnBtn">지금 ON</span></button>
-      <button type="button" class="btn ghost" id="onoffOffBtn" style="border-color:#54657A; color:#54657A">⚫ <span data-i18n="onoffOffBtn">지금 OFF</span></button>
-    </div>
-    <div class="hint no-print" style="text-align:center; margin:0 0 10px" data-i18n="onoffQuickHint">출력 점수와 별개로, 지금이 확실한 ON/OFF 상태면 바로 한 번에 기록할 수 있어요</div>
-
     <div class="top-actions no-print">
       <button class="btn primary" id="topMedBtn">💊 <span data-i18n="topMedBtn">약 복용 기록</span></button>
       <button class="btn ghost" id="topPastBtn">🕒 <span data-i18n="topPastBtn">지난 기록 추가</span></button>
@@ -354,10 +349,23 @@ body{font-size:calc(15px*var(--app-font-scale))}
       <div id="todayInterpretBody" style="font-size:13.5px; line-height:1.95"></div>
     </div>
 
+    <!-- v2.11: 임시 기록 — 순간엔 방향만 남기고, 점수는 시간 날 때 몰아서 매김 -->
+    <div class="grid-title" data-i18n="tempNoteTitle">🕐 임시 기록 — 지금은 방향만, 점수는 나중에</div>
+    <div class="quick-grid" id="tempNoteGrid"></div>
+
     <div class="grid-title" data-i18n="symptomTitle">⚡ 증상 기록 — 시작할 때 누르고, 끝나면 한 번 더</div>
     <div class="quick-grid" id="symptomGrid"></div>
 
+    <!-- v2.8: 생활기록(특히 단백질 식사)이 너무 드물어서 매번 시트를 열어야 하는 게
+         마찰이라는 실사용 피드백 — OFF 버튼과 같은 원탭 방식으로 가장 자주 궁금해하는
+         신호(저녁 단백질 식사)만 시트 없이 바로 기록하게 한다. 나머지 항목(수면·운동·
+         배변 등)은 기존처럼 "약·생활 기록"에서 상세히 기록. -->
+    <div class="grid-title" style="margin-top:16px" data-i18n="quickLifeTitle">🍽 빠른 생활기록</div>
+    <div class="quick-grid" id="quickLifeGrid"></div>
+
     <div class="grid-title" style="margin-top:16px" data-i18n="medLifeTitle">약·생활 기록</div>
+    <!-- v2.9: 복용 세트 원탭 — 같이 드시는 약들을 한 번에 같은 시각으로 기록 -->
+    <div class="recent-med-row" id="medSetQuickRow" style="display:none"></div>
     <div class="recent-med-row" id="recentMedRow"></div>
     <div class="life-grid" id="lifeGrid"></div>
 
@@ -422,7 +430,7 @@ body{font-size:calc(15px*var(--app-font-scale))}
     <div id="curveEventList"></div>
   </section>
 
-  <!-- ANALYSIS (Phase0 재현성 · Phase2 치료구간 · Phase3 과부족분석) — 숨김 기능, navAnalysisBtn이 열려야 도달 가능 -->
+  <!-- v2.0 Phase 0: 기록 분석 — 재현성 확인 (곡선 모델 없이 실측만) -->
   <section class="tab" id="tab-analysis">
     <div class="disclaimer" style="margin-bottom:12px">
       같은 약을 여러 날 복용했을 때 반응이 얼마나 일관되는지를 보여줍니다. 이 화면은 약효 추정 곡선을 전혀 사용하지 않으며, 실제 기록만으로 계산합니다. 여기서 나오는 판정은 확정 진단이 아니라 기록 패턴 요약입니다.
@@ -442,12 +450,14 @@ body{font-size:calc(15px*var(--app-font-scale))}
       <div id="anTable" style="overflow-x:auto; margin-top:10px"></div>
     </div>
 
+    <!-- v2.2 Phase 2: 치료 구간(하한·상한) 추정 -->
     <div class="chart-card" id="anWindowCard" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px; display:none">
       <div class="card-title"><span data-i18n="anWindowTitle">치료 구간 추정 (하한·상한)</span></div>
       <div class="disclaimer" style="margin-bottom:10px" data-i18n="anWindowDisclaimer">이 구간은 회원님이 실제로 기록한 OFF 시각·이상운동증 시각을 근거로 추정한 값이며, 절대 기준이 아닙니다. 표본이 부족하면 추정하지 않습니다.</div>
       <div id="anWindowBody"></div>
     </div>
 
+    <!-- v2.4 Phase 3: 과부족 분석 (구간 안에 머문 시간·낮은/높은 구간) -->
     <div class="chart-card" id="anCoverageCard" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px; display:none">
       <div class="card-title"><span data-i18n="anCoverageTitle">치료 구간 안에 머문 시간</span></div>
       <div class="disclaimer" style="margin-bottom:10px" data-i18n="anCoverageDisclaimer">이 계산은 추정된 치료 구간과 약효 추정곡선을 비교한 것으로, 처방을 권고하지 않습니다. 약물 조정은 담당 의료진과 상의하세요.</div>
@@ -457,79 +467,70 @@ body{font-size:calc(15px*var(--app-font-scale))}
 
   <!-- SIM (LEDD 복약 시뮬레이션) -->
   <section class="tab" id="tab-sim">
-    <div class="disclaimer" style="margin-bottom:12px" data-i18n="simTopDisclaimer">
+    <div class="disclaimer" style="margin-bottom:12px">
       이 곡선은 약물 종류, 제형, 용량, 복용시간 및 LEDD를 이용해 시간적 특성을 단순화한 참조 모델입니다. 실제 혈중농도, 개인의 실제 약효 또는 치료 결과를 예측하지 않습니다.
     </div>
 
     <!-- 1단계: 날짜와 실제 출력곡선 -->
     <div class="card" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px">
-      <div class="card-title"><span data-i18n="simStep1Title">출력곡선과 약효곡선 비교</span></div>
+      <div class="card-title"><span>출력곡선과 약효곡선 비교</span></div>
       <div class="btn-row no-print" style="margin:8px 0">
         <select id="simDate" class="btn" style="font-weight:700"></select>
       </div>
-      <div class="hint" data-i18n="simStep1Hint">내가 기록한 실제 출력과 현재 약물 조합의 시간적 특성을 함께 살펴봅니다.</div>
+      <div class="hint">내가 기록한 실제 출력과 현재 약물 조합의 시간적 특성을 함께 살펴봅니다.</div>
     </div>
 
     <!-- 2단계: 현재 복용약 확인 -->
     <div class="card" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px">
-      <div class="card-title"><span data-i18n="simStep2Title">현재 복용약</span></div>
+      <div class="card-title"><span>현재 복용약</span></div>
       <div id="simPlanList" style="font-size:13px; color:var(--ink-2)"></div>
       <div id="simUnregisteredNote" style="font-size:12px; color:var(--ink-2); margin-top:6px"></div>
     </div>
 
     <!-- 3단계: 실제 출력곡선 + 복합 약효 추정곡선 -->
     <div class="chart-card" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px">
-      <div class="card-title"><span data-i18n="simStep3Title">실제 출력과 약효 추정곡선</span></div>
-      <div class="hint" data-i18n="simStep3Hint">실제 출력과 약효 추정치는 서로 다른 자료입니다. 곡선의 일치 여부는 참고용이며 인과관계를 의미하지 않습니다.</div>
+      <div class="card-title"><span>실제 출력과 약효 추정곡선</span></div>
+      <div class="hint">실제 출력과 약효 추정치는 서로 다른 자료입니다. 곡선의 일치 여부는 참고용이며 인과관계를 의미하지 않습니다.</div>
       <div id="simCarryNote" style="font-size:12px; color:var(--ink-2); margin:4px 0"></div>
       <div id="simMainChart"></div>
       <div class="legend">
-        <span><i style="background:#E8663C"></i><span data-i18n="simLegendActualPatient">실제 출력: 환자 기록</span></span>
-        <span><i style="background:#5C93D6"></i><span data-i18n="simLegendEstDrugModel">현재 약효 추정: 약물모델</span></span>
+        <span><i style="background:#E8663C"></i><span>실제 출력: 환자 기록</span></span>
+        <span><i style="background:#5C93D6"></i><span>현재 약효 추정: 약물모델</span></span>
       </div>
-      <button class="btn ghost no-print" id="simPerDrugToggle" style="margin-top:8px" data-i18n="simPerDrugShow">약물별 곡선 보기</button>
+      <button class="btn ghost no-print" id="simPerDrugToggle" style="margin-top:8px">약물별 곡선 보기</button>
       <div id="simPerDrugChart" style="display:none; margin-top:8px"></div>
     </div>
 
     <!-- 4단계: 변경안 비교 -->
     <div class="card no-print" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:14px 16px; margin-bottom:14px">
-      <div class="card-title"><span data-i18n="simStep4Title">변경안 만들기</span></div>
-      <div class="hint" data-i18n="simStep4Hint">현재안을 복사한 뒤 한 가지만 바꿔서 곡선의 상대적 모양 차이를 비교합니다.</div>
-      <div style="font-size:12px; color:var(--ink-2); margin:8px 0 4px" data-i18n="simChangeTargetLabel">변경할 약</div>
+      <div class="card-title"><span>변경안 만들기</span></div>
+      <div class="hint">현재안을 복사한 뒤 한 가지만 바꿔서 곡선의 상대적 모양 차이를 비교합니다.</div>
+      <div style="font-size:12px; color:var(--ink-2); margin:8px 0 4px">변경할 약</div>
       <select id="simTargetMed" style="width:100%; min-height:48px"></select>
       <div id="simTargetInfo" style="font-size:12.5px; margin:6px 0 8px"></div>
-      <div style="font-size:12px; color:var(--ink-2); margin-bottom:4px" data-i18n="simChangeKindLabel">변경 방식</div>
+      <div style="font-size:12px; color:var(--ink-2); margin-bottom:4px">변경 방식</div>
       <div class="chips" id="simChangeKind"></div>
       <div id="simChangeControls" style="margin-top:8px"></div>
-      <button class="btn ghost" id="simResetBtn" style="margin-top:8px" data-i18n="simResetVariant">변경안 초기화</button>
+      <button class="btn ghost" id="simResetBtn" style="margin-top:8px">변경안 초기화</button>
     </div>
 
     <div class="chart-card" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px" id="simCompareWrap">
-      <div class="card-title"><span data-i18n="simCompareTitle">현재안 · 변경안 비교</span></div>
+      <div class="card-title"><span>현재안 · 변경안 비교</span></div>
       <div id="simCompareChart"></div>
       <div class="legend">
-        <span><i style="background:#E8663C"></i><span data-i18n="simLegendActualOnly">실제 출력</span></span>
-        <span><i style="background:#5C93D6"></i><span data-i18n="simLegendCurrentEst">현재 약효 추정</span></span>
-        <span><i style="background:#E0A030"></i><span data-i18n="simLegendVirtualEst">변경안 약효 추정</span></span>
+        <span><i style="background:#E8663C"></i><span>실제 출력</span></span>
+        <span><i style="background:#5C93D6"></i><span>현재 약효 추정</span></span>
+        <span><i style="background:#E0A030"></i><span>변경안 약효 추정</span></span>
       </div>
       <div id="simOverlapNote" class="hint" style="margin-top:6px"></div>
-      <div id="simDangerSummary" style="margin-top:10px">
-        <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:var(--ink-2); margin-bottom:6px">
-          <span data-i18n="simDangerThreshLabel">위험구간 기준</span>
-          <input type="number" id="simDangerLo" value="25" min="0" max="100" style="width:52px; padding:3px 6px; border-radius:6px; border:1px solid var(--surface-2); background:var(--surface); color:var(--ink); text-align:center">
-          ~
-          <input type="number" id="simDangerHi" value="50" min="0" max="100" style="width:52px; padding:3px 6px; border-radius:6px; border:1px solid var(--surface-2); background:var(--surface); color:var(--ink); text-align:center">
-        </div>
-        <div id="simDangerBody"></div>
-      </div>
       <div id="simLeddCompare" style="font-size:12.5px; margin-top:10px"></div>
       <div id="simDiffLine" style="font-size:12.5px; color:var(--ink-2); margin-top:8px"></div>
-      <div class="disclaimer" style="margin-top:10px" data-i18n="simBottomDisclaimer">
+      <div class="disclaimer" style="margin-top:10px">
         약물의 용량이나 복용시간 변경은 담당 의료진과 상의해야 합니다. 실제 반응은 약효 비교 테스트와 진료를 통해 확인하십시오.
       </div>
     </div>
 
-    <div class="hint no-print" style="text-align:center; margin:6px 0 16px" data-i18n-html="simChallengeLinkHint">
+    <div class="hint no-print" style="text-align:center; margin:6px 0 16px">
       실제 복용 결과는 <a href="challenge/index.html" onclick="syncSharedProfile()">약효 비교 테스트</a>에서 확인할 수 있습니다.
     </div>
   </section>
@@ -571,6 +572,23 @@ body{font-size:calc(15px*var(--app-font-scale))}
     <div class="section-label" data-i18n="myMeds">내 약 · 복용 시간 예약</div>
     <div class="list-card" id="medList"></div>
     <button class="btn ghost no-print" id="addMedBtn" style="margin-bottom:8px" data-i18n="addMed">+ 약 추가</button>
+    <button class="btn ghost no-print" id="addRxBtn" style="margin-bottom:8px" data-i18n="addRx">📋 처방전으로 한 번에 등록</button>
+
+    <!-- v2.9: 복용 세트 — 같이 드시는 여러 약을 묶어 한 번에 같은 시각으로 기록 -->
+    <div id="medSetSection">
+      <div class="section-label" data-i18n="medSetTitle">복용 세트</div>
+      <div class="disclaimer" style="margin-bottom:8px" data-i18n="medSetDesc">같이 드시는 약들을 묶어두면, 매번 하나씩 기록할 필요 없이 한 번에 같은 시각으로 기록됩니다. 시각이 정확히 겹쳐야 기록 분석도 더 정확해집니다.</div>
+      <div class="list-card" id="medSetList"></div>
+      <button class="btn ghost no-print" id="addMedSetBtn" style="margin-bottom:8px" data-i18n="addMedSet">+ 세트 만들기</button>
+    </div>
+
+    <!-- v2.7: 성분명 기반 개인 별칭 매핑 — 앱 사전에 없는 약 이름을 이 기기에서만 성분에 연결한다.
+         공용 사전(drug-dictionary.json)은 건드리지 않는다. -->
+    <div id="unregDrugSection" style="display:none">
+      <div class="section-label" data-i18n="unregDrugTitle">미등록 약 정리</div>
+      <div class="disclaimer" style="margin-bottom:8px" data-i18n="unregDrugDesc">기록에 있지만 앱 사전에 없는 약 이름입니다. 성분을 한 번만 골라 두면, 그 이름으로 기록된 모든 복용이 앞으로 계산에 포함됩니다. 이 설정은 이 기기에만 저장됩니다.</div>
+      <div class="list-card" id="unregDrugList"></div>
+    </div>
 
     <div class="section-label" data-i18n="medAlarm">약 알림</div>
     <div class="list-card">
@@ -584,7 +602,7 @@ body{font-size:calc(15px*var(--app-font-scale))}
       <button class="btn" id="exportBtn" data-i18n="backupExport">⬇ 백업 내보내기</button>
       <button class="btn" id="importBtn" data-i18n="backupImport">⬆ 불러오기</button>
     </div>
-    <input type="file" id="importFile" accept="application/json,.json,text/plain" style="display:none">
+    <input type="file" id="importFile" accept="application/json" style="display:none">
 
     <div class="section-label" data-i18n="screen">화면</div>
     <div class="list-card">
@@ -595,11 +613,11 @@ body{font-size:calc(15px*var(--app-font-scale))}
           <button class="btn ghost fsBtn" data-fs="1.15" style="width:auto; min-height:40px; padding:0 10px; font-size:15px" data-i18n="fsLarge">크게</button>
           <button class="btn ghost fsBtn" data-fs="1.3" style="width:auto; min-height:40px; padding:0 10px; font-size:17px" data-i18n="fsXLarge">매우 크게</button>
         </div></div>
-      <div class="li"><div class="grow"><div class="name" data-i18n="outputInputMethod">출력 입력 방식</div><div class="meta" data-i18n="outputInputMethodDesc">버튼(기본) · 슬라이더 · 함께</div></div>
+      <div class="li"><div class="grow"><div class="name">출력 입력 방식</div><div class="meta">버튼(기본) · 슬라이더 · 함께</div></div>
         <div style="display:flex; gap:6px">
-          <button class="btn ghost oiBtn" data-oi="buttons" style="width:auto; min-height:40px; padding:0 10px; font-size:13px" data-i18n="oiButtons">버튼</button>
-          <button class="btn ghost oiBtn" data-oi="slider" style="width:auto; min-height:40px; padding:0 10px; font-size:13px" data-i18n="oiSlider">슬라이더</button>
-          <button class="btn ghost oiBtn" data-oi="both" style="width:auto; min-height:40px; padding:0 10px; font-size:13px" data-i18n="oiBoth">함께</button>
+          <button class="btn ghost oiBtn" data-oi="buttons" style="width:auto; min-height:40px; padding:0 10px; font-size:13px">버튼</button>
+          <button class="btn ghost oiBtn" data-oi="slider" style="width:auto; min-height:40px; padding:0 10px; font-size:13px">슬라이더</button>
+          <button class="btn ghost oiBtn" data-oi="both" style="width:auto; min-height:40px; padding:0 10px; font-size:13px">함께</button>
         </div>
       </div>
       <div class="li"><div class="grow"><div class="name" data-i18n="primarySym">주증상 (최대 3개)</div><div class="meta" data-i18n="primarySymDesc">집중 기록할 증상을 골라두면 다음 버전 기능에 사용돼요</div></div><button class="btn ghost" id="primarySymBtn" style="width:auto">☰</button></div>
@@ -612,11 +630,7 @@ body{font-size:calc(15px*var(--app-font-scale))}
       약물 용량·복용 간격 조정은 반드시 주치의와 상의하세요. 모든 기록은 이 기기 안에만 저장되며, 다른 곳으로 전송되지 않습니다.
     </div>
     <button class="btn danger no-print" id="resetBtn" style="margin-top:14px" data-i18n="resetAll">모든 기록 삭제</button>
-    <div class="hint no-print" style="text-align:center; margin:14px 0 2px"><a href="privacy.html" target="_blank" rel="noopener" data-i18n="privacyPolicyLink">개인정보처리방침 보기</a></div>
     <div id="versionLabel" style="text-align:center; color:var(--ink-2); font-size:12px; margin:18px 0 8px" data-i18n="versionLabel">약효일지 · 테스트판 0.9.2</div>
-    <div style="text-align:center; margin-bottom:20px">
-      <input type="password" id="hiddenCodeInput" placeholder="" autocomplete="off" style="width:70px; font-size:11px; padding:3px 6px; border:1px solid var(--surface-2); border-radius:6px; background:var(--surface); color:var(--ink-2); text-align:center; opacity:.5">
-    </div>
   </section>
 
 </main>
@@ -627,7 +641,7 @@ body{font-size:calc(15px*var(--app-font-scale))}
     <button data-tab="log"><span class="ic">📋</span><span data-i18n="navLog">기록</span></button>
     <button data-tab="trend"><span class="ic">📈</span><span data-i18n="navTrend">추이</span></button>
     <button data-tab="curve"><span class="ic">🌊</span><span data-i18n="navCurve">곡선</span></button>
-    <button data-tab="analysis" id="navAnalysisBtn" style="display:none"><span class="ic">🔬</span><span data-i18n="navAnalysis">분석</span></button>
+    <button data-tab="analysis"><span class="ic">🔬</span><span data-i18n="navAnalysis">분석</span></button>
     <button data-tab="sim"><span class="ic">🧪</span><span data-i18n="navSim">시뮬</span></button>
     <button data-tab="report"><span class="ic">🩺</span><span data-i18n="navReport">보고서</span></button>
     <button data-tab="set"><span class="ic">⚙️</span><span data-i18n="navSet">설정</span></button>
@@ -646,6 +660,8 @@ body{font-size:calc(15px*var(--app-font-scale))}
 <script src="analysis-clinical.js"></script>
 <script src="analysis-threshold.js"></script>
 <script src="analysis-coverage.js"></script>
+<script src="analysis-candidates.js"></script>
+<script src="analysis-validation.js"></script>
 <script>
 "use strict";
 /* ---------- i18n ---------- */
@@ -678,12 +694,7 @@ const I18N = {
     guideText:"<b>약효일지는 증상과 약효 패턴을 기록·관찰하는 도구입니다.</b> 의학적 진단이나 처방을 대체하지 않습니다. 약물 용량·복용 간격 조정은 반드시 주치의와 상의하세요. 모든 기록은 이 기기 안에만 저장되며, 다른 곳으로 전송되지 않습니다.",
     resetAll:"모든 기록 삭제",
     lang:"언어", langDesc:"한국어 / English",
-    navToday:"오늘", navLog:"기록", navTrend:"추이", navCurve:"곡선", navAnalysis:"분석", navSim:"시뮬", navReport:"보고서", navSet:"설정",
-    analysisTitle:"기록 분석 · 재현성 확인",
-    anWindowTitle:"치료 구간 추정 (하한·상한)",
-    anWindowDisclaimer:"이 구간은 회원님이 실제로 기록한 OFF 시각·이상운동증 시각을 근거로 추정한 값이며, 절대 기준이 아닙니다. 표본이 부족하면 추정하지 않습니다.",
-    anCoverageTitle:"치료 구간 안에 머문 시간",
-    anCoverageDisclaimer:"이 계산은 추정된 치료 구간과 약효 추정곡선을 비교한 것으로, 처방을 권고하지 않습니다. 약물 조정은 담당 의료진과 상의하세요.",
+    navToday:"오늘", navLog:"기록", navTrend:"추이", navCurve:"곡선", navSim:"시뮬", navReport:"보고서", navSet:"설정",
     simPlanTitle:"현재 복약안 (선택한 날짜의 실제 기록)",
     simVirtualTitle:"가상 변경안",
     simAddDose:"+ 복용 추가",
@@ -696,8 +707,17 @@ const I18N = {
     simPlanPeak:"현재안 피크 시간", simVirtualPeak:"가상안 피크 시간",
     glossaryBtn:"ⓘ 상태·용어 설명 보기",
     glossOnVsPartial:"ON vs 불완전 ON", glossDyskVsDyst:"이상운동 vs 근긴장",
+    navAnalysis:"분석", analysisTitle:"기록 분석 · 재현성 확인",
+    anWindowTitle:"치료 구간 추정 (하한·상한)",
+    anWindowDisclaimer:"이 구간은 회원님이 실제로 기록한 OFF 시각·이상운동증 시각을 근거로 추정한 값이며, 절대 기준이 아닙니다. 표본이 부족하면 추정하지 않습니다.",
+    anCoverageTitle:"치료 구간 안에 머문 시간",
+    anCoverageDisclaimer:"이 계산은 추정된 치료 구간과 약효 추정곡선을 비교한 것으로, 처방을 권고하지 않습니다. 약물 조정은 담당 의료진과 상의하세요.",
+    anValidationTitle:"예측 vs 실제",
+    anValidationDisclaimer:"보고서에서 제안했던 후보안을 실제로 복용한 날의 기록과, 그때 예측했던 값을 비교합니다. 예측과 다르다고 해서 잘못된 것이 아니며, 그 차이가 다음 추정을 더 정확하게 만드는 데 쓰입니다.",
+    unregDrugTitle:"미등록 약 정리",
+    unregDrugDesc:"기록에 있지만 앱 사전에 없는 약 이름입니다. 성분을 한 번만 골라 두면, 그 이름으로 기록된 모든 복용이 앞으로 계산에 포함됩니다. 이 설정은 이 기기에만 저장됩니다.",
+    medSetTitle:"복용 세트", medSetDesc:"같이 드시는 약들을 묶어두면, 매번 하나씩 기록할 필요 없이 한 번에 같은 시각으로 기록됩니다. 시각이 정확히 겹쳐야 기록 분석도 더 정확해집니다.", addMedSet:"+ 세트 만들기", addRx:"📋 처방전으로 한 번에 등록",
     quickOutputTitle:"지금 몸이 어떠세요?", qoLabel:"현재 출력",
-    onoffOnBtn:"지금 ON", onoffOffBtn:"지금 OFF", onoffQuickHint:"출력 점수와 별개로, 지금이 확실한 ON/OFF 상태면 바로 한 번에 기록할 수 있어요",
     qoStep90:"아주 잘 움직여요", qoStep70:"지낼 만해요", qoStep50:"불편하지만 움직여요", qoStep30:"많이 느리고 힘들어요", qoStep10:"거의 못 움직여요", qoHelpBtn:"ⓘ 도움말 · 기준 설정", qoReset:"오늘 기준점 다시 설정", qoGuide:"출력 점수 기준 보기",
     fontSize:"글씨 크기", fontSizeDesc:"기본 · 크게 · 매우 크게", fsNormal:"기본", fsLarge:"크게", fsXLarge:"매우 크게",
     primarySym:"주증상 (최대 3개)", primarySymDesc:"집중 기록할 증상을 골라두면 다음 버전 기능에 사용돼요",
@@ -706,52 +726,16 @@ const I18N = {
     qoTrendPrompt:"이대로 기록할까요? 방향을 눌러주세요", trendRising:"상승 중", trendStable:"유지 중", trendFalling:"하강 중",
     trendPickAlert:"현재 몸 상태가 상승 중인지, 유지 중인지, 하강 중인지 선택해 주세요.",
     pastDateSaved:"기록을 추가했습니다", viewAddedRecord:"추가한 기록 보기", refState:"참고 상태",
-    symptomTitle:"⚡ 증상 기록 — 시작할 때 누르고, 끝나면 한 번 더", medLifeTitle:"약·생활 기록",
+    symptomTitle:"⚡ 증상 기록 — 시작할 때 누르고, 끝나면 한 번 더", medLifeTitle:"약·생활 기록", quickLifeTitle:"🍽 빠른 생활기록",
+    tempNoteTitle:"🕐 임시 기록 — 지금은 방향만, 점수는 나중에",
     outputOverlayTitle:"출력 곡선 + 생활기록 + 이벤트", overlayTapHint:"그래프를 눌러 그 시각의 출력·약효·이벤트를 확인하세요",
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
-    chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음 (INSUF)",
-    versionLabel:"파킨슨 약효 기록 · 2.13.8",
-    privacyPolicyLink:"개인정보처리방침 보기",
+    chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음",
+    versionLabel:"파킨슨 약효 기록 · 2.13.9",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
-    simTopDisclaimer:"이 곡선은 약물 종류, 제형, 용량, 복용시간 및 LEDD를 이용해 시간적 특성을 단순화한 참조 모델입니다. 실제 혈중농도, 개인의 실제 약효 또는 치료 결과를 예측하지 않습니다.",
-    simStep1Title:"출력곡선과 약효곡선 비교", simStep1Hint:"내가 기록한 실제 출력과 현재 약물 조합의 시간적 특성을 함께 살펴봅니다.",
-    simStep2Title:"현재 복용약",
-    simStep3Title:"실제 출력과 약효 추정곡선", simStep3Hint:"실제 출력과 약효 추정치는 서로 다른 자료입니다. 곡선의 일치 여부는 참고용이며 인과관계를 의미하지 않습니다.",
-    simLegendActualPatient:"실제 출력: 환자 기록", simLegendEstDrugModel:"현재 약효 추정: 약물모델",
-    simPerDrugShow:"약물별 곡선 보기", simPerDrugHide:"약물별 곡선 숨기기",
-    simStep4Title:"변경안 만들기", simStep4Hint:"현재안을 복사한 뒤 한 가지만 바꿔서 곡선의 상대적 모양 차이를 비교합니다.",
-    simChangeTargetLabel:"변경할 약", simChangeKindLabel:"변경 방식", simResetVariant:"변경안 초기화",
-    simCompareTitle:"현재안 · 변경안 비교",
-    simLegendActualOnly:"실제 출력", simLegendCurrentEst:"현재 약효 추정", simLegendVirtualEst:"변경안 약효 추정",
-    simBottomDisclaimer:"약물의 용량이나 복용시간 변경은 담당 의료진과 상의해야 합니다. 실제 반응은 약효 비교 테스트와 진료를 통해 확인하십시오.",
-    simChallengeLinkHint:"실제 복용 결과는 <a href=\"challenge/index.html\" onclick=\"syncSharedProfile()\">약효 비교 테스트</a>에서 확인할 수 있습니다.",
-    simKindDose:"용량 변경", simKindTime:"시간 변경", simKindAdd:"약 추가", simKindRemove:"약 삭제", simKindReplace:"약 교체",
-    simNoRecordOption:"이 날짜에 복약 기록이 없습니다",
-    simNoDoseWarn:"용량 확인 필요", simNoDoseInfo:"이 기록에는 용량이 없어 용량 변경을 할 수 없습니다.",
-    simCurrentPlanPrefix:"현재안:", simNoCurveModel:"곡선 모델 미등록",
-    simDoseOnlyForRecorded:"용량이 기록된 약에서만 사용할 수 있습니다.",
-    simDrugSearchPlaceholder:"약 이름 검색 (상품명·성분명 모두 가능)",
-    simAddToVariant:"이 약을 변경안에 추가", simReplaceWithThis:"이 약으로 교체",
-    simReplaceFormulationNote:"제형·약물이 다르면 곡선의 모양도 달라집니다. 용량 단위가 크게 다르면 다시 입력해야 합니다.",
-    simRecognized:"인식됨:", simSimilarIngredients:"비슷한 성분:",
-    simNoRecordForDate:"이 날짜에는 기록이 없습니다.", simNoPerDrugCurve:"약물별 곡선이 없습니다.",
-    simDoseNotEditable:"현재 용량이 기록되어 있지 않아 용량 변경을 할 수 없어요",
-    simDoseFloor:"0mg 이하로는 만들 수 없어요",
-    simDoseReenter:"제형·표준 용량이 달라 용량을 다시 입력해주세요",
-    simRemoved:"제외:", simAdded:"추가:",
-    simChangesLabel:"변경 내용:", simNoChanges:"변경 내용: 없음 (현재안과 동일)",
-    simIncludedLedd:"계산 포함 LEDD", simIncludedLeddNote:"(레보도파 계열 환산량 — 전체 LEDD가 아닙니다)",
-    simCurrentIncludedLedd:"현재 계산 포함 LEDD:", simVirtualIncludedLedd:"변경안 계산 포함 LEDD:", simLeddChange:"변화:",
-    simPerDrugContribution:"약물별 기여도", simCurrentPlanLabel:"현재안:", simVirtualPlanLabel:"변경안:",
-    simExcludedNote1:"일부 보조약과 도파민 작용제(", simExcludedNote2:")는 현재 이 합계에서 제외됩니다.",
-    simOverlapNoteText1:"약효 추정 중첩 구간: 약", simOverlapNoteText2:"분 (여러 약의 추정 효과가 동시에 높은 시간대 — 이상운동증 위험을 단정하지 않습니다)",
-    simDangerThreshLabel:"위험구간 기준",
-    simCarryPrefix:"전날", simCarrySuffix:"· 다음 날 보정 반영",
-    outputInputMethod:"출력 입력 방식", outputInputMethodDesc:"버튼(기본) · 슬라이더 · 함께",
-    oiButtons:"버튼", oiSlider:"슬라이더", oiBoth:"함께",
   },
   en:{
     appTitle:"Med Log", appSub:"Output Diary",
@@ -781,12 +765,7 @@ const I18N = {
     guideText:"<b>Med Log is a tool for recording and observing symptom and medication-response patterns.</b> It does not replace medical diagnosis or prescription. Always consult your doctor before adjusting dosage or timing. All records are stored only on this device and are never transmitted anywhere.",
     resetAll:"Delete all records",
     lang:"Language", langDesc:"한국어 / English",
-    navToday:"Today", navLog:"Log", navTrend:"Trend", navCurve:"Curve", navAnalysis:"Analysis", navSim:"Sim", navReport:"Report", navSet:"Settings",
-    analysisTitle:"Record Analysis · Reproducibility",
-    anWindowTitle:"Estimated therapeutic window (lower/upper bound)",
-    anWindowDisclaimer:"This window is estimated from your own recorded OFF times and dyskinesia times — it is not an absolute standard. It is not estimated when there isn't enough data.",
-    anCoverageTitle:"Time within the therapeutic window",
-    anCoverageDisclaimer:"This is a comparison of your estimated window against the effect-estimate curve. It does not recommend a prescription. Discuss medication changes with your clinician.",
+    navToday:"Today", navLog:"Log", navTrend:"Trend", navCurve:"Curve", navSim:"Sim", navReport:"Report", navSet:"Settings",
     simPlanTitle:"Current plan (actual record for selected date)",
     simVirtualTitle:"Virtual (what-if) plan",
     simAddDose:"+ Add dose",
@@ -799,8 +778,17 @@ const I18N = {
     simPlanPeak:"Current plan peak time", simVirtualPeak:"Virtual plan peak time",
     glossaryBtn:"ⓘ View state & term guide",
     glossOnVsPartial:"ON vs Partial ON", glossDyskVsDyst:"Dyskinesia vs Dystonia",
+    navAnalysis:"Analysis", analysisTitle:"Record Analysis · Reproducibility",
+    anWindowTitle:"Estimated therapeutic window (lower/upper bound)",
+    anWindowDisclaimer:"This window is estimated from your own recorded OFF times and dyskinesia times — it is not an absolute standard. It is not estimated when there isn't enough data.",
+    anCoverageTitle:"Time within the therapeutic window",
+    anCoverageDisclaimer:"This is a comparison of your estimated window against the effect-estimate curve. It does not recommend a prescription. Discuss medication changes with your clinician.",
+    anValidationTitle:"Predicted vs Actual",
+    anValidationDisclaimer:"Compares a candidate suggested in a past report against records from a day it was actually taken. A mismatch isn't a failure — the difference helps refine future estimates.",
+    unregDrugTitle:"Unrecognized medications",
+    unregDrugDesc:"These drug names appear in your records but aren't in the app dictionary. Choose the ingredient once and every past and future dose under that name will be included in calculations. Saved on this device only.",
+    medSetTitle:"Medication sets", medSetDesc:"Group medications you take together — logging the set records them all at the exact same time, instead of one by one. Matching timestamps also make analysis more accurate.", addMedSet:"+ Create set", addRx:"📋 Add from a prescription",
     quickOutputTitle:"How is your body right now?", qoLabel:"Current output",
-    onoffOnBtn:"Log ON now", onoffOffBtn:"Log OFF now", onoffQuickHint:"Separate from your output score — if you're clearly ON or OFF right now, you can log it in one tap",
     qoStep90:"Moving very well", qoStep70:"Manageable", qoStep50:"Uncomfortable but moving", qoStep30:"Very slow and hard", qoStep10:"Can barely move", qoHelpBtn:"ⓘ Help & baseline", qoReset:"Reset today's baseline", qoGuide:"View output score guide",
     fontSize:"Font size", fontSizeDesc:"Normal · Large · Extra large", fsNormal:"Normal", fsLarge:"Large", fsXLarge:"Extra large",
     primarySym:"Main symptoms (up to 3)", primarySymDesc:"Pick symptoms to focus on — used by upcoming features",
@@ -809,52 +797,16 @@ const I18N = {
     qoTrendPrompt:"Ready to save? Tap the direction", trendRising:"Rising", trendStable:"Stable", trendFalling:"Falling",
     trendPickAlert:"Please choose whether your body is currently rising, stable, or falling.",
     pastDateSaved:"Record added", viewAddedRecord:"View added record", refState:"Reference state",
-    symptomTitle:"⚡ Symptoms — tap to start, tap again to end", medLifeTitle:"Medication & life records",
+    symptomTitle:"⚡ Symptoms — tap to start, tap again to end", medLifeTitle:"Medication & life records", quickLifeTitle:"🍽 Quick life log",
+    tempNoteTitle:"🕐 Quick notes — direction now, score later",
     outputOverlayTitle:"Output curve + life records + events", overlayTapHint:"Tap the chart to see output, drug level, and events at that time",
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
-    chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests (INSUF)",
-    versionLabel:"Parkinson's Medication Diary · 2.13.8",
-    privacyPolicyLink:"View Privacy Policy",
+    chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests",
+    versionLabel:"Parkinson's Medication Diary · 2.13.9",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
-    simTopDisclaimer:"This curve is a simplified reference model based on medication type, formulation, dose, timing, and LEDD. It does not predict actual blood levels, your personal medication response, or treatment outcomes.",
-    simStep1Title:"Compare output curve with estimated medication curve", simStep1Hint:"See your recorded output alongside the time-based characteristics of your current medication combination.",
-    simStep2Title:"Current medications",
-    simStep3Title:"Actual output vs. estimated medication curve", simStep3Hint:"Actual output and the estimated curve are two different kinds of data. How closely they align is for reference only and does not imply causation.",
-    simLegendActualPatient:"Actual output: patient record", simLegendEstDrugModel:"Current estimated response: drug model",
-    simPerDrugShow:"Show per-drug curves", simPerDrugHide:"Hide per-drug curves",
-    simStep4Title:"Build a what-if plan", simStep4Hint:"Copy your current plan and change just one thing to compare the relative shape difference.",
-    simChangeTargetLabel:"Medication to change", simChangeKindLabel:"Type of change", simResetVariant:"Reset what-if plan",
-    simCompareTitle:"Current plan vs. what-if plan",
-    simLegendActualOnly:"Actual output", simLegendCurrentEst:"Current estimated response", simLegendVirtualEst:"What-if estimated response",
-    simBottomDisclaimer:"Discuss any change in medication dose or timing with your doctor. Confirm the actual effect through a Medication Challenge test and your clinic visit.",
-    simChallengeLinkHint:"You can check real-world results in the <a href=\"challenge/index.html\" onclick=\"syncSharedProfile()\">Medication Challenge</a>.",
-    simKindDose:"Change dose", simKindTime:"Change time", simKindAdd:"Add medication", simKindRemove:"Remove medication", simKindReplace:"Replace medication",
-    simNoRecordOption:"No medication records for this date",
-    simNoDoseWarn:"Dose not recorded", simNoDoseInfo:"This record has no dose, so it can't be changed.",
-    simCurrentPlanPrefix:"Current plan:", simNoCurveModel:"No curve model registered",
-    simDoseOnlyForRecorded:"Only available for medications with a recorded dose.",
-    simDrugSearchPlaceholder:"Search by drug name (brand or generic name)",
-    simAddToVariant:"Add to what-if plan", simReplaceWithThis:"Replace with this medication",
-    simReplaceFormulationNote:"A different formulation or drug changes the curve shape. Re-enter the dose if the standard unit is very different.",
-    simRecognized:"Recognized:", simSimilarIngredients:"Similar ingredients:",
-    simNoRecordForDate:"No records for this date.", simNoPerDrugCurve:"No per-drug curves available.",
-    simDoseNotEditable:"This dose wasn't recorded, so it can't be changed.",
-    simDoseFloor:"Dose can't go to 0mg or below.",
-    simDoseReenter:"Formulation and standard dose differ — please re-enter the dose.",
-    simRemoved:"Removed:", simAdded:"Added:",
-    simChangesLabel:"Changes:", simNoChanges:"Changes: none (same as current plan)",
-    simIncludedLedd:"Included LEDD", simIncludedLeddNote:"(levodopa-equivalent amount — not total LEDD)",
-    simCurrentIncludedLedd:"Current included LEDD:", simVirtualIncludedLedd:"What-if included LEDD:", simLeddChange:"Change:",
-    simPerDrugContribution:"Per-drug contribution", simCurrentPlanLabel:"Current plan:", simVirtualPlanLabel:"What-if plan:",
-    simExcludedNote1:"Some adjunct medications and dopamine agonists (", simExcludedNote2:") are currently excluded from this total.",
-    simOverlapNoteText1:"Estimated medication-response overlap: about", simOverlapNoteText2:"min (a time when several medications' estimated effects are high at once — this does not determine dyskinesia risk)",
-    simDangerThreshLabel:"Danger-zone threshold",
-    simCarryPrefix:"Previous day", simCarrySuffix:"· carried over to next day",
-    outputInputMethod:"Output input style", outputInputMethodDesc:"Buttons (default) · Slider · Both",
-    oiButtons:"Buttons", oiSlider:"Slider", oiBoth:"Both",
   }
 };
 function currentLang(){ try{ return (db && db.settings && db.settings.lang) || "ko"; }catch(e){ return "ko"; } }
@@ -1171,10 +1123,26 @@ const BOWEL_CONSISTENCY = ["딱딱함","보통","묽음"];
 const BOWEL_EXTRAS = ["힘들었음","잔변감"];
 const BODY_SYMPTOMS = ["이상 없음","어지럼","기립 시 어지럼","소변 급박","빈뇨","땀 증가","침 흘림","메스꺼움","극심한 피로","불안","졸림","통증"];
 const MED_PRESETS = ["마도파","마도파 HBS","시네메트","시네메트 CR","스타레보","퍼킨","온젠티스(오피카폰)","아질렉트","미라펙스","리큅","아만타딘","컴탄"];
+
+/* 빠른 기록: 시트 없이 한 번의 탭으로 바로 저장되는 버튼들 (가장 많이 나온 피드백 반영) */
+const QUICK_ACTIONS = [
+  {key:"good",   ic:"😊", ko:"괜찮음",  en:"Okay",       kind:"state", state:"on"},
+  {key:"better", ic:"↗",  ko:"좋아짐",  en:"Better",     kind:"state", state:"rising", riseResult:"reached"},
+  {key:"worse",  ic:"↘",  ko:"나빠짐",  en:"Worse",      kind:"state", state:"falling"},
+  {key:"off",    ic:"⚫", ko:"OFF",     en:"OFF",        kind:"state", state:"off"},
+  {key:"on",     ic:"🟢", ko:"ON",      en:"ON",         kind:"state", state:"on"},
+  {key:"dysk",   ic:"⚡", ko:"이상운동", en:"Dyskinesia", kind:"state", state:"on", symptoms:["dysk"]},
+];
+
+/* ---------- kinetic profiles for curve tab ----------
+   type: "fast"  = 빠른 상승/짧은 지속 (즉시방출 레보도파류: 퍼킨, 시네메트, 마도파(일반), 스타레보)
+         "slow"  = 완만한 상승/긴 지속 (서방정: HBS, CR)
+         "extend"= 곡선을 옆으로 늘려주는 보조제 (온젠티스/컴탄=COMT억제제, 아질렉트=MAO-B억제제)
+         "flat"  = 완만한 기저 상승 (도파민 효능제, 아만타딘)
+   peakMin: 투여 후 피크까지 걸리는 시간(분)
+   durMin: 전체 지속시간(분, 반감기 기반 근사)
+   amp: 상대적 기여도(1.0 = 표준 1회 용량 기준) */
 const KEY = "yakhyo_log_v1";
-
-
-
 
 /* ---------- LEDD 환산계수 (parkinsonsmeasurement.org LEDD 계산기 참고) ----------
    레보도파 속방형=1, 서방형=0.75, 프라미펙솔·라사길린 등 효능제/MAO-B는 "표준 1일 용량당" 환산계수를 그대로 곱함 */
@@ -1271,14 +1239,7 @@ function defaultQuestions(){ return (currentLang()==="en" ? [
 const pad=n=>String(n).padStart(2,"0");
 const dkey=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const todayKey=()=>dkey(new Date());
-function hm(ts){
-  const d=new Date(ts);
-  if(currentLang()==="en"){
-    let h=d.getHours(); const ap=h>=12?"PM":"AM"; h=h%12; if(h===0) h=12;
-    return `${h}:${pad(d.getMinutes())} ${ap}`;
-  }
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
+function hm(ts){const d=new Date(ts); return `${pad(d.getHours())}:${pad(d.getMinutes())}`;}
 function minOfDay(ts){const d=new Date(ts); return d.getHours()*60+d.getMinutes();}
 function fmtDur(m){ if(m<=0) return L("0분","0min"); const h=Math.floor(m/60),mm=Math.round(m%60); return h? L(`${h}시간 ${mm}분`,`${h}h ${mm}m`) : L(`${mm}분`,`${mm}m`); }
 function fmtDateK(k){ const[a,b,c]=k.split("-");
@@ -1287,6 +1248,239 @@ function fmtDateK(k){ const[a,b,c]=k.split("-");
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 
 /* ---------- event ops ---------- */
+/* v2.11: 임시 기록 — 실사용 설계 논의: "약 먹은 후 증상이 생기거나 없어지는 순간마다
+   0~100점을 바로 매기긴 부담스럽다. 그 순간엔 방향(좋아짐/나빠짐/그대로)만 짧게
+   남기고, 오전·오후처럼 시간 날 때 그 메모들을 나란히 놓고 비교하며 점수를 매기면
+   더 정확하다"는 결론 — 시뮬레이션으로 확인한 "하루 8~20개 기록"이라는 목표는
+   그대로 지키면서(각 순간의 시각은 그대로 보존), 점수 매기는 부담만 뒤로 미룬다.
+   임시 기록은 type:"tempnote"로 저장되고, 점수를 매기면 정식 출력 기록(type:"state")
+   으로 전환되며 원래 시각은 그대로 유지된다 — 나중에 몰아서 매겨도 그래프상 위치는
+   정확하다. */
+/* v2.12: 앵커+이벤트 기반 그래프 — 작업지시서 반영. 기존 3종(좋아짐/나빠짐/그대로)을
+   설계도의 5가지 곡선 모양 이벤트로 확장한다. "재상승"은 별도 타입을 안 만들고
+   "상승"을 다시 쓰는 것으로 처리한다(하강 뒤에 상승이 오면 문맥상 재상승이라는 게
+   시각에 나타남 — 종류를 하나 더 늘리는 것보다 재사용이 더 단순하고 안전하다). */
+const TEMPNOTE_DIRS = [
+  {key:"signal", ko:"첫 신호",  en:"First signal", ic:"⚡", trend:"rising"},
+  {key:"up",     ko:"상승",     en:"Rising",       ic:"↗", trend:"rising"},
+  {key:"peak",   ko:"피크",     en:"Peak",         ic:"△", trend:"stable"},
+  {key:"down",   ko:"하강",     en:"Falling",      ic:"↘", trend:"falling"},
+  {key:"same",   ko:"유지",     en:"Same",         ic:"→", trend:"stable"},
+];
+/* 설계도 7번: 상세 증상은 메인 화면에 항상 노출하지 않고, 이벤트 기록 후 필요할 때만
+   펼쳐서 선택한다. 기존 증상 사전(SYMPTOM_QUICK)의 라벨을 그대로 재사용해 새 목록을
+   따로 만들지 않는다 — incomplete ON만 여기 고유로 추가한다. */
+const TEMPNOTE_TAGS = [
+  {key:"incomplete_on", ko:"불완전 ON", en:"Incomplete ON"},
+  {key:"dysk",   ko:"이상운동증", en:"Dyskinesia"},
+  {key:"dyst",   ko:"근긴장이상", en:"Dystonia"},
+  {key:"freeze", ko:"동결",       en:"Freezing"},
+  {key:"weak",   ko:"힘 빠짐",    en:"Weakness"},
+  {key:"tremor", ko:"떨림",       en:"Tremor"},
+  {key:"pain",   ko:"통증",       en:"Pain"},
+];
+function tempNoteDirTrend(dirKey){ const d=TEMPNOTE_DIRS.find(x=>x.key===dirKey); return d? d.trend : "stable"; }
+function addTempNote(dir, memo, ts, tags){
+  const ev={ id:uid(), type:"tempnote", ts:ts||Date.now(), dir:dir||null, memo:memo||"", tags:tags||[] };
+  db.events.push(ev); db.events.sort((a,b)=>a.ts-b.ts); save(); renderAll();
+  toast(`${L("임시 기록됨","noted")} · ${hm(ev.ts)}`);
+  return ev;
+}
+/* 설계도 10번(몰아 기록): 시간을 "지금" 외에 "30분 전"·"1시간 전"으로도 바로 고를 수
+   있게 한다 — 나중에 몰아서 여러 개를 입력할 때 매번 시계를 돌리지 않아도 되게. */
+const TEMPNOTE_TIME_PRESETS = [
+  {key:"now",   ko:"지금",     en:"Now",     min:0},
+  {key:"m30",   ko:"30분 전",  en:"30m ago", min:30},
+  {key:"h1",    ko:"1시간 전", en:"1h ago",  min:60},
+];
+function openTempNoteQuick(){
+  openSheet(`
+    <h2>${L("🕐 지금 느낌만 짧게","🕐 Quick note")}</h2>
+    <div class="hint" style="margin-bottom:10px">${L("점수는 나중에 몰아서 매길게요 — 지금은 모양만 눌러 주세요.","Score it later — just pick a shape for now.")}</div>
+    <div class="chips" style="display:flex; gap:6px; flex-wrap:wrap">
+      ${TEMPNOTE_DIRS.map((d,i)=>`<button class="btn ghost" data-dir="${d.key}" style="flex:1; min-width:60px"><span style="font-size:20px">${d.ic}</span><br>${L(d.ko,d.en)}</button>`).join("")}
+    </div>
+    <div class="field" style="margin-top:10px"><label>${L("시각","Time")}</label>
+      <div class="chips" id="tnTimeChips" style="display:flex; gap:6px; flex-wrap:wrap">
+        ${TEMPNOTE_TIME_PRESETS.map((t,i)=>`<button type="button" class="chip${i===0?" sel":""}" data-tmin="${t.min}">${L(t.ko,t.en)}</button>`).join("")}
+        <button type="button" class="chip" id="tnTimeCustomBtn">${L("직접 선택","Pick time")}</button>
+      </div>
+      <div id="tnTimeCustomField" style="display:none; margin-top:8px"></div>
+    </div>
+    <div class="field"><label>${L("증상 태그 (선택)","Symptom tags (optional)")}</label>
+      <div class="chips" id="tnTagChips">${TEMPNOTE_TAGS.map((t,i)=>`<button type="button" class="chip" data-t="${t.key}">${L(t.ko,t.en)}</button>`).join("")}</div>
+    </div>
+    <div class="field"><label>${L("메모 (선택)","Memo (optional)")}</label><input id="tn_memo" placeholder="${L("예: 손이 떨림","e.g. hand tremor")}"></div>
+    <button class="btn ghost" style="margin-top:8px" onclick="closeSheet()">${L("취소","Cancel")}</button>
+  `);
+  multiChipToggle("tnTagChips");
+  singleChipToggle("tnTimeChips");
+  /* v2.12.3: 작업지시서(몰아 기록) 4번째 옵션 "시간 직접 선택"이 주석에만 있고 실제
+     구현이 빠져 있던 걸 발견해 채운다 — 프리셋(지금/30분전/1시간전)에 없는 시각은
+     기존 timeFieldHtml 위젯을 그대로 재사용해 시·분을 직접 고르게 한다. */
+  document.getElementById("tnTimeCustomBtn").onclick=()=>{
+    document.querySelectorAll("#tnTimeChips .chip").forEach(c=>c.classList.remove("sel"));
+    document.getElementById("tnTimeCustomBtn").classList.add("sel");
+    const field=document.getElementById("tnTimeCustomField");
+    field.style.display="block";
+    field.innerHTML=timeFieldHtml("tnCustomTime", Date.now());
+    bindTimeField("tnCustomTime");
+  };
+  document.querySelectorAll("#tnTimeChips [data-tmin]").forEach(b=>{
+    b.onclick=()=>{ document.getElementById("tnTimeCustomBtn").classList.remove("sel");
+      document.getElementById("tnTimeCustomField").style.display="none"; };
+  });
+  document.querySelectorAll("[data-dir]").forEach(b=>{
+    b.onclick=()=>{
+      const customOn=document.getElementById("tnTimeCustomBtn").classList.contains("sel");
+      const ts = customOn
+        ? tsFromTimeField("tnCustomTime", Date.now())
+        : Date.now()-(+(document.querySelector("#tnTimeChips .chip.sel")?.dataset.tmin || 0))*60000;
+      const tags=selectedChips("tnTagChips");
+      addTempNote(b.dataset.dir, document.getElementById("tn_memo").value.trim(), ts, tags);
+      closeSheet();
+    };
+  });
+}
+/* v2.12.1: 앵커+이벤트 곡선 추정 — 작업지시서 3번(그래프에 실제로 그리기)의 계산 부분.
+   확정 앵커(숫자로 기록된 출력값) 사이에 방향 이벤트(첫신호·상승·피크·하강·유지)가
+   있으면, 그 모양을 반영해서 중간값을 추정한다. 추정값은 estimated:true로 표시해
+   실측(anchor)과 절대 섞이지 않게 한다(설계도 9번 원칙).
+   신뢰도를 두 단계로 나눈다:
+   - high: 이벤트 앞뒤로 실측 앵커가 둘 다 있음(구간이 양쪽으로 고정됨) → 그 구간
+     안에서 선형보간 기준선에 이벤트별 굴곡(피크는 위로, 하강은 아래로)을 얹는다.
+   - low: 한쪽에만 앵커가 있음(형님 예시처럼 이벤트가 먼저 오고 앵커가 나중에 하나만
+     있는 경우) → **각 이벤트를 "그 직전 지점 대비 얼마나 변했는지"(STEP)로 사슬처럼
+     누적**해 상대적 모양(무엇이 가장 높고 낮은지)을 먼저 만든 다음, 마지막에 실측
+     앵커 하나로 전체를 통째로 밀어 올리거나 내린다(shift). 처음에 각 이벤트를 앵커
+     하나만으로 개별 역산했더니 "피크"가 "하강"보다 낮게 나오는 오류가 있었음(검산
+     중 발견) — 사슬 누적 방식으로 교체해 상대적 순서가 항상 맞도록 고쳤다. */
+const CURVE_EVENT_BUMP = { signal:8, up:12, peak:22, down:-18, same:0 };   /* high 신뢰도: 두 앵커 사이 굴곡 폭 */
+const CURVE_EVENT_STEP = { signal:8, up:15, peak:15, down:-25, same:0 };  /* low 신뢰도: 직전 지점 대비 변화량(사슬용) */
+function dayAnchorsAndEvents(dayKey){
+  const dayEvs=db.events.filter(e=>dkey(new Date(e.ts))===dayKey);
+  const anchors=dayEvs.filter(e=>e.type==="state" && e.output!=null)
+    .map(e=>({ts:e.ts, value:e.output})).sort((a,b)=>a.ts-b.ts);
+  const events=dayEvs.filter(e=>e.type==="tempnote")
+    .map(e=>({ts:e.ts, dir:e.dir, tags:e.tags||[], memo:e.memo||""})).sort((a,b)=>a.ts-b.ts);
+  return {anchors, events};
+}
+function estimateDailyCurve(dayKey){
+  const {anchors, events}=dayAnchorsAndEvents(dayKey);
+  const points=[...anchors.map(a=>({ts:a.ts, value:a.value, estimated:false, confidence:"measured"}))];
+
+  /* high 신뢰도 구간(양쪽 앵커 있음)은 개별 선형보간+굴곡으로 바로 계산 */
+  const highEvents=events.filter(ev=>{
+    const before=anchors.filter(a=>a.ts<ev.ts).pop();
+    const after=anchors.find(a=>a.ts>ev.ts);
+    return before && after;
+  });
+  highEvents.forEach(ev=>{
+    const before=anchors.filter(a=>a.ts<ev.ts).pop();
+    const after=anchors.find(a=>a.ts>ev.ts);
+    const frac=(ev.ts-before.ts)/(after.ts-before.ts||1);
+    const base=before.value+(after.value-before.value)*frac;
+    const value=Math.max(0,Math.min(100, base+(CURVE_EVENT_BUMP[ev.dir]||0)));
+    points.push({ts:ev.ts, value, estimated:true, confidence:"high", dir:ev.dir, tags:ev.tags, memo:ev.memo});
+  });
+
+  /* low 신뢰도 구간: 뒤쪽에만 앵커가 있는 사슬(형님 예시가 이 경우) */
+  const beforeOnlyChain=events.filter(ev=>!anchors.some(a=>a.ts<ev.ts) && anchors.some(a=>a.ts>ev.ts));
+  if(beforeOnlyChain.length){
+    const after=anchors.find(a=>a.ts>beforeOnlyChain[0].ts);
+    let rel=0; const relSeq=beforeOnlyChain.map(ev=>{ rel+=CURVE_EVENT_STEP[ev.dir]||0; return rel; });
+    const offset=after.value-relSeq[relSeq.length-1];
+    beforeOnlyChain.forEach((ev,i)=>{
+      const value=Math.max(0,Math.min(100, relSeq[i]+offset));
+      points.push({ts:ev.ts, value, estimated:true, confidence:"low", dir:ev.dir, tags:ev.tags, memo:ev.memo});
+    });
+  }
+  /* low 신뢰도 구간: 앞쪽에만 앵커가 있는 사슬(그날의 마지막 이벤트들, 그 뒤로 앵커 없음) */
+  const afterOnlyChain=events.filter(ev=>anchors.some(a=>a.ts<ev.ts) && !anchors.some(a=>a.ts>ev.ts));
+  if(afterOnlyChain.length){
+    const before=anchors.filter(a=>a.ts<afterOnlyChain[0].ts).pop();
+    let rel=0;
+    afterOnlyChain.forEach(ev=>{
+      rel+=CURVE_EVENT_STEP[ev.dir]||0;
+      const value=Math.max(0,Math.min(100, before.value+rel));
+      points.push({ts:ev.ts, value, estimated:true, confidence:"low", dir:ev.dir, tags:ev.tags, memo:ev.memo});
+    });
+  }
+  /* 그 날 앵커가 하나도 없는 경우: 절대값 추정 근거가 전혀 없어 숫자를 만들지 않는다 */
+  if(!anchors.length){
+    events.forEach(ev=>{
+      points.push({ts:ev.ts, value:null, estimated:true, confidence:"none", dir:ev.dir, tags:ev.tags, memo:ev.memo});
+    });
+  }
+  points.sort((a,b)=>a.ts-b.ts);
+  return points;
+}
+/* 검토 발견(2026-08-10, 실사용): 이 함수가 "오늘 것만" 걸러서 보여주고 있어서, 임시
+   기록을 남기고 그날 안에 점수를 안 매기면 다음 날부터 화면에서 영영 사라졌다 —
+   "저장해도 반영이 안 된다"고 느끼신 신고의 정확한 원인. 날짜와 상관없이 "아직 점수
+   안 매긴 것 전부"를 보여주도록 고친다(이름도 그에 맞게 pendingTempNotes로). */
+function pendingTempNotes(){
+  return db.events.filter(e=>e.type==="tempnote").sort((a,b)=>a.ts-b.ts);
+}
+function openTempNoteReview(){
+  const notes=pendingTempNotes();
+  if(!notes.length){ toast(L("아직 점수 안 매긴 임시 기록이 없어요","No pending notes to score")); return; }
+  const DIRLABEL=Object.fromEntries(TEMPNOTE_DIRS.map(d=>[d.key, `${d.ic} ${L(d.ko,d.en)}`]));
+  const tagLabel=(k)=>{ const t=TEMPNOTE_TAGS.find(x=>x.key===k); return t? L(t.ko,t.en) : k; };
+  const spansMultipleDays = new Set(notes.map(n=>dkey(new Date(n.ts)))).size>1;
+  const timeLabel = n => spansMultipleDays
+    ? `${new Intl.DateTimeFormat(L("ko-KR","en-US"),{month:"numeric",day:"numeric"}).format(new Date(n.ts))} ${hm(n.ts)}`
+    : hm(n.ts);
+  openSheet(`
+    <h2>${L("임시 기록 점수 매기기","Score today's notes")}</h2>
+    <div class="hint" style="margin-bottom:10px">${L("시각순으로 나란히 놓았어요. 서로 비교하면서 점수를 매기면 더 정확해요.","Notes are lined up by time — compare them as you score each one.")}</div>
+    <div id="tnReviewRows">
+      ${notes.map((n,i)=>`<div class="li" data-tn="${n.id}" style="flex-wrap:wrap; align-items:center; gap:8px">
+        <div style="min-width:${spansMultipleDays?"96":"70"}px; font-weight:800">${timeLabel(n)}</div>
+        <div style="flex:1; min-width:100px">${DIRLABEL[n.dir]||""}${(n.tags&&n.tags.length)?` · ${n.tags.map(tagLabel).join(", ")}`:""}${n.memo?` · ${escapeHtml(n.memo)}`:""}</div>
+        <input type="number" class="tn-score" min="0" max="100" placeholder="${L("점수","Score")}" style="width:76px">
+      </div>`).join("")}
+    </div>
+    <div class="btn-row" style="margin-top:10px"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="tnSaveAll">${L("전부 저장","Save all")}</button></div>
+  `);
+  document.getElementById("tnSaveAll").onclick=()=>{
+    const rows=[...document.querySelectorAll("#tnReviewRows [data-tn]")];
+    let saved=0;
+    const KNOWN_SYMPTOM_KEYS=["dysk","dyst","tremor","freeze","pain"]; /* 기존 SYMPTOMS 사전과 겹치는 것만 symptoms 배열로, 나머지(불완전ON·힘빠짐)는 메모에 덧붙인다 */
+    rows.forEach(row=>{
+      const val=row.querySelector(".tn-score").value;
+      if(val==="") return;
+      const id=row.dataset.tn;
+      const note=db.events.find(e=>e.id===id); if(!note) return;
+      /* 검토 발견: type:"state" 이벤트는 evRow가 SMAP[e.state]로 색을 찾으므로 state 필드가
+         반드시 있어야 한다(없으면 실제로 화면이 깨짐) — 메모를 남길 때 고른 방향(dir)을
+         기존 stateFromTrend()가 쓰는 trend 값으로 그대로 매핑해서 재사용한다. */
+      const trend = tempNoteDirTrend(note.dir);
+      const state = stateFromTrend(trend, +val);
+      const tags=note.tags||[];
+      const symptoms=tags.filter(t=>KNOWN_SYMPTOM_KEYS.includes(t));
+      const extraTags=tags.filter(t=>!KNOWN_SYMPTOM_KEYS.includes(t)).map(tagLabel);
+      const memo=[note.memo, ...extraTags].filter(Boolean).join(" · ");
+      db.events.push({ id:uid(), type:"state", state, ts:note.ts, output:+val, trend,
+        memo, symptoms, customSymptom:"", riseResult:null,
+        inputMethod:"tempnote_review", retrospective:false });
+      db.events=db.events.filter(e=>e.id!==id);
+      saved++;
+    });
+    db.events.sort((a,b)=>a.ts-b.ts); save(); closeSheet(); renderAll();
+    toast(saved? L(`${saved}건 정식 기록으로 전환됨`,`${saved} converted`) : L("점수를 매긴 항목이 없어요","No scores entered"));
+  };
+}
+function renderTempNoteGrid(){
+  const grid=document.getElementById("tempNoteGrid"); if(!grid) return;
+  const pending=pendingTempNotes().length;
+  grid.innerHTML=`
+    <button class="quick-btn" id="tnQuickBtn"><span class="qic">🕐</span><span>${L("지금 느낌 메모","Quick note")}</span></button>
+    <button class="quick-btn${pending?" sel":""}" id="tnReviewBtn"><span class="qic">📋</span><span>${L("점수 매기기","Score notes")}${pending? ` · ${pending}`:""}</span></button>
+  `;
+  document.getElementById("tnQuickBtn").onclick=openTempNoteQuick;
+  document.getElementById("tnReviewBtn").onclick=openTempNoteReview;
+}
 function addState(key, extra={}){
   const ts = extra.ts || Date.now();
   const ev = { id:uid(), type:"state", state:key, ts,
@@ -1302,6 +1496,196 @@ function addMed(name, dose, ts){
   db.events.push({ id:uid(), type:"med", drug:name, dose:dose||null, ts:ts||Date.now(), memo:"" });
   db.events.sort((a,b)=>a.ts-b.ts); save(); renderAll();
   toast(`${name}${dose?(" "+dose+"mg"):""} ${L("복약 기록됨","medication recorded")}`);
+}
+/* v2.9: 복용 세트 — 실사용 신고: 같이 드시는 여러 약(예: 아침 6시에 마도파HBS·미라펙스·
+   아만타딘 동시복용)을 하나씩 따로 기록하면 실제로는 5~10분 안에 다 드셨는데도 기록
+   시각이 6:01, 6:03, 6:05처럼 몇 분씩 흩어진다. Phase 0의 그룹핑(±45분 근접성 기준)은
+   시각이 정확히 같을수록 정확한 하나의 그룹으로 묶이므로, 이 시간차 자체가 재현성
+   분석에 불필요한 잡음이 된다. 세트 하나를 한 번에 기록하면 전부 정확히 같은 시각으로
+   저장되어, 기록 부담도 줄고 Phase 0 분석 정확도도 함께 올라간다. */
+/* 검토 발견(2026-08-09, 실사용): "아침7"처럼 예정시각(schedTime)을 안 켠 세트는
+   눌러도 화면에 "이미 기록됨" 같은 표시가 없어서, 눌렀는지 헷갈려 5번 연속 누른
+   사고가 실제로 발생함(퍼킨 50mg이 같은 시각에 5건 중복 기록됨) — 코드는 매번
+   정상 작동했지만, 되풀이 클릭을 막는 안전장치가 없었던 게 진짜 문제였다.
+   같은 세트를 짧은 시간(5분) 안에 다시 누르면 확인을 한 번 거치게 한다. */
+const MEDSET_DUP_GUARD_MS = 5*60*1000;
+function addMedSet(setId){
+  const set=(db.medSets||[]).find(s=>s.id===setId); if(!set || !set.items.length) return;
+  const now=Date.now();
+  const recent=db.events.filter(e=>e.type==="med" && e.fromSet===setId && (now-e.ts)<MEDSET_DUP_GUARD_MS);
+  if(recent.length){
+    const mins=Math.round((now-Math.max(...recent.map(e=>e.ts)))/60000);
+    const msg = mins<1
+      ? L(`방금 "${set.name}"을(를) 기록했어요. 다시 기록할까요?`,`You just logged "${set.name}". Log it again?`)
+      : L(`${mins}분 전에 "${set.name}"을(를) 기록했어요. 다시 기록할까요?`,`You logged "${set.name}" ${mins} min ago. Log it again?`);
+    if(!confirm(msg)) return;
+  }
+  const ts=now;
+  set.items.forEach(it=>{ db.events.push({ id:uid(), type:"med", drug:it.name, dose:it.dose||null, ts, memo:"", fromSet:set.id }); });
+  db.events.sort((a,b)=>a.ts-b.ts); save(); renderAll();
+  toast(`${set.name} · ${set.items.length}${L("개 약 동시 기록됨","items recorded together")} · ${hm(ts)}`);
+}
+function saveMedSet(name, items, existingId, schedTime){
+  /* 검토 발견(2026-08-09, 실사용): 이 함수가 schedTime 매개변수를 아예 안 받고 있었다 —
+     호출부(openMedSetEditor)는 4번째 인자로 schedTime을 넘기고 있었지만, 여기서
+     정의 자체에 그 매개변수가 없어 조용히 버려졌다. 화면에서 체크박스·시각을 뭘로
+     바꾸든 기존 세트는 절대 schedTime이 안 바뀌던 진짜 원인이 이거였다(화면 쪽
+     체크박스 비활성화 문제와는 별개의, 더 근본적인 버그). */
+  if(!db.medSets) db.medSets=[];
+  if(existingId){ const s=db.medSets.find(x=>x.id===existingId); if(s){ s.name=name; s.items=items; s.schedTime=schedTime||null; } }
+  else db.medSets.push({id:uid(), name, items, schedTime:schedTime||null});
+  save();
+}
+function deleteMedSet(setId){
+  db.medSets=(db.medSets||[]).filter(s=>s.id!==setId); save(); renderMedSets(); renderToday();
+}
+function openMedSetEditor(existingId){
+  const existing=existingId? (db.medSets||[]).find(s=>s.id===existingId) : null;
+  const medChips=(db.meds||[]).map((m,i)=>{
+    const inSet=existing && existing.items.some(it=>it.name===m.name && it.dose===m.dose);
+    return `<button type="button" class="chip${inSet?" sel":""}" data-t="${i}">${escapeHtml(m.name)}${m.dose?` ${m.dose}mg`:""}</button>`;
+  }).join("");
+  openSheet(`
+    <h2>${existing? L("복용 세트 수정","Edit medication set") : L("복용 세트 만들기","Create medication set")}</h2>
+    <div class="hint" style="margin-bottom:10px">${L("같이 드시는 약들을 골라 이름을 붙여두면, 다음부터 한 번에 같은 시각으로 기록됩니다.","Group meds you take together — logging the set records them all at the same time.")}</div>
+    <div class="field"><label>${L("세트 이름","Set name")}</label><input type="text" id="msetName" placeholder="${L("예: 아침 6시 세트","e.g. Morning 6am set")}" value="${existing?escapeHtml(existing.name):""}"></div>
+    <div class="field"><label>${L("포함할 약 (복수 선택)","Medications (multi-select)")}</label>
+      <div class="chips" id="msetChips">${medChips || `<span class="hint">${L("먼저 '내 약'에 약을 등록해 주세요.","Register medications in \"My meds\" first.")}</span>`}</div>
+    </div>
+    <div class="field">
+      <label style="display:flex; align-items:center; gap:6px"><input type="checkbox" id="msetSchedOn" ${existing&&existing.schedTime?"checked":""}> ${L("매일 정해진 시각에 자동으로 '복용함'으로 기록","Automatically record as taken at a set time each day")}</label>
+      <div class="hint" style="margin:4px 0 8px">${L("이 시각이 지나면 따로 안 눌러도 먹은 것으로 기록됩니다. 실제로 안 드셨거나 시각이 다르면 그때 고치면 됩니다.","Once this time passes, it's recorded as taken automatically — correct it only if you skipped it or took it at a different time.")}</div>
+      <input type="time" id="msetSchedTime" value="${existing&&existing.schedTime?existing.schedTime:"06:00"}" style="width:100%" ${existing&&existing.schedTime?"":"disabled"}>
+    </div>
+    <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="msetSave">${L("저장","Save")}</button></div>
+  `);
+  multiChipToggle("msetChips");
+  /* 검토 발견(2026-08-09, 실사용): 체크박스가 꺼진 채로 시각 칸만 고치고 저장하면,
+     저장 시 체크 여부만 보고 schedTime을 null로 덮어써서 "시각을 고쳤는데 반영이
+     안 되는" 혼란스러운 상황이 실제로 발생함(회색으로 흐려 보이지도 않아서 활성화된
+     칸처럼 보였다). 이제 ①체크 꺼져 있으면 시각 칸을 눈에 띄게 비활성화하고,
+     ②시각 칸을 직접 만지면 "자동기록을 켜고 싶다"는 뜻으로 보고 체크박스도 같이 켠다. */
+  const schedCk=document.getElementById("msetSchedOn"), schedTimeInput=document.getElementById("msetSchedTime");
+  schedCk.onchange=()=>{ schedTimeInput.disabled=!schedCk.checked; schedTimeInput.style.opacity=schedCk.checked?"1":".5"; };
+  schedTimeInput.addEventListener("input",()=>{ if(!schedCk.checked){ schedCk.checked=true; schedTimeInput.disabled=false; schedTimeInput.style.opacity="1"; } });
+  schedTimeInput.style.opacity = schedCk.checked? "1" : ".5";
+  document.getElementById("msetSave").onclick=()=>{
+    const name=document.getElementById("msetName").value.trim();
+    const idxs=selectedChips("msetChips").map(Number);
+    if(!name || !idxs.length){ toast(L("이름과 약을 선택해 주세요","Please enter a name and select medications")); return; }
+    const items=idxs.map(i=>({name:db.meds[i].name, dose:db.meds[i].dose}));
+    const schedTime = schedCk.checked? schedTimeInput.value : null;
+    saveMedSet(name, items, existingId, schedTime);
+    closeSheet(); renderMedSets(); renderToday();
+  };
+}
+function renderMedSets(){
+  const sec=document.getElementById("medSetSection"); if(!sec) return;
+  const list=document.getElementById("medSetList");
+  const sets=db.medSets||[];
+  list.innerHTML = sets.map(s=>`<div class="li"><div class="grow"><div class="name">${escapeHtml(s.name)}${s.schedTime?` <span style="color:var(--accent); font-weight:700">· ⏰ ${s.schedTime} ${L("자동","auto")}</span>`:""}</div><div class="meta">${s.items.map(it=>escapeHtml(it.name)).join(" · ")}</div></div>
+    <button class="btn ghost" data-edit="${s.id}" style="width:auto">${L("수정","Edit")}</button>
+    <button class="btn ghost" data-del="${s.id}" style="width:auto">✕</button></div>`).join("");
+  list.querySelectorAll("button[data-edit]").forEach(b=>{ b.onclick=()=>openMedSetEditor(b.dataset.edit); });
+  list.querySelectorAll("button[data-del]").forEach(b=>{ b.onclick=()=>{ if(confirm(L("이 세트를 삭제할까요?","Delete this set?"))) deleteMedSet(b.dataset.del); }; });
+}
+/* v2.9.1: "안 먹거나 시간을 어긴 사람만 고치는" 반대 방향 기록 — 실사용 아이디어.
+   대부분의 환자는 정해진 시각에 세트를 그대로 복용하므로, 매번 눌러서 "먹었다"고
+   확인시키는 대신 예정 시각이 지나면 "먹은 것으로" 자동 기록하고, 실제로 안 먹었거나
+   다른 시각에 먹은 예외적인 경우에만 그 사람이 고치게 한다. 자동 기록된 항목은
+   assumed:true로 표시해 "확인된 사실"과 구분한다(나중에 분석 신뢰도 표시 등에 활용 가능) —
+   조용히 사실인 척하지 않는다는 원칙을 지킨다. */
+function todayScheduledTs(schedTime){
+  const [h,m]=schedTime.split(":").map(Number);
+  const d=new Date(); d.setHours(h,m,0,0); return d.getTime();
+}
+/* 검토 발견: 같은 약이 두 세트에 걸쳐 있으면(예: 마도파HBS가 아침·저녁 세트 둘 다에
+   포함) 약 이름만으로 "오늘 이 세트가 기록됐는지"를 판단하면 서로 헷갈린다 — 한쪽
+   세트가 채워지면 다른 세트도 "이미 기록됨"으로 잘못 보인다. 세트를 통해 생성된
+   이벤트에는 fromSet(어느 세트에서 왔는지)을 남겨서, 세트별로 정확히 구분한다. */
+function assumedEventsForSetToday(set){
+  const dayStart=new Date(); dayStart.setHours(0,0,0,0);
+  return db.events.filter(e=>e.type==="med" && e.ts>=dayStart.getTime() && e.fromSet===set.id);
+}
+/* 오늘 렌더링 때마다 호출 — 예정 시각이 지났고 오늘 그 세트에 대한 기록이 전혀 없으면
+   "먹은 것으로" 자동 채운다. 이미 뭔가 기록돼 있으면(수동이든 이전 자동이든) 건드리지 않는다. */
+function reconcileAssumedDoses(){
+  const sets=db.medSets||[];
+  const now=Date.now();
+  let changed=false;
+  sets.forEach(set=>{
+    if(!set.schedTime) return;
+    const schedTs=todayScheduledTs(set.schedTime);
+    if(now<schedTs) return; /* 아직 예정 시각 전이면 손대지 않음 */
+    const existing=assumedEventsForSetToday(set);
+    if(existing.length) return; /* 이미 기록(수동/자동/스킵표시) 있으면 건드리지 않음 */
+    if(set.skippedToday===dkey(new Date())) return; /* 오늘 "안 먹었어요"로 명시적으로 표시된 경우 */
+    set.items.forEach(it=>{
+      db.events.push({ id:uid(), type:"med", drug:it.name, dose:it.dose||null, ts:schedTs, memo:"", assumed:true, fromSet:set.id });
+    });
+    changed=true;
+  });
+  if(changed){ db.events.sort((a,b)=>a.ts-b.ts); save(); }
+}
+function markSetSkippedToday(setId){
+  const set=(db.medSets||[]).find(s=>s.id===setId); if(!set) return;
+  /* 오늘 그 세트로 자동 기록된(assumed) 이벤트가 있으면 지우고, 스킵 표시를 남겨
+     reconcileAssumedDoses가 오늘 다시 채우지 않게 한다. */
+  db.events=db.events.filter(e=>!(e.type==="med" && e.assumed && e.fromSet===setId));
+  set.skippedToday=dkey(new Date());
+  save(); renderToday();
+  toast(`${set.name} · ${L("오늘 복용 안 함으로 표시됨","marked as not taken today")}`);
+}
+function openSetTimeCorrection(setId){
+  const set=(db.medSets||[]).find(s=>s.id===setId); if(!set) return;
+  openSheet(`
+    <h2>${escapeHtml(set.name)} · ${L("실제 복용 시각","Actual time taken")}</h2>
+    <div class="hint" style="margin-bottom:10px">${L("예정 시각과 다르게 드셨다면 실제 시각으로 바꿔주세요.","If you took it at a different time, correct it here.")}</div>
+    ${timeFieldHtml("msetTime", Date.now())}
+    <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="msetTimeSave">${L("저장","Save")}</button></div>
+  `);
+  bindTimeField("msetTime");
+  document.getElementById("msetTimeSave").onclick=()=>{
+    const ts=tsFromTimeField("msetTime", Date.now());
+    const todays=assumedEventsForSetToday(set);
+    if(todays.length){ todays.forEach(e=>{ e.ts=ts; e.assumed=false; }); }
+    else { set.items.forEach(it=>{ db.events.push({ id:uid(), type:"med", drug:it.name, dose:it.dose||null, ts, memo:"", fromSet:set.id }); }); }
+    db.events.sort((a,b)=>a.ts-b.ts); save(); closeSheet(); renderToday();
+    toast(`${set.name} · ${L("시각 수정됨","time corrected")} · ${hm(ts)}`);
+  };
+}
+function renderMedSetQuickRow(){
+  const row=document.getElementById("medSetQuickRow"); if(!row) return;
+  reconcileAssumedDoses();
+  const sets=db.medSets||[];
+  row.style.display = sets.length? "flex" : "none";
+  row.innerHTML = sets.map(s=>{
+    if(!s.schedTime){
+      /* 예정 시각이 없는 세트는 기존처럼 누를 때마다 지금 시각으로 기록(원터치) */
+      return `<button class="recent-med-chip" data-set="${s.id}"><span class="r-ic">💊</span>${escapeHtml(s.name)} (${s.items.length})</button>`;
+    }
+    const todays=assumedEventsForSetToday(s);
+    const isSkipped = s.skippedToday===dkey(new Date()) && !todays.length;
+    const isAssumed = todays.length && todays.every(e=>e.assumed);
+    if(isSkipped){
+      return `<button class="recent-med-chip" data-undo-skip="${s.id}" style="opacity:.6"><span class="r-ic">➖</span>${escapeHtml(s.name)} · ${L("안 먹음","not taken")}</button>`;
+    }
+    if(!todays.length){
+      /* 예정 시각이 아직 안 지남 — 다가올 예정으로만 표시 */
+      return `<span class="recent-med-chip" style="opacity:.55; pointer-events:none"><span class="r-ic">🕐</span>${escapeHtml(s.name)} · ${s.schedTime} ${L("예정","scheduled")}</span>`;
+    }
+    return `<span style="display:inline-flex; align-items:center; gap:4px">
+      <span class="recent-med-chip" style="pointer-events:none; ${isAssumed?"":"font-weight:800"}"><span class="r-ic">${isAssumed?"✅":"💊"}</span>${escapeHtml(s.name)} · ${hm(todays[0].ts)}${isAssumed?` (${L("자동 기록","auto")})`:""}</span>
+      <button class="btn ghost" data-fix="${s.id}" style="width:auto; padding:4px 8px; font-size:12px">${L("시각 수정","fix time")}</button>
+      <button class="btn ghost" data-skip="${s.id}" style="width:auto; padding:4px 8px; font-size:12px">${L("안 먹었어요","didn't take")}</button>
+    </span>`;
+  }).join("");
+  row.querySelectorAll("button[data-set]").forEach(b=>{ b.onclick=()=>addMedSet(b.dataset.set); });
+  row.querySelectorAll("button[data-fix]").forEach(b=>{ b.onclick=()=>openSetTimeCorrection(b.dataset.fix); });
+  row.querySelectorAll("button[data-skip]").forEach(b=>{ b.onclick=()=>markSetSkippedToday(b.dataset.skip); });
+  row.querySelectorAll("button[data-undo-skip]").forEach(b=>{ b.onclick=()=>{
+    const s=sets.find(x=>x.id===b.dataset.undoSkip); if(s){ s.skippedToday=null; save(); renderToday(); }
+  }; });
 }
 function addLife(kind, data={}){
   const ts = data.ts || Date.now();
@@ -1883,6 +2267,11 @@ function symptomZonePattern(rangeEvents){
 }
 /* ---------- 증상 빠른 기록 (시작/종료 토글) ---------- */
 const SYMPTOM_QUICK = [
+  /* v2.3(치료구간 설계도, Phase 2 보완): OFF를 사용자가 직접 시작/종료로 표시할 수 있게 함.
+     출력<=20 자동 감지만으로는 "힘들다"고 느끼는 시점을 놓치는 경우가 있어(개인 문턱이 다름)
+     실측 역치 추정(analysis-threshold.js)의 표본이 부족했음 — 기존 이상운동증 타이머와
+     완전히 같은 메커니즘(start/end, outputAtStart/outputAtEnd)을 그대로 재사용한다. */
+  {key:"off",    ko:"OFF",       en:"OFF",        ic:"⚫"},
   {key:"dysk",   ko:"이상운동증", en:"Dyskinesia", ic:"⚠"},
   {key:"freeze", ko:"동결",       en:"Freezing",   ic:"🧊"},
   {key:"dyst",   ko:"근긴장이상", en:"Dystonia",   ic:"🔗"},
@@ -1891,6 +2280,57 @@ const SYMPTOM_QUICK = [
   {key:"other",  ko:"기타 증상", en:"Other symptom", ic:"➕"},
 ];
 function symQuickLabel(key){ const s=SYMPTOM_QUICK.find(x=>x.key===key); return s? L(s.ko,s.en) : key; }
+/* v2.8: 생활기록 원탭 — 시트를 열지 않고 그 자리에서 바로 addLife를 호출한다.
+   식사 종류는 지금 시각으로 자동 추정(06~10시=아침, 11~14시=점심, 17~20시=저녁, 그 외=간식) —
+   틀렸으면 "약·생활 기록"의 기존 시트에서 수정하면 된다. 가장 자주 궁금해하는 신호
+   (저녁 단백질 식사가 다음날 아침 온 지연과 관련 있는지)부터 마찰 없이 남기게 한다. */
+function inferMealType(){
+  const h=new Date().getHours();
+  if(h>=6&&h<11) return "아침";
+  if(h>=11&&h<15) return "점심";
+  if(h>=17&&h<21) return "저녁";
+  return "간식";
+}
+/* v2.8.1: 단백질원마다 레보도파 흡수 경쟁 정도가 달라(고기·유제품은 큰 중성아미노산이
+   많고, 콩류·두부는 상대적으로 적음) "단백질 먹었다/안 먹었다"만으론 나중에 어떤
+   종류가 관련 있는지 구분이 안 된다는 실사용 피드백 — 완전한 시트를 열지 않고,
+   짧은 선택지 한 번만 더 눌러 종류를 남기게 한다(원탭 정신은 유지, 두 탭까지만). */
+const PROTEIN_SOURCES = [
+  {key:"고기",     ko:"고기",       en:"Meat",   ic:"🥩"},
+  {key:"생선",     ko:"생선",       en:"Fish",   ic:"🐟"},
+  {key:"유제품",   ko:"유제품(우유·치즈)", en:"Dairy", ic:"🧀"},
+  {key:"콩류",     ko:"두부·콩류",  en:"Tofu/beans", ic:"🫘"},
+  {key:"기타",     ko:"기타",       en:"Other",  ic:"🍽"},
+];
+function openProteinSourcePicker(){
+  openSheet(`
+    <h2>🍖 ${L("어떤 단백질이었나요?","What kind of protein?")}</h2>
+    <div class="hint" style="margin-bottom:10px">${L("한 번만 골라주세요 — 뒤에 다른 입력은 필요 없어요.","Just pick one — nothing else to fill in.")}</div>
+    <div class="chips" style="display:flex; flex-direction:column; gap:8px">
+      ${PROTEIN_SOURCES.map((p,i)=>`<button class="btn ghost" data-i="${i}" style="text-align:left; min-height:52px">
+        <span style="font-size:18px; margin-right:8px">${p.ic}</span>${L(p.ko,p.en)}
+      </button>`).join("")}
+    </div>
+    <button class="btn ghost" style="margin-top:12px" onclick="closeSheet()">${L("취소","Cancel")}</button>
+  `);
+  PROTEIN_SOURCES.forEach((p,i)=>{
+    document.querySelector(`[data-i="${i}"]`).onclick=()=>{
+      closeSheet();
+      addLife("meal", {mealType:inferMealType(), protein:true, extras:["단백질 많음", p.key]});
+    };
+  });
+}
+const QUICK_LIFE = [
+  {key:"protein_meal", ko:"단백질 식사", en:"Protein meal", ic:"🍖", action:openProteinSourcePicker},
+];
+function renderQuickLifeGrid(){
+  const grid=document.getElementById("quickLifeGrid"); if(!grid) return; grid.innerHTML="";
+  QUICK_LIFE.forEach(q=>{
+    const b=document.createElement("button"); b.className="quick-btn";
+    b.innerHTML=`<span class="qic">${q.ic}</span><span>${L(q.ko,q.en)}</span>`;
+    b.onclick=q.action; grid.appendChild(b);
+  });
+}
 function openSymptomState(key){
   const evs = db.events.filter(e=>e.type==="symptom" && e.key===key).sort((a,b)=>b.ts-a.ts);
   return (evs.length && evs[0].phase==="start") ? evs[0] : null;
@@ -1964,6 +2404,7 @@ function renderDaySummary(tEvents){
 }
 /* ---------- render: TODAY ---------- */
 function renderToday(){
+  renderTempNoteGrid(); /* v2.11 */
   const symGrid=document.getElementById("symptomGrid"); symGrid.innerHTML="";
   SYMPTOM_QUICK.forEach(sq=>{
     const isOpen = !!openSymptomState(sq.key);
@@ -1972,6 +2413,8 @@ function renderToday(){
     b.onclick=()=>toggleSymptomTimer(sq.key); symGrid.appendChild(b);
   });
   renderRecentMedRow();
+  renderMedSetQuickRow(); /* v2.9 */
+  renderQuickLifeGrid();
   const lgrid=document.getElementById("lifeGrid"); lgrid.innerHTML="";
   Object.entries(LIFE).forEach(([k,lf])=>{
     const b=document.createElement("button"); b.className="life-btn";
@@ -2076,6 +2519,17 @@ function evRow(e){
   } else if(e.type==="challenge"){
     row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">🧪 ${escapeHtml(e.title||"Medication Challenge")}</div>${(e.lines&&e.lines.length)?`<div class="m">${escapeHtml(e.lines.join(" · "))}</div>`:""}</div>
       <span class="pill" style="background:#8e44ad">${tr("chgPillLabel")}</span>`;
+  } else if(e.type==="tempnote"){
+    /* 검토 발견(2026-08-08): tempnote가 기존 if-chain 어디에도 안 걸려 마지막 생활기록
+       분기(LIFE[e.kind].color)로 떨어지면, e.kind가 없어서 LIFE[undefined]가 undefined가
+       되고 그 .color를 읽으려다 실제로 에러가 났을 상황 — 전용 분기를 만들어 막는다.
+       v2.12: 로컬에 낡은 3종 맵을 따로 두지 않고 TEMPNOTE_DIRS/TAGS를 그대로 재사용해,
+       이벤트 종류를 늘릴 때마다 이 표시 로직도 같이 고쳐야 하는 걸 막는다. */
+    const dirInfo=TEMPNOTE_DIRS.find(d=>d.key===e.dir);
+    const dirLabel=dirInfo? `${dirInfo.ic} ${L(dirInfo.ko,dirInfo.en)}` : L("임시 기록","Note");
+    const tagTxt=(e.tags&&e.tags.length)? e.tags.map(k=>{ const t=TEMPNOTE_TAGS.find(x=>x.key===k); return t?L(t.ko,t.en):k; }).join(", ") : "";
+    row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">🕐 ${dirLabel}</div>${(tagTxt||e.memo)?`<div class="m">${[tagTxt,e.memo].filter(Boolean).map(escapeHtml).join(" · ")}</div>`:""}</div>
+      <span class="pill" style="background:var(--ink-2)">${L("임시","Note")}</span>`;
   } else {
     const {s, extraTxt} = lifeRowInfo(e);
     const memoLine=[extraTxt, e.memo].filter(Boolean).join(" · ");
@@ -2105,7 +2559,7 @@ function evRow(e){
 function openChallengeEventSheet(e){
   openSheet(`
     <h2>🧪 ${escapeHtml(e.title||"Medication Challenge")}</h2>
-    <div class="hint">${hm(e.ts)} ${L("약효 챌린지 시작(복용)","challenge start (dose)")} · ${e.completedAt? `${hm(new Date(e.completedAt).getTime())} ${L("시험 완료","completed")}`:""} · ${new Date(e.ts).toLocaleDateString(currentLang()==="en"?"en-US":"ko-KR")}</div>
+    <div class="hint">${hm(e.ts)} ${L("약효 챌린지 시작(복용)","challenge start (dose)")} · ${e.completedAt? `${hm(new Date(e.completedAt).getTime())} ${L("시험 완료","completed")}`:""} · ${new Date(e.ts).toLocaleDateString()}</div>
     ${(e.lines||[]).map(l=>`<div style="margin:6px 0">· ${escapeHtml(l)}</div>`).join("")}
     <div class="hint" style="margin-top:8px">${L("이 요약은 약효 비교 테스트의 기록 사실만 정리한 것으로, 치료 판단이 아닙니다.","This summary only restates recorded facts from the medication response test and is not a treatment judgment.")}</div>
     ${e.challengeTestId?`<button class="btn primary" style="margin-top:10px" onclick="location.href='challenge/index.html#test=${encodeURIComponent(e.challengeTestId)}'">${L("챌린지에서 자세히 보기","View details in Challenge")}</button>`:""}
@@ -2177,19 +2631,41 @@ function openEditMedSheet(e){
     <h2>💊 ${L("복약 기록 수정","Edit medication record")}</h2>
     ${timeFieldHtml("em_ts", e.ts)}
     <div class="field"><label>${L("약 이름","Medication name")}</label><input id="em_drug" value="${escapeHtml(e.drug||"")}"></div>
-    <div class="field"><label>${L("용량 (mg, 선택)","Dose (mg, optional)")}</label><input id="em_dose" type="number" inputmode="numeric" value="${e.dose??""}"></div>
+    <div class="field"><label>${L("정제 강도 (mg, 실제 나오는 알약 기준)","Tablet strength (mg, as manufactured)")}</label><input id="em_strength" type="number" inputmode="decimal" value="${e.tabletMg??""}" placeholder="${L("예: 100 (50mg 정제가 없으면 100 입력)","e.g. 100 (enter 100 if there's no 50mg tablet)")}"></div>
+    <div class="field"><label>${L("한 번에 먹는 개수 (정, 반 알이면 0.5)","Count per dose (tablets, 0.5 for half)")}</label><input id="em_count" type="number" inputmode="decimal" step="0.5" value="${e.tabletCount??1}"></div>
+    <div class="hint" id="em_doseCalc">${L("실제 용량: —","Actual dose: —")}</div>
     <div class="field"><label>${L("메모 (선택)","Memo (optional)")}</label><textarea id="em_memo">${escapeHtml(e.memo||"")}</textarea></div>
     <div style="text-align:center; margin-bottom:6px"><button class="btn ghost" id="em_changeKind" style="font-size:12.5px; width:auto">${L("↺ 기록 종류 변경 (출력·증상 등으로 전환)","↺ Change record type (convert to output, symptom, …)")}</button></div>
     <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="em_save">${L("수정 저장","Save changes")}</button></div>
     <button class="btn ghost" id="em_addNew" style="margin-top:8px">${L("＋ 이 내용으로 새 기록 추가 (원래 기록은 그대로)","＋ Add as a NEW record (keep the original)")}</button>
     <div class="hint" style="margin-top:4px">${L("같은 약을 한 번 더 먹었다면 '새 기록 추가'를 누르세요. '수정 저장'은 원래 기록을 바꿉니다.","If you took the same medication again, use \"Add as a new record\". \"Save changes\" edits the original.")}</div>`);
   document.getElementById("em_changeKind").onclick=()=>{ closeSheet(); openAddPast(e); }; /* v0.9.18 */
+  /* 검토 발견(2026-08-10, 실사용): 이미 기록된 항목을 고칠 땐 옛날 "용량(mg)" 단일칸만
+     있고 v2.10.3에서 새로 등록할 때만 넣었던 정제강도×개수가 빠져 있었음 — "퍼킨 100mg
+     × 0.5정을 고치려는데 안 된다"는 신고의 정확한 원인. 등록 화면과 같은 계산 로직을
+     여기에도 넣어 맞춘다. */
+  const emUpdateCalc=()=>{
+    const strength=+document.getElementById("em_strength").value, count=+document.getElementById("em_count").value;
+    const calc=document.getElementById("em_doseCalc");
+    calc.textContent = (strength>0 && count>0)
+      ? L(`실제 용량: ${strength}mg × ${count}정 = ${Math.round(strength*count*1000)/1000}mg`,`Actual dose: ${strength}mg × ${count} = ${Math.round(strength*count*1000)/1000}mg`)
+      : L("실제 용량: —","Actual dose: —");
+  };
+  document.getElementById("em_strength").addEventListener("input", emUpdateCalc);
+  document.getElementById("em_count").addEventListener("input", emUpdateCalc);
+  emUpdateCalc();
 
   const emRead=()=>{
     const drug=document.getElementById("em_drug").value.trim();
     if(!drug){ toast(L("약 이름을 입력하세요","Please enter a medication name")); return null; }
+    const strength=+document.getElementById("em_strength").value||null;
+    const count=+document.getElementById("em_count").value||1;
+    /* 검토 발견: 정제강도 칸을 비워두면(레거시 기록 등) dose를 무조건 null로
+       덮어써서 기존 용량이 사라지는 회귀가 있었음 — 강도를 안 채운 경우엔
+       원래 dose를 그대로 보존한다. */
     return { drug, ts:tsFromTimeField("em_ts", e.ts),
-      dose:(+document.getElementById("em_dose").value)||null,
+      dose: strength? Math.round(strength*count*1000)/1000 : (e.dose??null),
+      tabletMg: strength, tabletCount: strength?count:null,
       memo:document.getElementById("em_memo").value.trim() };
   };
   /* v1.3: 새 기록으로 추가 — 원래 기록을 건드리지 않는다.
@@ -2197,7 +2673,7 @@ function openEditMedSheet(e){
   document.getElementById("em_addNew").onclick=()=>{
     const v=emRead(); if(!v) return;
     closeSheet();
-    db.events.push({id:uid(), type:"med", drug:v.drug, dose:v.dose, ts:v.ts, memo:v.memo});
+    db.events.push({id:uid(), type:"med", drug:v.drug, dose:v.dose, tabletMg:v.tabletMg, tabletCount:v.tabletCount, ts:v.ts, memo:v.memo});
     db.events.sort((a,b)=>a.ts-b.ts); save(); renderAll();
     toast(L("새 기록으로 추가했어요 (원래 기록 그대로)","Added as a new record (original kept)"));
   };
@@ -2211,7 +2687,7 @@ function openEditMedSheet(e){
       if(!keep) return;
     }
     closeSheet();
-    Object.assign(e,{drug:v.drug, ts:v.ts, dose:v.dose, memo:v.memo});
+    Object.assign(e,{drug:v.drug, ts:v.ts, dose:v.dose, tabletMg:v.tabletMg, tabletCount:v.tabletCount, memo:v.memo});
     db.events.sort((a,b)=>a.ts-b.ts); save(); renderAll(); toast(L("수정했어요","Updated"));
   };
 }
@@ -2567,11 +3043,7 @@ function computeCurve(dayEvents, dayKey){
   const midnight = new Date(Y,Mo-1,Da,0,0,0).getTime();
   const meds = dayEvents.filter(e=>e.type==="med");
   const states = outputStates(dayEvents); /* v0.9.17: legacy 제외 */
-  /* v2.15: 곡선 탭도 시뮬 탭과 같은 SIMDRUG.compositeCurve 엔진으로 통일.
-     이전엔 이 파일 안의 단순 MED_KINETICS 표를 따로 썼는데, 아만타딘·MAO-B억제제처럼
-     근거값이 없는 약도 임의로 곡선에 포함시켜서 시뮬 탭과 결과가 어긋났음.
-     SIMDRUG는 그런 약을 곡선 계산에서 제외하고, 전날 COMT억제제·배경형 효능제 이월(carryover)도
-     medsForSimulationDay()가 자동 처리해준다(이 파일의 옛 계산은 이월을 아예 안 다뤘음). */
+  /* v2.13.3: 라이브와 동일하게 SIMDRUG.compositeCurve로 통일 (일관성) */
   const {all:doses} = medsForSimulationDay(dayKey);
   const t0Min = (dayStart-midnight)/60000, t1Min = (dayEnd-midnight)/60000;
   const composite = SIMDRUG.compositeCurve(doses, t0Min, t1Min, 10);
@@ -2618,7 +3090,45 @@ function svgCurve(dayKey){
   const linePts = pts.map(p=>`${x(p.t)},${y(p.val)}`).join(" ");
   const areaPts = `${padL},${y(0)} ${linePts} ${x(t1)},${y(0)}`;
 
-  const outputPts = overlay.filter(o=>o.output!=null).map(o=>`${x(o.t)},${y(o.output)}`); /* v2.13.4: output은 0~100 — 옛 0~10 스케일 잔재(×10)로 좌표가 화면 밖으로 나가 실측선이 안 보이던 버그 수정 */
+  /* v2.12.2: 예전엔 여기서 y(o.output*10)로 output(이미 0~100)에 10을 또 곱해 차트
+     밖으로 벗어나는 기존 버그가 있었다(검토 중 발견, 이번 작업과 무관하게 존재하던
+     결함) — 새 레이어는 이 값을 안 쓰고 estimateDailyCurve()로 직접 정확한 스케일로
+     그린다. 실측 구간은 실선, 추정이 섞인 구간은 점선으로 구분하고, 이벤트 지점에는
+     모양 아이콘(⚡↗△↘→)을 마커로 찍는다(작업지시서 5번: "확정점은 실선, 이벤트는
+     아이콘 마커"). */
+  const anchorEventLayer = (()=>{
+    const curvePts=estimateDailyCurve(dayKey).filter(p=>p.value!=null && p.ts>=t0 && p.ts<=t1);
+    if(curvePts.length<1) return "";
+    /* v2.12.4: 실사용 신고 — "그래프는 곡선으로 보정해서 그린 것은 없나". 지금까지는
+       점과 점을 직선(<line>)으로만 이어서 뾰족뾰족하게 보였다. 카트멀롬(Catmull-Rom)
+       스플라인을 3차 베지어로 변환해, 각 구간을 부드러운 곡선으로 그린다 — 앞뒤 이웃
+       점의 기울기를 반영해 자연스럽게 휘어지도록 한다(끝 구간은 이웃이 없으니 자기
+       자신으로 대체). 실측/추정 구분(실선/점선)은 구간별로 그대로 유지한다. */
+    const P=curvePts.map(p=>({x:x(p.ts), y:y(p.value)}));
+    let segs="", markers="";
+    for(let i=0;i<curvePts.length-1;i++){
+      const a=curvePts[i], b=curvePts[i+1];
+      const p0=P[i-1]||P[i], p1=P[i], p2=P[i+1], p3=P[i+2]||P[i+1];
+      const c1x=p1.x+(p2.x-p0.x)/6, c1y=p1.y+(p2.y-p0.y)/6;
+      const c2x=p2.x-(p3.x-p1.x)/6, c2y=p2.y-(p3.y-p1.y)/6;
+      const bothMeasured = !a.estimated && !b.estimated;
+      const dash = bothMeasured? "" : `stroke-dasharray="${a.confidence==="low"||b.confidence==="low"?"2,4":"5,3"}"`;
+      const col = "#2C6FBF";
+      segs += `<path d="M${p1.x},${p1.y} C${c1x},${c1y} ${c2x},${c2y} ${p2.x},${p2.y}" fill="none" stroke="${col}" stroke-width="2" ${dash} opacity="${bothMeasured?1:.75}"/>`;
+    }
+    curvePts.forEach(p=>{
+      const cx=x(p.ts), cy=y(p.value);
+      if(!p.estimated){
+        markers += `<circle cx="${cx}" cy="${cy}" r="3.6" fill="#2C6FBF"/>`;
+      } else {
+        const dirInfo=TEMPNOTE_DIRS.find(d=>d.key===p.dir);
+        const ic=dirInfo? dirInfo.ic : "•";
+        markers += `<circle cx="${cx}" cy="${cy}" r="8" fill="var(--card-bg,#fff)" stroke="#2C6FBF" stroke-width="1.4" opacity="${p.confidence==='low'?.7:.9}"/>
+          <text x="${cx}" y="${cy+4}" font-size="10" text-anchor="middle">${ic}</text>`;
+      }
+    });
+    return segs+markers;
+  })();
   const gaitPts = overlay.filter(o=>o.gait!=null).map(o=>`${x(o.t)},${y(o.gait*10)}`);
 
   let medMarks="";
@@ -2641,7 +3151,7 @@ function svgCurve(dayKey){
     ${shading}
     <polygon points="${areaPts}" fill="#1FA971" opacity=".16"/>
     <polyline points="${linePts}" fill="none" stroke="#1FA971" stroke-width="2.4"/>
-    ${outputPts.length>1? `<polyline points="${outputPts.join(" ")}" fill="none" stroke="#5C93D6" stroke-width="1.6" stroke-dasharray="4,3"/>`:""}
+    ${anchorEventLayer}
     ${gaitPts.length>1? `<polyline points="${gaitPts.join(" ")}" fill="none" stroke="#E0A030" stroke-width="1.6" stroke-dasharray="1,3"/>`:""}
     ${medMarks}
     ${axisLabels}
@@ -2739,13 +3249,408 @@ function carryoverDosesFor(dayKey){
     return false;
   }).map(d=>({...d, dayOffset:-1}));
 }
+/* v2.7: 성분명 기반 개인 별칭 ---------------------------------------------
+   "길렉트정" 같이 사전에 없는 이름을, 그 사람이 딱 한 번 고른 성분(=사전에
+   이미 있는 등록 이름 하나)에 매핑해 이 기기에만 저장한다. 공용 사전 파일은
+   그대로 두고, 곡선·LEDD 계산에 들어가기 직전에만 이름을 바꿔치기한다 —
+   그래서 이 파일 하나만 고치면 Phase 1~5 전부에 자동으로 적용된다. */
+function personalAliasMap(){ return (db.personalDrugAliases)||{}; }
+function resolveDrugName(name){ return personalAliasMap()[name] || name; }
+function savePersonalAlias(typedName, canonicalAlias){
+  if(!db.personalDrugAliases) db.personalDrugAliases={};
+  db.personalDrugAliases[typedName]=canonicalAlias;
+  save();
+}
+function forgetPersonalAlias(typedName){
+  if(db.personalDrugAliases) delete db.personalDrugAliases[typedName];
+  save();
+}
+/* 성분 선택지 — SIMDRUG.DRUGS(약물 사전)를 그대로 쓴다. 새 성분을 여기 하드코딩하지
+   않는다 — 사전에 추가되면 이 목록에도 자동으로 나타난다. */
+function ingredientChoiceLabel(d){
+  const FAMILY={
+    LEVO_IR:"레보도파 (즉방형)", LEVO_HBS:"레보도파 (서방형)", STALEVO:"레보도파+엔타카폰 복합",
+    APOMORPHINE:"아포모르핀 (구제요법)", ONGENTYS:"COMT 억제제 (1일 1회형)", ENTACAPONE:"COMT 억제제 (매 복용 병용형)",
+    PRAMI_IR:"프라미펙솔 (즉방형)", PRAMI_ER:"프라미펙솔 (서방형)",
+    ROPI_IR:"로피니롤 (즉방형)", ROPI_ER:"로피니롤 (서방형)", ROTIGOTINE:"로티고틴 (패치)",
+  };
+  if(FAMILY[d.curveId]) return FAMILY[d.curveId];
+  if(/rasagiline/i.test(d.genericName)) return "MAO-B 억제제 (라사길린/셀레길린 계열)";
+  if(/safinamide/i.test(d.genericName)) return "MAO-B 억제제 (사피나미드)";
+  if(/amantadine/i.test(d.genericName)) return "아만타딘";
+  return d.genericName;
+}
+function openIngredientPicker(typedName){
+  const items=SIMDRUG.DRUGS.map(d=>({d, label:ingredientChoiceLabel(d), example:d.aliases[0]}));
+  openSheet(`
+    <h2>${L("이 약의 성분을 골라주세요","Choose the ingredient")}</h2>
+    <div class="hint" style="margin-bottom:10px">${L(`"${escapeHtml(typedName)}"이(가) 어떤 성분인지 한 번만 골라 두면, 다음부터 자동으로 인식됩니다. 잘 모르시면 처방전이나 약 봉투에 적힌 성분명을 확인해 보세요.`,`Pick the ingredient for "${escapeHtml(typedName)}" once — it'll be recognized automatically from now on.`)}</div>
+    <div class="chips" style="display:flex; flex-direction:column; gap:8px">
+      ${items.map((it,i)=>`<button class="btn ghost" data-i="${i}" style="text-align:left; min-height:56px">
+        <div style="font-weight:800">${escapeHtml(it.label)}</div>
+        <div style="font-size:12px; color:var(--ink-2)">${L("예","e.g.")}: ${escapeHtml(it.example)}</div>
+      </button>`).join("")}
+    </div>
+    <button class="btn ghost" style="margin-top:12px" onclick="closeSheet()">${L("취소","Cancel")}</button>
+  `);
+  items.forEach((it,i)=>{
+    document.querySelector(`[data-i="${i}"]`).onclick=()=>{
+      savePersonalAlias(typedName, it.example);
+      closeSheet();
+      toast(L(`"${typedName}"을(를) ${it.label}(으)로 저장했어요`,`Saved "${typedName}" as ${it.label}`));
+      renderUnregisteredDrugList();
+    };
+  });
+}
+function renderUnregisteredDrugList(){
+  const sec=document.getElementById("unregDrugSection");
+  const names=findUnregisteredDrugNames();
+  if(!names.length){ sec.style.display="none"; return; }
+  sec.style.display="block";
+  const list=document.getElementById("unregDrugList");
+  list.innerHTML=names.map(n=>{
+    const cnt=db.events.filter(e=>e.type==="med"&&e.drug===n).length;
+    const metaTxt = cnt>0
+      ? L(`${cnt}회 기록됨 · 곡선·LEDD 계산에서 제외 중`,`${cnt} records · excluded from curve/LEDD calc`)
+      : L(`등록만 되어 있음 · 아직 복용 기록 없음`,`Registered only · no doses logged yet`);
+    return `<div class="li"><div class="grow"><div class="name">${escapeHtml(n)}</div><div class="meta">${metaTxt}</div></div>
+      <button class="btn ghost" data-name="${escapeHtml(n)}" style="width:auto">${L("성분 선택","Choose")}</button></div>`;
+  }).join("");
+  list.querySelectorAll("button[data-name]").forEach(b=>{ b.onclick=()=>openIngredientPicker(b.dataset.name); });
+}
+/* 기록에 있지만 사전에도, 개인 별칭에도 없는 약 이름들을 찾는다 */
+/* 검토 발견(2026-08-06, 실사용): "+ 약 추가"로 내 약 목록에만 등록해 두고 아직
+   그 약으로 복용 기록을 한 번도 안 남긴 경우, 예전엔 감지가 안 됐다 — 실제 복용
+   기록(db.events)만 보고 등록해 둔 약 목록(db.meds)은 안 봤기 때문이다. 사용자는
+   보통 약부터 등록하고 나서 기록을 시작하므로, 등록 단계에서부터 미등록임을
+   알려주는 게 자연스럽다. 이제 둘 다 본다. */
+function findUnregisteredDrugNames(){
+  const names=new Set();
+  db.events.forEach(e=>{ if(e.type==="med" && e.drug) names.add(e.drug); });
+  db.meds.forEach(m=>{ if(m.name) names.add(m.name); });
+  const map=personalAliasMap();
+  return [...names].filter(n => !map[n] && !SIMDRUG.classify(n)).sort();
+}
 function medsForSimulationDay(dayKey){
-  const today=medsForDay(dayKey).map(d=>({...d, dayOffset:0}));
-  const carry=carryoverDosesFor(dayKey);
+  const today=medsForDay(dayKey).map(d=>({...d, dayOffset:0, name:resolveDrugName(d.name)}));
+  const carry=carryoverDosesFor(dayKey).map(d=>({...d, name:resolveDrugName(d.name)}));
   return {today, carry, all:carry.concat(today)};
 }
+function outputsForDay(dayKey){
+  const days=byDay();
+  return (days[dayKey]||[]).filter(e=>e.type==="state" && e.output!=null).map(e=>({time:hm(e.ts), val:e.output}));
+}
+function simFmtTime(tMin){ const t=((tMin%1440)+1440)%1440; return `${pad(Math.floor(t/60))}:${pad(Math.round(t%60))}`; }
+function doseLabel(v){ return (v==null||v==="")? SIMDRUG.UNREGISTERED_NOTE&&"용량 확인 필요" : `${+v}mg`; }
 
-/* ========== 분석탭(Phase0 재현성 · Phase2 치료구간 · Phase3 과부족분석) — 시험판(easteregg/v200p0) 이식, 숨김 기능 ========== */
+function renderSimPlanList(dayKey){
+  const el=document.getElementById("simPlanList");
+  const doses=medsForDay(dayKey);
+  if(!doses.length){ el.textContent=tr("simNoMed"); document.getElementById("simUnregisteredNote").textContent=""; return; }
+  el.innerHTML = doses.map(d=>{
+    const model=SIMDRUG.classify(resolveDrugName(d.name)); /* v2.7: 개인 별칭 반영 */
+    const roleTxt=model? model.roleLabel : "곡선 모델 미등록";
+    return `<div style="padding:4px 0">💊 ${d.time} · ${escapeHtml(d.name)}${d.dose?` ${d.dose}mg`:` <span style="color:var(--ink-2)">(용량 확인 필요)</span>`}
+      <span style="color:var(--ink-2); font-size:11.5px">— ${escapeHtml(roleTxt)}</span></div>`;
+  }).join("");
+  const unreg=doses.filter(d=>!SIMDRUG.classify(resolveDrugName(d.name)));
+  document.getElementById("simUnregisteredNote").innerHTML = unreg.length
+    ? unreg.map(d=>`<div>· ${escapeHtml(d.name)}: ${escapeHtml(SIMDRUG.UNREGISTERED_NOTE)}</div>`).join("") : "";
+}
+
+/* ---- 변경안 저장/로드 (기존 simVirtual 자리를 재사용 — 저장 키는 그대로, 구조만 단순화) ---- */
+let _simVirtual=null;
+function simEnsureVariant(dayKey){
+  const base=medsForDay(dayKey);
+  if(!_simVirtual || _simVirtual.dayKey!==dayKey){
+    const saved=db.settings.simVirtual;
+    _simVirtual = (saved && saved.dayKey===dayKey && Array.isArray(saved.doses))
+      ? {dayKey, doses:JSON.parse(JSON.stringify(saved.doses))}
+      : {dayKey, doses:JSON.parse(JSON.stringify(base))};
+  }
+  return base;
+}
+function saveSimVariant(){ db.settings.simVirtual={dayKey:_simVirtual.dayKey, doses:_simVirtual.doses}; save(); }
+
+let _simTargetIdx=0, _simChangeKind="dose";
+function simApplyChange(kind, arg){
+  const dayKey=document.getElementById("simDate").value||todayKey();
+  const base=simEnsureVariant(dayKey);
+  const i=_simTargetIdx;
+  const b=base[i];
+  if(kind==="reset"){ _simVirtual.doses=JSON.parse(JSON.stringify(base)); }
+  else if(kind==="dose"){
+    if(!b) return;
+    if(b.dose==null){ toast("현재 용량이 기록되어 있지 않아 용량 변경을 할 수 없어요"); return; }
+    const target=_simVirtual.doses[i] || (_simVirtual.doses[i]=JSON.parse(JSON.stringify(b)));
+    const next=Math.round((+b.dose + (+arg))*1000)/1000; /* 항상 현재안 원본 기준 — 누적하지 않음 */
+    if(next<=0){ toast("0mg 이하로는 만들 수 없어요"); return; }
+    target.dose=next; target.name=b.name; target.time=target.time||b.time;
+  }
+  else if(kind==="time"){
+    if(!b) return;
+    const target=_simVirtual.doses[i] || (_simVirtual.doses[i]=JSON.parse(JSON.stringify(b)));
+    const [h,m]=(b.time||"08:00").split(":").map(Number);
+    const t=(h*60+m+(+arg)+1440)%1440;
+    target.time=`${pad(Math.floor(t/60))}:${pad(t%60)}`;
+    target.name=b.name; if(target.dose===undefined) target.dose=b.dose;
+  }
+  else if(kind==="remove"){ if(!b) return; _simVirtual.doses=_simVirtual.doses.filter((d,idx)=>idx!==i); }
+  else if(kind==="add"){ _simVirtual.doses.push({name:arg||MED_PRESETS[0]||"", dose:null, time:b? b.time : "08:00"}); }
+  else if(kind==="replace"){ if(!b) return;
+    const target=_simVirtual.doses[i] || (_simVirtual.doses[i]=JSON.parse(JSON.stringify(b)));
+    /* 약물 사전: 약 교체는 기존 복용 시간·용량을 유지하는 것이 원칙이다.
+       새 약의 표준 용량 단위가 크게 다를 때만(예: 레보도파100mg대→프라미펙솔0.375mg대)
+       자동 계산하지 않고 용량 재입력을 요구한다. */
+    const oldModel=SIMDRUG.classify(b.name), newModel=SIMDRUG.classify(arg);
+    const compatible=SIMDRUG.doseCompatible(oldModel, newModel);
+    target.name=arg;
+    target.time=b.time; /* 시간은 항상 유지 */
+    target.dose=compatible? b.dose : null;
+    if(!compatible) toast("제형·표준 용량이 달라 용량을 다시 입력해주세요");
+  }
+  saveSimVariant(); renderSim();
+}
+
+/* 현재안 ↔ 변경안 차이 (구조체 + 요약 문자열) */
+function planDiffParts(planDoses, virtDoses){
+  const parts=[]; const usedV=new Set();
+  planDoses.forEach((p,i)=>{
+    let vi=(virtDoses[i] && virtDoses[i].name===p.name)? i : -1;
+    if(vi<0) vi=virtDoses.findIndex((v,j)=>!usedV.has(j) && v.name===p.name);
+    if(vi<0){ parts.push({type:"remove", name:p.name, baseTime:p.time, desc:`제외: ${p.name} ${doseLabel(p.dose)} ${p.time||""}`.trim()}); return; }
+    usedV.add(vi);
+    const v=virtDoses[vi];
+    const dChanged=(p.dose==null||v.dose==null)? (p.dose!==v.dose) : (+p.dose!==+v.dose);
+    const tChanged=(p.time||"")!==(v.time||"");
+    if(dChanged) parts.push({type:"dose_change", name:p.name, baseTime:p.time, newTime:v.time, desc:`${p.name} ${v.time||p.time||""} ${doseLabel(p.dose)}→${doseLabel(v.dose)}`.trim()});
+    if(tChanged) parts.push({type:"time_change", name:p.name, baseTime:p.time, newTime:v.time, desc:`${p.name} 시각 ${p.time}→${v.time}`});
+  });
+  virtDoses.forEach((v,j)=>{ if(!usedV.has(j)) parts.push({type:"add", name:v.name, newTime:v.time, desc:`추가: ${v.name} ${doseLabel(v.dose)} ${v.time||""}`.trim()}); });
+  const seen=new Set(); return parts.filter(p=>!seen.has(p.desc)&&seen.add(p.desc));
+}
+function simDiffSummary(planDoses, virtDoses){
+  const parts=planDiffParts(planDoses, virtDoses).map(p=>p.desc);
+  return parts.length? "변경 내용: "+parts.join(" · ") : "변경 내용: 없음 (현재안과 동일)";
+}
+
+/* ---- 변경 대상 선택 · 3단 편집 UI ---- */
+function renderSimVariantBuilder(dayKey){
+  const base=simEnsureVariant(dayKey);
+  const sel=document.getElementById("simTargetMed"); if(!sel) return;
+  if(!base.length){
+    sel.innerHTML=`<option>이 날짜에 복약 기록이 없습니다</option>`;
+    document.getElementById("simTargetInfo").textContent="";
+    document.getElementById("simChangeKind").innerHTML="";
+    document.getElementById("simChangeControls").innerHTML="";
+    return;
+  }
+  if(_simTargetIdx>=base.length) _simTargetIdx=0;
+  sel.innerHTML=base.map((d,i)=>`<option value="${i}" ${i===_simTargetIdx?"selected":""}>${escapeHtml(d.time)} ${escapeHtml(d.name)} ${doseLabel(d.dose)}</option>`).join("");
+  sel.onchange=()=>{ _simTargetIdx=+sel.value; renderSimVariantBuilder(dayKey); };
+
+  const b=base[_simTargetIdx];
+  const model=SIMDRUG.classify(b.name);
+  const info=document.getElementById("simTargetInfo");
+  info.innerHTML = (b.dose==null)
+    ? `<span style="color:var(--danger); font-weight:700">용량 확인 필요</span> — 이 기록에는 용량이 없어 용량 변경을 할 수 없습니다.`
+    : `현재안: <b>${escapeHtml(b.time)} ${escapeHtml(b.name)} ${doseLabel(b.dose)}</b>${model?` · ${escapeHtml(model.roleLabel)}`:` · 곡선 모델 미등록`}`;
+
+  const steps = model && model.category==="levodopa" ? [-50,-25,25,50]
+    : (model && model.category==="dopamine_agonist" ? (b.name.includes("리큅")||b.name.includes("로피니롤")? [-0.5,-0.25,0.25,0.5] : [-0.25,-0.125,0.125,0.25])
+    : (model && model.category==="amantadine" ? [-100,100] : null));
+
+  const kinds=[["dose","용량 변경"],["time","시간 변경"],["add","약 추가"],["remove","약 삭제"],["replace","약 교체"]];
+  document.getElementById("simChangeKind").innerHTML=kinds.map(([k,l])=>
+    `<button type="button" class="chip${_simChangeKind===k?" sel":""}" data-kind="${k}">${l}</button>`).join("");
+  document.querySelectorAll("#simChangeKind .chip").forEach(btn=>{
+    btn.onclick=()=>{ _simChangeKind=btn.dataset.kind; renderSimVariantBuilder(dayKey); };
+  });
+
+  const ctl=document.getElementById("simChangeControls");
+  if(_simChangeKind==="dose"){
+    if(b.dose==null) ctl.innerHTML=`<div class="hint">용량이 기록된 약에서만 사용할 수 있습니다.</div>`;
+    else if(!steps) ctl.innerHTML=`<div class="hint">${escapeHtml(b.name)}은(는) 이 도구에서 용량 조절 단위를 제공하지 않습니다. 시간 변경·추가·삭제·교체는 사용할 수 있어요.</div>`;
+    else ctl.innerHTML=`<div class="chips">${steps.map(v=>`<button type="button" class="chip" data-dose="${v}">${v>0?"+":""}${v}mg</button>`).join("")}</div>
+      <div class="hint">현재안 ${doseLabel(b.dose)} 기준으로 계산됩니다.</div>`;
+    ctl.querySelectorAll("[data-dose]").forEach(x=>x.onclick=()=>simApplyChange("dose", x.dataset.dose));
+  } else if(_simChangeKind==="time"){
+    ctl.innerHTML=`<div class="chips">${[-60,-30,30,60].map(v=>`<button type="button" class="chip" data-min="${v}">${v>0?"+":""}${v}분</button>`).join("")}</div>
+      <div class="hint">현재안 ${escapeHtml(b.time)} 기준으로 계산됩니다.</div>`;
+    ctl.querySelectorAll("[data-min]").forEach(x=>x.onclick=()=>simApplyChange("time", x.dataset.min));
+  } else if(_simChangeKind==="add"){
+    ctl.innerHTML=simDrugSearchHtml("simAddPick", "");
+    document.getElementById("simAddGo").onclick=()=>simApplyChange("add", document.getElementById("simAddPick").value);
+    bindSimDrugSearch("simAddPick");
+  } else if(_simChangeKind==="remove"){
+    ctl.innerHTML=`<button class="btn ghost" id="simRemoveGo">${escapeHtml(b.time)} ${escapeHtml(b.name)} 을(를) 변경안에서 빼기</button>`;
+    document.getElementById("simRemoveGo").onclick=()=>simApplyChange("remove");
+  } else if(_simChangeKind==="replace"){
+    ctl.innerHTML=simDrugSearchHtml("simReplacePick", b.name, "이 약으로 교체");
+    document.getElementById("simReplaceGo").onclick=()=>simApplyChange("replace", document.getElementById("simReplacePick").value);
+    bindSimDrugSearch("simReplacePick");
+    const note=document.getElementById("simReplacePickNote");
+    if(note) note.textContent="제형·약물이 다르면 곡선의 모양도 달라집니다. 용량 단위가 크게 다르면 다시 입력해야 합니다.";
+  }
+}
+/* 약물 사전 검색 입력 — 상품명·성분명·별칭 어디로 검색해도 찾을 수 있게 한다(datalist).
+   목록에 없는 이름을 입력하면 "약물 사전에 등록되지 않은 약" 안내를 보여준다(임의 곡선 생성 금지). */
+function simDrugSearchHtml(id, initialValue, goLabel){
+  const dl=id+"_dl";
+  const allAliases=[...new Set(SIMDRUG.DRUGS.flatMap(d=>d.aliases))];
+  return `<input list="${dl}" id="${id}" value="${escapeHtml(initialValue||"")}" placeholder="약 이름 검색 (상품명·성분명 모두 가능)" style="width:100%; min-height:48px; box-sizing:border-box">
+    <datalist id="${dl}">${allAliases.map(a=>`<option value="${escapeHtml(a)}">`).join("")}</datalist>
+    <div id="${id}Note" style="font-size:12px; color:var(--ink-2); margin-top:4px"></div>
+    <button class="btn ghost" id="${id==="simAddPick"?"simAddGo":"simReplaceGo"}" style="margin-top:6px">${escapeHtml(goLabel||"이 약을 변경안에 추가")}</button>
+    <div id="${id}PickNote" style="font-size:12px; color:var(--ink-2); margin-top:4px"></div>`;
+}
+function bindSimDrugSearch(id){
+  const el=document.getElementById(id); if(!el) return;
+  const note=document.getElementById(id+"Note");
+  const check=()=>{
+    const v=el.value.trim();
+    if(!v){ note.textContent=""; return; }
+    const found=SIMDRUG.classify(v);
+    if(found){ note.innerHTML=`<span style="color:var(--ink-2)">인식됨: ${escapeHtml(found.genericName)} · ${escapeHtml(found.roleLabel)}</span>`; }
+    else {
+      const suggestions=SIMDRUG.searchDictionary(v).slice(0,5);
+      note.innerHTML = `<span style="color:var(--danger)">${escapeHtml(SIMDRUG.NOT_FOUND_GUIDANCE)}</span>` +
+        (suggestions.length? `<div style="margin-top:2px">비슷한 성분: ${suggestions.map(s=>`<button type="button" class="chip" style="margin:2px" onclick="document.getElementById('${id}').value='${escapeHtml(s.alias)}'; document.getElementById('${id}').dispatchEvent(new Event('input'))">${escapeHtml(s.alias)}</button>`).join("")}</div>` : "");
+    }
+  };
+  el.addEventListener("input", check); check();
+}
+
+/* ---- 그래프 그리기 (SVG) ---- */
+function simSvgAxes(W,H,padL,padR,padT,padB){
+  const plotW=W-padL-padR, plotH=H-padT-padB;
+  return {plotW,plotH, x:(t,t0,t1)=>padL+(t-t0)/(t1-t0)*plotW, y:v=>padT+plotH-(Math.min(100,Math.max(0,v))/100)*plotH};
+}
+function simDoseMarkers(doses, x, t0, t1, y0){
+  return doses.filter(d=>d.time).map(d=>{ const [h,m]=d.time.split(":").map(Number); let tm=h*60+m; if(tm<t0) tm+=1440; if(tm>t1) return "";
+    return `<line x1="${x(tm,t0,t1)}" y1="${y0}" x2="${x(tm,t0,t1)}" y2="${y0-6}" stroke="var(--ink-2)" stroke-width="1.4"/>`; }).join("");
+}
+function simActualPoints(dayKey){
+  return outputsForDay(dayKey).map(a=>{ const [h,m]=a.time.split(":").map(Number); return {t:h*60+m, val:a.val}; }).sort((a,b)=>a.t-b.t);
+}
+function renderSimMainChart(dayKey, planDoses, composite){
+  const W=700,H=210,padL=32,padR=10,padT=10,padB=26;
+  const {x,y}=simSvgAxes(W,H,padL,padR,padT,padB);
+  const t0=0,t1=1440;
+  const axisLbl=[0,20,50,80,100].map(p=>`<text x="${padL-6}" y="${y(p)+3}" font-size="8.5" fill="var(--ink-2)" text-anchor="end">${p}</text>`).join("");
+  const actual=simActualPoints(dayKey);
+  const actLine=actual.length? `<polyline points="${actual.map(p=>`${x(p.t,t0,t1)},${y(p.val)}`).join(" ")}" fill="none" stroke="#E8663C" stroke-width="1.6" stroke-dasharray="1,3"/>`+actual.map(p=>`<circle cx="${x(p.t,t0,t1)}" cy="${y(p.val)}" r="3.4" fill="#E8663C"/>`).join("") : "";
+  const compLine=composite.points.length? `<polyline points="${composite.points.map(p=>`${x(p.t,t0,t1)},${y(p.val)}`).join(" ")}" fill="none" stroke="#5C93D6" stroke-width="2"/>` : "";
+  const markers=simDoseMarkers(planDoses, x, t0, t1, H-padB);
+  document.getElementById("simMainChart").innerHTML = (!planDoses.length&&!actual.length)
+    ? `<div class="hint" style="padding:20px 0; text-align:center">이 날짜에는 기록이 없습니다.</div>`
+    : `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${axisLbl}${compLine}${actLine}${markers}</svg>`;
+}
+function renderSimPerDrugChart(dayKey, planDoses, composite){
+  const el=document.getElementById("simPerDrugChart");
+  if(!composite.perDrug.length){ el.innerHTML=`<div class="hint">약물별 곡선이 없습니다.</div>`; return; }
+  const W=700,H=140,padL=32,padR=10,padT=8,padB=18;
+  const {x,y}=simSvgAxes(W,H,padL,padR,padT,padB);
+  const t0=0,t1=1440;
+  const colors=["#5C93D6","#7B5CD6","#1FA971","#E0A030","#B3261E"];
+  el.innerHTML = composite.perDrug.map((pd,i)=>{
+    const maxV=Math.max(1,...pd.points.map(p=>p.val));
+    const norm=pd.points.map(p=>({t:p.t, val:p.val/maxV*90}));
+    return `<div style="margin-top:6px">
+      <div style="font-size:11.5px; color:var(--ink-2)">${escapeHtml(pd.name)}</div>
+      <svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">
+        <polyline points="${norm.map(p=>`${x(p.t,t0,t1)},${y(p.val)}`).join(" ")}" fill="none" stroke="${colors[i%colors.length]}" stroke-width="1.8"/>
+      </svg></div>`;
+  }).join("");
+}
+function renderSimCompareChart(dayKey, planDoses, virtDoses, curPlan, virtPlan){
+  const W=700,H=200,padL=32,padR=10,padT=10,padB=26;
+  const {x,y}=simSvgAxes(W,H,padL,padR,padT,padB);
+  const t0=0,t1=1440;
+  const axisLbl=[0,20,50,80,100].map(p=>`<text x="${padL-6}" y="${y(p)+3}" font-size="8.5" fill="var(--ink-2)" text-anchor="end">${p}</text>`).join("");
+  const actual=simActualPoints(dayKey);
+  const actLine=actual.length? `<polyline points="${actual.map(p=>`${x(p.t,t0,t1)},${y(p.val)}`).join(" ")}" fill="none" stroke="#E8663C" stroke-width="1.4" stroke-dasharray="1,3"/>`+actual.map(p=>`<circle cx="${x(p.t,t0,t1)}" cy="${y(p.val)}" r="3" fill="#E8663C"/>`).join("") : "";
+  const curLine=`<polyline points="${curPlan.points.map(p=>`${x(p.t,t0,t1)},${y(p.val)}`).join(" ")}" fill="none" stroke="#5C93D6" stroke-width="2"/>`;
+  const virtLine=`<polyline points="${virtPlan.points.map(p=>`${x(p.t,t0,t1)},${y(p.val)}`).join(" ")}" fill="none" stroke="#E0A030" stroke-width="2" stroke-dasharray="6,4"/>`;
+  const markers=simDoseMarkers(planDoses,x,t0,t1,H-padB)+simDoseMarkers(virtDoses,x,t0,t1,H-padB-8);
+  document.getElementById("simCompareChart").innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${axisLbl}${curLine}${virtLine}${actLine}${markers}</svg>`;
+}
+
+/* ---- LEDD 요약 카드 (크기 비교 전용 — 곡선 모양은 결정하지 않음) ---- */
+/* 치료구간 설계도 Phase 1(2026-08-05) 반영: 도파민 작용제·아만타딘·MAO-B는 이제 표준
+   환산표 기준으로 총 LEDD에 포함된다(leddIncluded:true로 정정, 보내주신 LEDD 계산기의
+   4단계 값 150/225/325/425와 대조 검증됨). 남은 제외 대상은 COMT 억제제(온젠티스·엔타카폰)
+   뿐이다 — 자체 mg 환산이 아직 확립되지 않아서다. 그래서 "총 LEDD"로 표기를 되돌리고,
+   COMT가 있을 때만 제외 사실을 각주로 남긴다. */
+function simLeddCompareHtml(curPlan, virtPlan, planWithCarry, virtWithCarry){
+  const diff=virtPlan.leddTotal-curPlan.leddTotal;
+  const rows=(bd)=>bd.length? bd.map(x=>`${x.name} ${x.ledd}`).join(" · ") : "—";
+  const excludedNames=(list)=>{
+    const s=new Set();
+    (list||[]).forEach(d=>{ const m=SIMDRUG.classify(d.name); if(m && !m.leddIncluded) s.add(d.name); });
+    return [...s];
+  };
+  const excluded=[...new Set(excludedNames(planWithCarry).concat(excludedNames(virtWithCarry)))];
+  return `<b>총 LEDD</b><br>
+    현재 총 LEDD: ${curPlan.leddTotal} · 변경안 총 LEDD: ${virtPlan.leddTotal} · 변화: ${diff>=0?"+":""}${diff}${curPlan.leddTotal? ` (${diff>=0?"+":""}${Math.round(diff/curPlan.leddTotal*100)}%)`:""}
+    <details style="margin-top:4px"><summary style="cursor:pointer; color:var(--ink-2)">약물별 기여도</summary>
+      <div style="color:var(--ink-2); margin-top:4px">현재안: ${rows(curPlan.leddBreakdown)}<br>변경안: ${rows(virtPlan.leddBreakdown)}</div></details>
+    ${excluded.length? `<div class="hint" style="margin-top:4px">COMT 억제제(${escapeHtml(excluded.join(", "))})는 자체 mg 환산이 확립되지 않아 이 합계에서 제외됩니다.</div>`:""}`;
+}
+/* 약효 추정 중첩 구간 — 위험 판정이 아니라 사실 표시 */
+function simOverlapNote(curPlan){
+  const th=curPlan.points.length? Math.max(...curPlan.points.map(p=>p.val))*0.6 : 0;
+  const overlapMin=curPlan.perDrug.length>=2? curPlan.points.filter(p=>{
+    const active=curPlan.perDrug.filter(pd=>{ const v=(pd.points.find(x=>x.t===p.t)||{}).val||0; return v>0.05; }).length;
+    return active>=2 && p.val>=th;
+  }).length*10 : 0;
+  return overlapMin>0? `약효 추정 중첩 구간: 약 ${overlapMin}분 (여러 약의 추정 효과가 동시에 높은 시간대 — 이상운동증 위험을 단정하지 않습니다)` : "";
+}
+
+function renderSim(){
+  const sel=document.getElementById("simDate");
+  if(!sel._bound){
+    sel._bound=true;
+    const days=Object.keys(byDay()).sort().reverse();
+    sel.innerHTML=(days.length? days : [todayKey()]).map(k=>`<option value="${k}" ${k===todayKey()?"selected":""}>${fmtDateK(k)}</option>`).join("");
+    sel.onchange=renderSim;
+  }
+  const dayKey=sel.value||todayKey();
+  const {today:planDoses, carry, all:planWithCarry}=medsForSimulationDay(dayKey);
+  renderSimPlanList(dayKey);
+  document.getElementById("simCarryNote").innerHTML = carry.length
+    ? carry.map(d=>`전날 ${escapeHtml(d.time)} ${escapeHtml(d.name)}${d.dose?` ${d.dose}mg`:""} · 다음 날 보정 반영`).map(t=>`<div>${t}</div>`).join("")
+    : "";
+
+  const t0=0,t1=1440;
+  const curPlan=SIMDRUG.compositeCurve(planWithCarry, t0, t1, 10);
+  renderSimMainChart(dayKey, planDoses, curPlan);
+
+  const toggle=document.getElementById("simPerDrugToggle");
+  toggle.onclick=()=>{ const box=document.getElementById("simPerDrugChart");
+    const show=box.style.display==="none"; box.style.display=show?"block":"none";
+    toggle.textContent=show?"약물별 곡선 숨기기":"약물별 곡선 보기";
+    if(show) renderSimPerDrugChart(dayKey, planWithCarry, curPlan); };
+
+  simEnsureVariant(dayKey);
+  renderSimVariantBuilder(dayKey);
+  document.getElementById("simResetBtn").onclick=()=>simApplyChange("reset");
+
+  const virtDoses=_simVirtual.doses;
+  const virtPlan=SIMDRUG.compositeCurve(carry.concat(virtDoses), t0, t1, 10); /* 전날 이월분은 양쪽에 동일하게 적용 — 오늘 변경안 편집 대상은 아님 */
+  renderSimCompareChart(dayKey, planDoses, virtDoses, curPlan, virtPlan);
+  document.getElementById("simOverlapNote").textContent = simOverlapNote(curPlan) || simOverlapNote(virtPlan);
+  document.getElementById("simLeddCompare").innerHTML = simLeddCompareHtml(curPlan, virtPlan, planWithCarry, carry.concat(virtDoses));
+  document.getElementById("simDiffLine").textContent = simDiffSummary(planDoses, virtDoses);
+}
+
+
+
+/* ============================================================
+   v2.0 Phase 0 — 기록 분석(재현성 확인) 컨트롤러
+   analysis-clinical.js(CLIN)를 실제 기록에 연결한다.
+   이 화면은 약효 추정 곡선을 전혀 쓰지 않는다 — 실측만으로 재현성을 판정한다.
+   ============================================================ */
 function anCollectDoses(dayKeys){
   const days=byDay();
   const doses=[], byKeyOutputs={}, byKeyEvents={};
@@ -2754,6 +3659,8 @@ function anCollectDoses(dayKeys){
     byKeyOutputs[k]=evs.filter(e=>e.type==="state"&&e.output!=null)
       .map(e=>({timeMin:new Date(e.ts).getHours()*60+new Date(e.ts).getMinutes(), val:e.output, ts:e.ts}))
       .sort((a,b)=>a.timeMin-b.timeMin);
+    /* 동반 변수 비교(식사·단백질)를 위해 생활 기록도 함께 모은다.
+       analyzeEpisode가 kind:"meal"|"protein" 이벤트를 받아 mealNearby/proteinNearby를 채운다. */
     byKeyEvents[k]=evs.filter(e=>e.type==="life"&&e.kind==="meal").map(e=>{
       const timeMin=new Date(e.ts).getHours()*60+new Date(e.ts).getMinutes();
       const isProtein = e.mealType && /육류|고기|단백/.test(e.mealType);
@@ -2766,9 +3673,13 @@ function anCollectDoses(dayKeys){
   });
   return {doses, byKeyOutputs, byKeyEvents};
 }
+/* 이 화면(ON 도달 분석)은 "복용 후 뚜렷한 봉우리가 생기는가"를 전제로 한다.
+   배경형(도파민 작용제)·보조형(아만타딘·MAO-B) 약은 애초에 봉우리를 만들지 않으므로
+   여기서 "미도달"이 쏟아지는 게 오히려 정상이다 — 약이 안 듣는 게 아니라 질문이 안 맞는 것.
+   실사용 확인(2026-08-05): 아만타딘이 거의 전부 미도달/판정불가로 나온 것을 보고 반영. */
 function anGroupRole(name){
   const model = (typeof SIMDRUG!=="undefined" && SIMDRUG.classify)? SIMDRUG.classify(name) : null;
-  return model? model.role : null;
+  return model? model.role : null; /* "direct_curve" | "modifier" | "background" | "adjunct" | null(미등록) */
 }
 function anAnalyze(periodDays, groupId){
   const period=SIMCLIN.calendarPeriod(Object.keys(byDay()), periodDays);
@@ -2788,6 +3699,7 @@ function anAnalyze(periodDays, groupId){
   const repro=SIMCLIN.reproducibility(episodes);
   const baseline=SIMCLIN.personalBaseline(episodes);
   const classified=episodes.map(e=>SIMCLIN.classifyEpisode(e, baseline));
+  /* 동반 변수 비교: 가장 많이 관찰된 문제 유형을 기준으로 식사·단백질 연관을 본다 */
   const counts={};
   classified.forEach(c=>{ counts[c.classification]=(counts[c.classification]||0)+1; });
   const topProblem=["delayed_on","incomplete_on","on_failure"].filter(k=>counts[k]>0).sort((a,b)=>counts[b]-counts[a])[0]||null;
@@ -2817,6 +3729,7 @@ function renderAnalysis(){
   }).join("");
   gsel.onchange=()=>{ _anGroupId=gsel.value; renderAnalysis(); };
 
+  /* 배경형·보조형 약: ON 도달 분석 자체가 안 맞는 약이므로 통계를 내지 않고 이유를 설명한다 */
   if(r.unfit){
     const ROLE_LABEL={background:L("배경효과형 (도파민 작용제 등)","background-effect type (dopamine agonists, etc.)"),
       adjunct:L("보조형 (곡선을 만들지 않는 약)","adjunct type (does not form a curve)")};
@@ -2829,6 +3742,8 @@ function renderAnalysis(){
              `This medication is ${ROLE_LABEL[r.role]} and does not form a sharp peak. The "ON latency" analysis here is designed for medications that do form a peak (levodopa-type), so frequent "not reached" results are expected and normal for this medication.`)}
       </div>`;
     document.getElementById("anTable").innerHTML="";
+    /* 치료 구간 추정은 특정 약 그룹과 무관하게 그 기간 전체 기록으로 계산되므로,
+       선택된 그룹이 배경형·보조형이라 통계를 못 낼 때도 그대로 보여준다. */
     renderTherapeuticWindow(r.period);
     return;
   }
@@ -2879,6 +3794,8 @@ function renderAnalysis(){
 
   function median(a){ const s2=a.slice().sort((x,y)=>x-y); const m=Math.floor(s2.length/2); return s2.length%2? s2[m] : (s2[m-1]+s2[m])/2; }
 
+  /* 동반 변수 비교: 지연/미도달/무반응이 식사·단백질 섭취와 겹치는 비율을 보여준다.
+     인과관계를 단정하지 않는다 — SIMCLIN.contextComparison이 이미 그 원칙을 지킨다. */
   const PROBLEM_LABEL={delayed_on:L("지연","Delayed"), incomplete_on:L("미도달","Incomplete"), on_failure:L("무반응","No response")};
   document.getElementById("anContext").innerHTML = r.context? `
     <div style="background:var(--surface-2); border-radius:10px; padding:10px 12px; margin-top:10px">
@@ -2906,6 +3823,9 @@ function renderAnalysis(){
 
   renderTherapeuticWindow(r.period);
 }
+/* v2.2 Phase 2: OFF·이상운동증 시각의 곡선값을 모아 치료 구간(하한·상한)을 추정한다.
+   복용 그룹과 무관하게 그 기간 전체의 실제 하루 곡선을 기준으로 계산한다 —
+   역치는 "이 약의" 역치가 아니라 "이 사람의" 몸 상태 기준이기 때문이다. */
 function anGatherThresholdSamples(period){
   const days=byDay();
   const offSamples=[], dyskSamples=[];
@@ -2914,8 +3834,13 @@ function anGatherThresholdSamples(period){
     const outs=evs.filter(e=>e.type==="state"&&e.output!=null)
       .map(e=>({timeMin:new Date(e.ts).getHours()*60+new Date(e.ts).getMinutes(), val:e.output}))
       .sort((a,b)=>a.timeMin-b.timeMin);
+    /* v2.3 수정: 이상운동증은 type:"symptom", key:"dysk", phase:"start"로 저장된다
+       (toggleSymptomTimer 참조) — 이전엔 type:"state"&&state==="dysk"를 찾고 있어 실제
+       기록과 맞지 않았다(항상 0건이었을 버그). OFF도 이제 같은 방식(key:"off")으로
+       사용자가 직접 표시할 수 있다 — 있으면 그걸 우선 쓰고, 없으면 기존 출력<=20
+       자동 감지로 보완한다(둘 다 없는 날은 그냥 표본에서 빠진다). */
     const offTag=evs.find(e=>e.type==="symptom" && e.key==="off" && e.phase==="start");
-    const offPt=outs.find(o=>o.val<=20 && o.timeMin>=360);
+    const offPt=outs.find(o=>o.val<=20 && o.timeMin>=360); /* 새벽 시간대 잡음 방지로 06:00 이후만 */
     const offTimeMin = offTag? (new Date(offTag.ts).getHours()*60+new Date(offTag.ts).getMinutes())
                               : (offPt? offPt.timeMin : null);
     const dyskEvs=evs.filter(e=>e.type==="symptom" && e.key==="dysk" && e.phase==="start");
@@ -2959,6 +3884,9 @@ function renderTherapeuticWindow(period){
   `;
   renderCoverage(period, lower, upper);
 }
+/* v2.4 Phase 3: 기간 내 각 날짜의 복합곡선을 다시 계산해 하한·상한과 비교한다.
+   목표는 "얼마나 부족한가"가 아니라 "구간 안에 머문 시간이 얼마나 되는가"이므로
+   그 값을 가장 먼저 보여준다. */
 function anGatherCoverageForPeriod(period, lower, upper){
   const window={lower: lower&&lower.value!=null? lower.value : null, upper: upper&&upper.value!=null? upper.value : null};
   const dayResults=[];
@@ -3016,366 +3944,6 @@ function renderCoverage(period, lower, upper){
   `;
 }
 let _anGroupId=null;
-function outputsForDay(dayKey){
-  const days=byDay();
-  return (days[dayKey]||[]).filter(e=>e.type==="state" && e.output!=null).map(e=>({time:hm(e.ts), val:e.output}));
-}
-function simFmtTime(tMin){ const t=((tMin%1440)+1440)%1440; return `${pad(Math.floor(t/60))}:${pad(Math.round(t%60))}`; }
-function doseLabel(v){ return (v==null||v==="")? tr("simNoDoseWarn") : `${+v}mg`; }
-
-function renderSimPlanList(dayKey){
-  const el=document.getElementById("simPlanList");
-  const doses=medsForDay(dayKey);
-  if(!doses.length){ el.textContent=tr("simNoMed"); document.getElementById("simUnregisteredNote").textContent=""; return; }
-  el.innerHTML = doses.map(d=>{
-    const model=SIMDRUG.classify(d.name);
-    const roleTxt=model? L(model.roleLabel, model.roleLabelEn) : tr("simNoCurveModel");
-    return `<div style="padding:4px 0">💊 ${d.time} · ${escapeHtml(d.name)}${d.dose?` ${d.dose}mg`:` <span style="color:var(--ink-2)">(${tr("simNoDoseWarn")})</span>`}
-      <span style="color:var(--ink-2); font-size:11.5px">— ${escapeHtml(roleTxt)}</span></div>`;
-  }).join("");
-  const unreg=doses.filter(d=>!SIMDRUG.classify(d.name));
-  document.getElementById("simUnregisteredNote").innerHTML = unreg.length
-    ? unreg.map(d=>`<div>· ${escapeHtml(d.name)}: ${escapeHtml(L(SIMDRUG.UNREGISTERED_NOTE, SIMDRUG.UNREGISTERED_NOTE_EN))}</div>`).join("") : "";
-}
-
-/* ---- 변경안 저장/로드 (기존 simVirtual 자리를 재사용 — 저장 키는 그대로, 구조만 단순화) ---- */
-let _simVirtual=null;
-function simEnsureVariant(dayKey){
-  const base=medsForDay(dayKey);
-  if(!_simVirtual || _simVirtual.dayKey!==dayKey){
-    const saved=db.settings.simVirtual;
-    _simVirtual = (saved && saved.dayKey===dayKey && Array.isArray(saved.doses))
-      ? {dayKey, doses:JSON.parse(JSON.stringify(saved.doses))}
-      : {dayKey, doses:JSON.parse(JSON.stringify(base))};
-  }
-  return base;
-}
-function saveSimVariant(){ db.settings.simVirtual={dayKey:_simVirtual.dayKey, doses:_simVirtual.doses}; save(); }
-
-let _simTargetIdx=0, _simChangeKind="dose";
-function simApplyChange(kind, arg){
-  const dayKey=document.getElementById("simDate").value||todayKey();
-  const base=simEnsureVariant(dayKey);
-  const i=_simTargetIdx;
-  const b=base[i];
-  if(kind==="reset"){ _simVirtual.doses=JSON.parse(JSON.stringify(base)); }
-  else if(kind==="dose"){
-    if(!b) return;
-    if(b.dose==null){ toast(tr("simDoseNotEditable")); return; }
-    const target=_simVirtual.doses[i] || (_simVirtual.doses[i]=JSON.parse(JSON.stringify(b)));
-    const next=Math.round((+b.dose + (+arg))*1000)/1000; /* 항상 현재안 원본 기준 — 누적하지 않음 */
-    if(next<=0){ toast(tr("simDoseFloor")); return; }
-    target.dose=next; target.name=b.name; target.time=target.time||b.time;
-  }
-  else if(kind==="time"){
-    if(!b) return;
-    const target=_simVirtual.doses[i] || (_simVirtual.doses[i]=JSON.parse(JSON.stringify(b)));
-    const [h,m]=(b.time||"08:00").split(":").map(Number);
-    const t=(h*60+m+(+arg)+1440)%1440;
-    target.time=`${pad(Math.floor(t/60))}:${pad(t%60)}`;
-    target.name=b.name; if(target.dose===undefined) target.dose=b.dose;
-  }
-  else if(kind==="remove"){ if(!b) return; _simVirtual.doses=_simVirtual.doses.filter((d,idx)=>idx!==i); }
-  else if(kind==="add"){ _simVirtual.doses.push({name:arg||MED_PRESETS[0]||"", dose:null, time:b? b.time : "08:00"}); }
-  else if(kind==="replace"){ if(!b) return;
-    const target=_simVirtual.doses[i] || (_simVirtual.doses[i]=JSON.parse(JSON.stringify(b)));
-    /* 약물 사전: 약 교체는 기존 복용 시간·용량을 유지하는 것이 원칙이다.
-       새 약의 표준 용량 단위가 크게 다를 때만(예: 레보도파100mg대→프라미펙솔0.375mg대)
-       자동 계산하지 않고 용량 재입력을 요구한다. */
-    const oldModel=SIMDRUG.classify(b.name), newModel=SIMDRUG.classify(arg);
-    const compatible=SIMDRUG.doseCompatible(oldModel, newModel);
-    target.name=arg;
-    target.time=b.time; /* 시간은 항상 유지 */
-    target.dose=compatible? b.dose : null;
-    if(!compatible) toast(tr("simDoseReenter"));
-  }
-  saveSimVariant(); renderSim();
-}
-
-/* 현재안 ↔ 변경안 차이 (구조체 + 요약 문자열) */
-function planDiffParts(planDoses, virtDoses){
-  const parts=[]; const usedV=new Set();
-  planDoses.forEach((p,i)=>{
-    let vi=(virtDoses[i] && virtDoses[i].name===p.name)? i : -1;
-    if(vi<0) vi=virtDoses.findIndex((v,j)=>!usedV.has(j) && v.name===p.name);
-    if(vi<0){ parts.push({type:"remove", name:p.name, baseTime:p.time, desc:`${tr("simRemoved")} ${p.name} ${doseLabel(p.dose)} ${p.time||""}`.trim()}); return; }
-    usedV.add(vi);
-    const v=virtDoses[vi];
-    const dChanged=(p.dose==null||v.dose==null)? (p.dose!==v.dose) : (+p.dose!==+v.dose);
-    const tChanged=(p.time||"")!==(v.time||"");
-    if(dChanged) parts.push({type:"dose_change", name:p.name, baseTime:p.time, newTime:v.time, desc:`${p.name} ${v.time||p.time||""} ${doseLabel(p.dose)}→${doseLabel(v.dose)}`.trim()});
-    if(tChanged) parts.push({type:"time_change", name:p.name, baseTime:p.time, newTime:v.time, desc:`${p.name} ${L("시각","time")} ${p.time}→${v.time}`});
-  });
-  virtDoses.forEach((v,j)=>{ if(!usedV.has(j)) parts.push({type:"add", name:v.name, newTime:v.time, desc:`${tr("simAdded")} ${v.name} ${doseLabel(v.dose)} ${v.time||""}`.trim()}); });
-  const seen=new Set(); return parts.filter(p=>!seen.has(p.desc)&&seen.add(p.desc));
-}
-function simDiffSummary(planDoses, virtDoses){
-  const parts=planDiffParts(planDoses, virtDoses).map(p=>p.desc);
-  return parts.length? tr("simChangesLabel")+" "+parts.join(" · ") : tr("simNoChanges");
-}
-
-/* ---- 변경 대상 선택 · 3단 편집 UI ---- */
-function renderSimVariantBuilder(dayKey){
-  const base=simEnsureVariant(dayKey);
-  const sel=document.getElementById("simTargetMed"); if(!sel) return;
-  if(!base.length){
-    sel.innerHTML=`<option>${escapeHtml(tr("simNoRecordOption"))}</option>`;
-    document.getElementById("simTargetInfo").textContent="";
-    document.getElementById("simChangeKind").innerHTML="";
-    document.getElementById("simChangeControls").innerHTML="";
-    return;
-  }
-  if(_simTargetIdx>=base.length) _simTargetIdx=0;
-  sel.innerHTML=base.map((d,i)=>`<option value="${i}" ${i===_simTargetIdx?"selected":""}>${escapeHtml(d.time)} ${escapeHtml(d.name)} ${doseLabel(d.dose)}</option>`).join("");
-  sel.onchange=()=>{ _simTargetIdx=+sel.value; renderSimVariantBuilder(dayKey); };
-
-  const b=base[_simTargetIdx];
-  const model=SIMDRUG.classify(b.name);
-  const info=document.getElementById("simTargetInfo");
-  info.innerHTML = (b.dose==null)
-    ? `<span style="color:var(--danger); font-weight:700">${escapeHtml(tr("simNoDoseWarn"))}</span> — ${escapeHtml(tr("simNoDoseInfo"))}`
-    : `${escapeHtml(tr("simCurrentPlanPrefix"))} <b>${escapeHtml(b.time)} ${escapeHtml(b.name)} ${doseLabel(b.dose)}</b>${model?` · ${escapeHtml(L(model.roleLabel, model.roleLabelEn))}`:` · ${escapeHtml(tr("simNoCurveModel"))}`}`;
-
-  const steps = model && model.category==="levodopa" ? [-50,-25,25,50]
-    : (model && model.category==="dopamine_agonist" ? (model.curveId==="ROPI_IR"||model.curveId==="ROPI_ER"? [-0.5,-0.25,0.25,0.5] : [-0.25,-0.125,0.125,0.25])
-    : (model && model.category==="amantadine" ? [-100,100] : null));
-
-  const kinds=[["dose",tr("simKindDose")],["time",tr("simKindTime")],["add",tr("simKindAdd")],["remove",tr("simKindRemove")],["replace",tr("simKindReplace")]];
-  document.getElementById("simChangeKind").innerHTML=kinds.map(([k,l])=>
-    `<button type="button" class="chip${_simChangeKind===k?" sel":""}" data-kind="${k}">${escapeHtml(l)}</button>`).join("");
-  document.querySelectorAll("#simChangeKind .chip").forEach(btn=>{
-    btn.onclick=()=>{ _simChangeKind=btn.dataset.kind; renderSimVariantBuilder(dayKey); };
-  });
-
-  const ctl=document.getElementById("simChangeControls");
-  if(_simChangeKind==="dose"){
-    if(b.dose==null) ctl.innerHTML=`<div class="hint">${escapeHtml(tr("simDoseOnlyForRecorded"))}</div>`;
-    else if(!steps) ctl.innerHTML=`<div class="hint">${L(`${escapeHtml(b.name)}은(는) 이 도구에서 용량 조절 단위를 제공하지 않습니다. 시간 변경·추가·삭제·교체는 사용할 수 있어요.`, `This tool doesn't provide dose-adjustment steps for ${escapeHtml(b.name)}. You can still change the time, or add, remove, or replace it.`)}</div>`;
-    else ctl.innerHTML=`<div class="chips">${steps.map(v=>`<button type="button" class="chip" data-dose="${v}">${v>0?"+":""}${v}mg</button>`).join("")}</div>
-      <div class="hint">${L(`현재안 ${doseLabel(b.dose)} 기준으로 계산됩니다.`, `Calculated based on the current plan's ${doseLabel(b.dose)}.`)}</div>`;
-    ctl.querySelectorAll("[data-dose]").forEach(x=>x.onclick=()=>simApplyChange("dose", x.dataset.dose));
-  } else if(_simChangeKind==="time"){
-    ctl.innerHTML=`<div class="chips">${[-60,-30,30,60].map(v=>`<button type="button" class="chip" data-min="${v}">${L(`${v>0?"+":""}${v}분`, `${v>0?"+":""}${v} min`)}</button>`).join("")}</div>
-      <div class="hint">${L(`현재안 ${escapeHtml(b.time)} 기준으로 계산됩니다.`, `Calculated based on the current plan's ${escapeHtml(b.time)}.`)}</div>`;
-    ctl.querySelectorAll("[data-min]").forEach(x=>x.onclick=()=>simApplyChange("time", x.dataset.min));
-  } else if(_simChangeKind==="add"){
-    ctl.innerHTML=simDrugSearchHtml("simAddPick", "");
-    document.getElementById("simAddGo").onclick=()=>simApplyChange("add", document.getElementById("simAddPick").value);
-    bindSimDrugSearch("simAddPick");
-  } else if(_simChangeKind==="remove"){
-    ctl.innerHTML=`<button class="btn ghost" id="simRemoveGo">${L(`${escapeHtml(b.time)} ${escapeHtml(b.name)} 을(를) 변경안에서 빼기`, `Remove ${escapeHtml(b.time)} ${escapeHtml(b.name)} from the what-if plan`)}</button>`;
-    document.getElementById("simRemoveGo").onclick=()=>simApplyChange("remove");
-  } else if(_simChangeKind==="replace"){
-    ctl.innerHTML=simDrugSearchHtml("simReplacePick", b.name, tr("simReplaceWithThis"));
-    document.getElementById("simReplaceGo").onclick=()=>simApplyChange("replace", document.getElementById("simReplacePick").value);
-    bindSimDrugSearch("simReplacePick");
-    const note=document.getElementById("simReplacePickNote");
-    if(note) note.textContent=tr("simReplaceFormulationNote");
-  }
-}
-/* 약물 사전 검색 입력 — 상품명·성분명·별칭 어디로 검색해도 찾을 수 있게 한다(datalist).
-   목록에 없는 이름을 입력하면 "약물 사전에 등록되지 않은 약" 안내를 보여준다(임의 곡선 생성 금지). */
-function simDrugSearchHtml(id, initialValue, goLabel){
-  const dl=id+"_dl";
-  const allAliases=[...new Set(SIMDRUG.DRUGS.flatMap(d=>d.aliases))];
-  return `<input list="${dl}" id="${id}" value="${escapeHtml(initialValue||"")}" placeholder="${escapeHtml(tr("simDrugSearchPlaceholder"))}" style="width:100%; min-height:48px; box-sizing:border-box">
-    <datalist id="${dl}">${allAliases.map(a=>`<option value="${escapeHtml(a)}">`).join("")}</datalist>
-    <div id="${id}Note" style="font-size:12px; color:var(--ink-2); margin-top:4px"></div>
-    <button class="btn ghost" id="${id==="simAddPick"?"simAddGo":"simReplaceGo"}" style="margin-top:6px">${escapeHtml(goLabel||tr("simAddToVariant"))}</button>
-    <div id="${id}PickNote" style="font-size:12px; color:var(--ink-2); margin-top:4px"></div>`;
-}
-function bindSimDrugSearch(id){
-  const el=document.getElementById(id); if(!el) return;
-  const note=document.getElementById(id+"Note");
-  const check=()=>{
-    const v=el.value.trim();
-    if(!v){ note.textContent=""; return; }
-    const found=SIMDRUG.classify(v);
-    if(found){ note.innerHTML=`<span style="color:var(--ink-2)">${escapeHtml(tr("simRecognized"))} ${escapeHtml(L(found.genericName, found.genericNameEn))} · ${escapeHtml(L(found.roleLabel, found.roleLabelEn))}</span>`; }
-    else {
-      const suggestions=SIMDRUG.searchDictionary(v).slice(0,5);
-      note.innerHTML = `<span style="color:var(--danger)">${escapeHtml(L(SIMDRUG.NOT_FOUND_GUIDANCE, SIMDRUG.NOT_FOUND_GUIDANCE_EN))}</span>` +
-        (suggestions.length? `<div style="margin-top:2px">${escapeHtml(tr("simSimilarIngredients"))} ${suggestions.map(s=>`<button type="button" class="chip" style="margin:2px" onclick="document.getElementById('${id}').value='${escapeHtml(s.alias)}'; document.getElementById('${id}').dispatchEvent(new Event('input'))">${escapeHtml(s.alias)}</button>`).join("")}</div>` : "");
-    }
-  };
-  el.addEventListener("input", check); check();
-}
-
-/* ---- 그래프 그리기 (SVG) ---- */
-function simSvgAxes(W,H,padL,padR,padT,padB){
-  const plotW=W-padL-padR, plotH=H-padT-padB;
-  return {plotW,plotH, x:(t,t0,t1)=>padL+(t-t0)/(t1-t0)*plotW, y:v=>padT+plotH-(Math.min(100,Math.max(0,v))/100)*plotH};
-}
-function simDoseMarkers(doses, x, t0, t1, y0){
-  return doses.filter(d=>d.time).map(d=>{ const [h,m]=d.time.split(":").map(Number); let tm=h*60+m; if(tm<t0) tm+=1440; if(tm>t1) return "";
-    return `<line x1="${x(tm,t0,t1)}" y1="${y0}" x2="${x(tm,t0,t1)}" y2="${y0-6}" stroke="var(--ink-2)" stroke-width="1.4"/>`; }).join("");
-}
-function simActualPoints(dayKey){
-  return outputsForDay(dayKey).map(a=>{ const [h,m]=a.time.split(":").map(Number); return {t:h*60+m, val:a.val}; }).sort((a,b)=>a.t-b.t);
-}
-function renderSimMainChart(dayKey, planDoses, composite){
-  const W=700,H=210,padL=32,padR=10,padT=10,padB=26;
-  const {x,y}=simSvgAxes(W,H,padL,padR,padT,padB);
-  const t0=0,t1=1440;
-  const axisLbl=[0,20,50,80,100].map(p=>`<text x="${padL-6}" y="${y(p)+3}" font-size="8.5" fill="var(--ink-2)" text-anchor="end">${p}</text>`).join("");
-  const actual=simActualPoints(dayKey);
-  const actLine=actual.length? `<polyline points="${actual.map(p=>`${x(p.t,t0,t1)},${y(p.val)}`).join(" ")}" fill="none" stroke="#E8663C" stroke-width="1.6" stroke-dasharray="1,3"/>`+actual.map(p=>`<circle cx="${x(p.t,t0,t1)}" cy="${y(p.val)}" r="3.4" fill="#E8663C"/>`).join("") : "";
-  const compLine=composite.points.length? `<polyline points="${composite.points.map(p=>`${x(p.t,t0,t1)},${y(p.val)}`).join(" ")}" fill="none" stroke="#5C93D6" stroke-width="2"/>` : "";
-  const markers=simDoseMarkers(planDoses, x, t0, t1, H-padB);
-  document.getElementById("simMainChart").innerHTML = (!planDoses.length&&!actual.length)
-    ? `<div class="hint" style="padding:20px 0; text-align:center">${escapeHtml(tr("simNoRecordForDate"))}</div>`
-    : `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${axisLbl}${compLine}${actLine}${markers}</svg>`;
-}
-function renderSimPerDrugChart(dayKey, planDoses, composite){
-  const el=document.getElementById("simPerDrugChart");
-  if(!composite.perDrug.length){ el.innerHTML=`<div class="hint">${escapeHtml(tr("simNoPerDrugCurve"))}</div>`; return; }
-  const W=700,H=140,padL=32,padR=10,padT=8,padB=18;
-  const {x,y}=simSvgAxes(W,H,padL,padR,padT,padB);
-  const t0=0,t1=1440;
-  const colors=["#5C93D6","#7B5CD6","#1FA971","#E0A030","#B3261E"];
-  el.innerHTML = composite.perDrug.map((pd,i)=>{
-    const maxV=Math.max(1,...pd.points.map(p=>p.val));
-    const norm=pd.points.map(p=>({t:p.t, val:p.val/maxV*90}));
-    return `<div style="margin-top:6px">
-      <div style="font-size:11.5px; color:var(--ink-2)">${escapeHtml(pd.name)}</div>
-      <svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">
-        <polyline points="${norm.map(p=>`${x(p.t,t0,t1)},${y(p.val)}`).join(" ")}" fill="none" stroke="${colors[i%colors.length]}" stroke-width="1.8"/>
-      </svg></div>`;
-  }).join("");
-}
-function renderSimCompareChart(dayKey, planDoses, virtDoses, curPlan, virtPlan){
-  const W=700,H=200,padL=32,padR=10,padT=10,padB=26;
-  const {x,y}=simSvgAxes(W,H,padL,padR,padT,padB);
-  const t0=0,t1=1440;
-  const axisLbl=[0,20,50,80,100].map(p=>`<text x="${padL-6}" y="${y(p)+3}" font-size="8.5" fill="var(--ink-2)" text-anchor="end">${p}</text>`).join("");
-  const actual=simActualPoints(dayKey);
-  const actLine=actual.length? `<polyline points="${actual.map(p=>`${x(p.t,t0,t1)},${y(p.val)}`).join(" ")}" fill="none" stroke="#E8663C" stroke-width="1.4" stroke-dasharray="1,3"/>`+actual.map(p=>`<circle cx="${x(p.t,t0,t1)}" cy="${y(p.val)}" r="3" fill="#E8663C"/>`).join("") : "";
-  const curLine=`<polyline points="${curPlan.points.map(p=>`${x(p.t,t0,t1)},${y(p.val)}`).join(" ")}" fill="none" stroke="#5C93D6" stroke-width="2"/>`;
-  const virtLine=`<polyline points="${virtPlan.points.map(p=>`${x(p.t,t0,t1)},${y(p.val)}`).join(" ")}" fill="none" stroke="#E0A030" stroke-width="2" stroke-dasharray="6,4"/>`;
-  const markers=simDoseMarkers(planDoses,x,t0,t1,H-padB)+simDoseMarkers(virtDoses,x,t0,t1,H-padB-8);
-  document.getElementById("simCompareChart").innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${axisLbl}${curLine}${virtLine}${actLine}${markers}</svg>`;
-}
-
-/* ---- LEDD 요약 카드 (크기 비교 전용 — 곡선 모양은 결정하지 않음) ---- */
-/* 검토 반영: 온젠티스·도파민 작용제·아만타딘 등은 leddIncluded:false라 이 합계에서
-   빠진다. "총 LEDD"라고 하면 전체를 다 더한 것처럼 오해할 수 있어 "계산 포함 LEDD"로 표기하고,
-   제외된 약이 있으면 그 목록을 함께 보여준다. */
-function simLeddCompareHtml(curPlan, virtPlan, planWithCarry, virtWithCarry){
-  const diff=virtPlan.leddTotal-curPlan.leddTotal;
-  const rows=(bd)=>bd.length? bd.map(x=>`${x.name} ${x.ledd}`).join(" · ") : "—";
-  const excludedNames=(list)=>{
-    const s=new Set();
-    (list||[]).forEach(d=>{
-      const m=SIMDRUG.classify(d.name);
-      /* v2.13.7: comtLeddFactor가 있는 COMT억제제(온젠티스·엔타카폰)는 이제 병용 레보도파의
-         일정비율만큼 leddTotal에 자동 가산되므로, "제외됨" 안내에서도 빼야 한다 — 안 그러면
-         실제로는 계산에 들어갔는데 "제외됐다"고 잘못 안내하게 된다. */
-      if(m && !m.leddIncluded && !m.comtLeddFactor) s.add(d.name);
-    });
-    return [...s];
-  };
-  const excluded=[...new Set(excludedNames(planWithCarry).concat(excludedNames(virtWithCarry)))];
-  return `<b>${escapeHtml(tr("simIncludedLedd"))}</b> <span style="color:var(--ink-2); font-weight:400">${escapeHtml(tr("simIncludedLeddNote"))}</span><br>
-    ${escapeHtml(tr("simCurrentIncludedLedd"))} ${curPlan.leddTotal} · ${escapeHtml(tr("simVirtualIncludedLedd"))} ${virtPlan.leddTotal} · ${escapeHtml(tr("simLeddChange"))} ${diff>=0?"+":""}${diff}${curPlan.leddTotal? ` (${diff>=0?"+":""}${Math.round(diff/curPlan.leddTotal*100)}%)`:""}
-    <details style="margin-top:4px"><summary style="cursor:pointer; color:var(--ink-2)">${escapeHtml(tr("simPerDrugContribution"))}</summary>
-      <div style="color:var(--ink-2); margin-top:4px">${escapeHtml(tr("simCurrentPlanLabel"))} ${rows(curPlan.leddBreakdown)}<br>${escapeHtml(tr("simVirtualPlanLabel"))} ${rows(virtPlan.leddBreakdown)}</div></details>
-    ${excluded.length? `<div class="hint" style="margin-top:4px">${escapeHtml(tr("simExcludedNote1"))}${escapeHtml(excluded.join(", "))}${escapeHtml(tr("simExcludedNote2"))}</div>`:""}`;
-}
-/* 약효 추정 중첩 구간 — 위험 판정이 아니라 사실 표시 */
-function simOverlapNote(curPlan){
-  const th=curPlan.points.length? Math.max(...curPlan.points.map(p=>p.val))*0.6 : 0;
-  const overlapMin=curPlan.perDrug.length>=2? curPlan.points.filter(p=>{
-    const active=curPlan.perDrug.filter(pd=>{ const v=(pd.points.find(x=>x.t===p.t)||{}).val||0; return v>0.05; }).length;
-    return active>=2 && p.val>=th;
-  }).length*10 : 0;
-  return overlapMin>0? `${tr("simOverlapNoteText1")} ${overlapMin} ${tr("simOverlapNoteText2")}` : "";
-}
-
-/* 위험구간 요약: 오늘 세션에서 반복 계산했던 "50 이상 위험대 / 25~50 전환구간(diphasic dyskinesia
-   위험) / 25 미만 딥OFF" 시간을 앱에서 바로 보여준다. 구간이 하루에 여러 번 생겨도 전부 합산한다. */
-function simDangerStats(points, hi, lo){
-  let aboveHi=0, inBand=0, belowLo=0;
-  let peak=-Infinity, peakT=null, trough=Infinity, troughT=null;
-  const step = points.length>=2? (points[1].t-points[0].t) : 10;
-  points.forEach(p=>{
-    if(p.val>=hi) aboveHi+=step;
-    else if(p.val>=lo) inBand+=step;
-    else belowLo+=step;
-    if(p.val>peak){ peak=p.val; peakT=p.t; }
-    if(p.val<trough){ trough=p.val; troughT=p.t; }
-  });
-  return {aboveHi, inBand, belowLo, peak, peakT, trough, troughT};
-}
-function simFmtDur(min){
-  min=Math.round(min);
-  const h=Math.floor(min/60), m=min%60;
-  return h? `${h}${L("시간","h")}${m?` ${m}${L("분","min")}`:""}` : `${m}${L("분","min")}`;
-}
-function renderSimDangerSummary(curPlan, virtPlan){
-  const hi=+document.getElementById("simDangerHi").value||50;
-  const lo=+document.getElementById("simDangerLo").value||25;
-  const rowHtml=(label, s, color)=>`
-    <div style="background:var(--surface-2); border-radius:10px; padding:10px 12px; margin-bottom:6px; border-left:3px solid ${color}">
-      <div style="font-weight:800; font-size:13px; margin-bottom:4px">${escapeHtml(label)}</div>
-      <div style="font-size:12.5px; line-height:1.7">
-        ${L("최고","Peak")} <b>${s.peak.toFixed(1)}</b> (${simFmtTime(s.peakT)}) · ${L("최저","Min")} <b>${s.trough.toFixed(1)}</b> (${simFmtTime(s.troughT)})<br>
-        ${L(`${hi} 이상(피크 위험대)`,`≥${hi} (peak-risk zone)`)}: <b style="color:#B3261E">${simFmtDur(s.aboveHi)}</b> ·
-        ${L(`${lo}~${hi}(전환구간)`,`${lo}–${hi} (transition zone)`)}: <b style="color:#E0A030">${simFmtDur(s.inBand)}</b> ·
-        ${L(`${lo} 미만(깊은 OFF)`,`<${lo} (deep OFF)`)}: <b style="color:var(--ink-2)">${simFmtDur(s.belowLo)}</b>
-      </div>
-    </div>`;
-  const curStats=simDangerStats(curPlan.points, hi, lo);
-  let html = rowHtml(L("현재안","Current plan"), curStats, "#5C93D6");
-  if(virtPlan){
-    const virtStats=simDangerStats(virtPlan.points, hi, lo);
-    html += rowHtml(L("변경안","Variant"), virtStats, "#E0A030");
-  }
-  document.getElementById("simDangerBody").innerHTML = html;
-}
-
-function renderSim(){
-  const sel=document.getElementById("simDate");
-  if(!sel._bound){
-    sel._bound=true;
-    const days=Object.keys(byDay()).sort().reverse();
-    sel.innerHTML=(days.length? days : [todayKey()]).map(k=>`<option value="${k}" ${k===todayKey()?"selected":""}>${fmtDateK(k)}</option>`).join("");
-    sel.onchange=renderSim;
-  }
-  const dayKey=sel.value||todayKey();
-  const {today:planDoses, carry, all:planWithCarry}=medsForSimulationDay(dayKey);
-  renderSimPlanList(dayKey);
-  document.getElementById("simCarryNote").innerHTML = carry.length
-    ? carry.map(d=>`${escapeHtml(tr("simCarryPrefix"))} ${escapeHtml(d.time)} ${escapeHtml(d.name)}${d.dose?` ${d.dose}mg`:""} ${escapeHtml(tr("simCarrySuffix"))}`).map(t=>`<div>${t}</div>`).join("")
-    : "";
-
-  const t0=0,t1=1440;
-  const curPlan=SIMDRUG.compositeCurve(planWithCarry, t0, t1, 10);
-  renderSimMainChart(dayKey, planDoses, curPlan);
-
-  const toggle=document.getElementById("simPerDrugToggle");
-  toggle.onclick=()=>{ const box=document.getElementById("simPerDrugChart");
-    const show=box.style.display==="none"; box.style.display=show?"block":"none";
-    toggle.textContent=show?tr("simPerDrugHide"):tr("simPerDrugShow");
-    if(show) renderSimPerDrugChart(dayKey, planWithCarry, curPlan); };
-
-  simEnsureVariant(dayKey);
-  renderSimVariantBuilder(dayKey);
-  document.getElementById("simResetBtn").onclick=()=>simApplyChange("reset");
-
-  const virtDoses=_simVirtual.doses;
-  const virtPlan=SIMDRUG.compositeCurve(carry.concat(virtDoses), t0, t1, 10); /* 전날 이월분은 양쪽에 동일하게 적용 — 오늘 변경안 편집 대상은 아님 */
-  renderSimCompareChart(dayKey, planDoses, virtDoses, curPlan, virtPlan);
-  document.getElementById("simOverlapNote").textContent = simOverlapNote(curPlan) || simOverlapNote(virtPlan);
-  renderSimDangerSummary(curPlan, virtPlan);
-  const dLo=document.getElementById("simDangerLo"), dHi=document.getElementById("simDangerHi");
-  if(!dLo._bound){ dLo._bound=true; dHi._bound=true;
-    dLo.addEventListener("change", ()=>renderSimDangerSummary(curPlan, virtPlan));
-    dHi.addEventListener("change", ()=>renderSimDangerSummary(curPlan, virtPlan));
-  }
-  document.getElementById("simLeddCompare").innerHTML = simLeddCompareHtml(curPlan, virtPlan, planWithCarry, carry.concat(virtDoses));
-  document.getElementById("simDiffLine").textContent = simDiffSummary(planDoses, virtDoses);
-}
-
 
 /* ---------- render: REPORT ---------- */
 function renderReport(){
@@ -3448,6 +4016,8 @@ window.addQ=()=>{ const t=prompt(L("질문을 입력하세요","Enter your quest
 
 /* ---------- render: SETTINGS ---------- */
 function renderMeds(){
+  renderUnregisteredDrugList(); /* v2.7 */
+  renderMedSets(); /* v2.9 */
   const el=document.getElementById("medList"); el.innerHTML="";
   if(!db.meds.length){ el.innerHTML=`<div class="li"><div class="grow"><div class="meta">${L("아직 등록된 약이 없어요. 아래에서 추가하세요.","No medications registered yet. Add one below.")}</div></div></div>`; }
   const ordered = db.meds.map((m,i)=>({m,i})).sort((a,b)=>(b.m.fav?1:0)-(a.m.fav?1:0));
@@ -3457,7 +4027,8 @@ function renderMeds(){
     const fav=document.createElement("button"); fav.className="del"; fav.style.fontSize="18px"; fav.style.color=m.fav?"var(--accent)":"var(--ink-2)";
     fav.innerHTML = m.fav? "★" : "☆"; fav.title=L("즐겨찾기","Favorite");
     fav.onclick=()=>{ m.fav=!m.fav; save(); renderMeds(); };
-    li.innerHTML=`<div class="grow"><div class="name">${escapeHtml(m.name)}${m.dose?` <span class="meta">${m.dose}mg</span>`:""}</div>${m.note?`<div class="meta">${escapeHtml(m.note)}</div>`:""}
+    const doseLabel = m.tabletMg? `${m.tabletMg}mg × ${m.tabletCount}${L("정","tab")} = ${m.dose}mg` : (m.dose? `${m.dose}mg` : "");
+    li.innerHTML=`<div class="grow"><div class="name">${escapeHtml(m.name)}${doseLabel?` <span class="meta">${doseLabel}</span>`:""}</div>${m.note?`<div class="meta">${escapeHtml(m.note)}</div>`:""}
       <div class="sched-row">${chips}<button class="sched-chip" style="background:transparent;border:1px dashed var(--line);color:var(--accent-ink);font-weight:800" data-addsched="${i}">＋ ${L("시간 예약","Add time")}</button></div></div>`;
     li.appendChild(fav);
     const del=document.createElement("button"); del.className="del"; del.innerHTML="✕"; del.style.fontSize="18px"; del.style.color="var(--ink-2)";
@@ -3762,23 +4333,19 @@ function openLifeSheet(kind){
     const chips=MEAL_TYPES.map(t=>`<button type="button" class="chip" data-t="${t}">${tagLabel(t)}</button>`).join("");
     const amtChips=MEAL_AMOUNTS.map(t=>`<button type="button" class="chip" data-t="${t}">${tagLabel(t)}</button>`).join("");
     const exChips=MEAL_EXTRAS.map(t=>`<button type="button" class="chip" data-t="${t}">${tagLabel(t)}</button>`).join("");
-    openSheet(`<h2>${lf.icon} ${L("식사 기록","Meal log")}</h2>
+    openSheet(`<h2>${lf.icon} ${L("식사 기록","Meal log")}</h2><div class="hint">${L("단백질이 많거나 기름진 식사는 약효 흡수에 영향을 줄 수 있어요.","High-protein or fatty meals can affect how well medication is absorbed.")}</div>
       ${timeFieldHtml("life_time", now)}
       <div class="field"><label>${L("종류","Type")}</label><div class="chips" id="mealChips">${chips}</div></div>
-      <details class="field"><summary style="cursor:pointer; font-weight:700; font-size:13px; color:var(--ink-2)">${L("세부 정보 (선택)","Details (optional)")}</summary>
-        <div style="margin-top:10px">
-          <div class="field"><label>${L("식사량","Amount")}</label><div class="chips" id="amtChips">${amtChips}</div></div>
-          <div class="field"><label>${L("추가 (복수 선택 가능)","Additional (multi-select)")}</label><div class="chips" id="mealExChips">${exChips}</div></div>
-          <div class="field"><label>${L("메모","Memo")}</label><textarea id="life_memo" placeholder="${L("예: 단백질 많음, 기름진 식사, 아침 겸 약 등","e.g. high-protein, fatty meal, breakfast with medication")}"></textarea></div>
-        </div>
-      </details>
+      <div class="field"><label>${L("식사량 (선택)","Amount (optional)")}</label><div class="chips" id="amtChips">${amtChips}</div></div>
+      <div class="field"><label>${L("추가 (복수 선택 가능)","Additional (multi-select)")}</label><div class="chips" id="mealExChips">${exChips}</div></div>
+      <div class="field"><label>${L("메모 (선택)","Memo (optional)")}</label><textarea id="life_memo" placeholder="${L("예: 아침 겸 약","e.g. breakfast with medication")}"></textarea></div>
       <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="life_save" disabled>${L("저장","Save")}</button></div>`);
     singleChipToggle("mealChips"); singleChipToggle("amtChips"); multiChipToggle("mealExChips");
     document.getElementById("mealChips").addEventListener("click",()=>{ document.getElementById("life_save").disabled=false; });
     document.getElementById("life_save").onclick=()=>{
       const mt=selectedChip("mealChips"); const amount=selectedChip("amtChips"); const extras=selectedChips("mealExChips");
       const ts=tsFromTimeField("life_time", now);
-      closeSheet(); addLife("meal",{mealType:mt, amount, extras, protein:extras.includes("단백질 많음"), ts, memo:document.getElementById("life_memo")?.value.trim()||""});
+      closeSheet(); addLife("meal",{mealType:mt, amount, extras, protein:extras.includes("단백질 많음"), ts, memo:document.getElementById("life_memo").value.trim()});
     };
     return;
   }
@@ -4009,23 +4576,275 @@ function openMedSheet(){
   };
 }
 
+/* v2.10.4: 용량 추천 — 실사용 요청: "실재 존재하는 용량을 목록에 올릴 수 없나".
+   두 가지를 섞어서 보여준다: ①형님이 이미 등록하신 값(그 이름으로 예전에 실제 등록한
+   강도) — 이건 확실하니 그냥 추천. ②검색으로 확인한 참고값 — 제가 조사한 정보라 시장
+   철수·규격 변경 등으로 달라질 수 있어 "참고(다를 수 있음)"이라고 항상 표시하고, 확인
+   안 된 약은 아예 안 보여준다(모르면 추측하지 않는다는 원칙 — 반대방향으로 틀린 정보를
+   주면 지금 고친 문제를 되풀이하는 셈이라 검증 안 된 건 절대 채우지 않는다). */
+const REFERENCE_TABLET_MG = {
+  /* 2026-08 식약처·약학정보원 검색으로 확인 — 향후 시장 변경(품목 철수·규격 변경 등)
+     가능성이 있으니 "참고용"이며 처방 확인용으로 대체할 수 없다. 확인 안 된 약(아만타딘·
+     아질렉트·온젠티스·뉴프로 등)은 추측하지 않고 목록에서 아예 뺀다 — 형님이 등록하시면
+     그때부터 "전에 등록하신 값"으로 학습된다. */
+  "퍼킨": [100, 250],
+  "트리레보": [50, 75, 100, 125, 150, 200],
+  "스타레보": [50, 75, 100, 125, 150, 200],
+  "미라펙스": [0.125, 0.25, 0.5, 1],
+  "프라펙솔": [0.125, 0.25, 0.5, 1], /* 미라펙스 제네릭, 같은 규격으로 확인됨 */
+  "리큅 피디": [2, 4, 8], /* 서방형(PD) — 먼저 검사해야 "리큅"보다 우선 매칭됨 */
+  "리큅피디": [2, 4, 8],
+  "리큅": [0.25], /* 즉방형 — 국내 확인은 0.25mg만, 다른 규격은 미확인이라 안 넣음 */
+  "마도파 HBS": [100], /* 서방형 — 100mg(레보도파 기준)만 확인됨. "마도파"보다 먼저 검사해야 함 */
+  "마도파HBS": [100],
+  "마도파": [100, 200], /* 즉방형/확산정 — 명도파(현재 판매 제네릭) 25/100·50/200 규격으로 확인 */
+};
+/* "리큅 피디"가 "리큅"의, "마도파 HBS"가 "마도파"의 부분집합이라 순서가 중요 —
+   더 구체적인(제형까지 포함한) 이름을 먼저 검사해야 서방형을 즉방형으로 잘못
+   매칭하지 않는다. */
+const REFERENCE_KEY_ORDER = ["리큅 피디","리큅피디","리큅","트리레보","스타레보","미라펙스","프라펙솔","마도파 HBS","마도파HBS","마도파","퍼킨"];
+function learnedTabletMg(name){
+  const vals=new Set();
+  (db.meds||[]).forEach(m=>{ if(m.name===name && m.tabletMg!=null) vals.add(m.tabletMg); });
+  return [...vals].sort((a,b)=>a-b);
+}
+function referenceTabletMg(name){
+  const key=REFERENCE_KEY_ORDER.find(k=>name.includes(k));
+  return key? REFERENCE_TABLET_MG[key] : [];
+}
+function tabletSuggestChipsHtml(name){
+  const learned=learnedTabletMg(name), ref=referenceTabletMg(name).filter(v=>!learned.includes(v));
+  if(!learned.length && !ref.length) return "";
+  const learnedChips=learned.map(v=>`<button type="button" class="chip" data-mg="${v}">${v}mg</button>`).join("");
+  const refChips=ref.map(v=>`<button type="button" class="chip" data-mg="${v}" style="opacity:.7; border-style:dashed">${v}mg</button>`).join("");
+  return `<div class="hint" style="margin-top:6px">
+    ${learned.length? `<div>${L("전에 등록하신 값","Previously used")}: ${learnedChips}</div>`:""}
+    ${ref.length? `<div style="margin-top:4px">${L("검색 참고값(다를 수 있음)","Reference (may differ)")}: ${refChips}</div>`:""}
+  </div>`;
+}
+function bindTabletSuggestChips(containerId, targetInputId){
+  document.querySelectorAll(`#${containerId} [data-mg]`).forEach(b=>{
+    b.onclick=()=>{ document.getElementById(targetInputId).value=b.dataset.mg;
+      document.getElementById(targetInputId).dispatchEvent(new Event("input")); };
+  });
+}
 function openAddMed(fromMedFlow){
-  const chips=MED_PRESETS.map(n=>`<button class="chip" onclick="document.getElementById('m_name').value='${n}'">${n}</button>`).join("");
+  const chips=MED_PRESETS.map(n=>`<button class="chip" onclick="document.getElementById('m_name').value='${n}'; document.getElementById('m_name').dispatchEvent(new Event('input'))">${n}</button>`).join("");
   openSheet(`
     <h2>${L("약 추가","Add medication")}</h2><div class="hint">${L("자주 먹는 약을 등록해두면 복약 기록이 한 번에 끝나요.","Registering meds you take often makes logging them a single tap.")}</div>
     <div class="field"><label>${L("약 이름","Medication name")}</label><input id="m_name" placeholder="${L("예: 마도파 HBS","e.g. Madopar HBS")}"></div>
     <div class="field"><label>${L("자주 쓰는 약","Common medications")}</label><div class="chips">${chips}</div></div>
-    <div class="field"><label>${L("기본 용량 (mg, 선택)","Default dose (mg, optional)")}</label><input id="m_dose" type="number" inputmode="numeric" placeholder="${L("예: 100","e.g. 100")}"></div>
+    <div class="field"><label>${L("정제 강도 (mg, 실제 나오는 알약 기준)","Tablet strength (mg, as manufactured)")}</label><input id="m_strength" type="number" inputmode="decimal" placeholder="${L("예: 100 (50mg 정제가 없으면 100 입력)","e.g. 100 (enter 100 if there's no 50mg tablet)")}">
+      <div id="m_strengthSuggest"></div>
+    </div>
+    <div class="field"><label>${L("한 번에 먹는 개수 (정, 반 알이면 0.5)","Count per dose (tablets, 0.5 for half)")}</label><input id="m_count" type="number" inputmode="decimal" step="0.5" value="1"></div>
+    <div class="hint" id="m_doseCalc">${L("실제 용량: —","Actual dose: —")}</div>
     <div class="field"><label>${L("메모 (선택)","Memo (optional)")}</label><input id="m_note" placeholder="${L("예: 아침 기저용","e.g. morning baseline dose")}"></div>
     <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="m_save">${L("추가","Add")}</button></div>`);
+  const updateCalc=()=>{
+    const strength=+document.getElementById("m_strength").value, count=+document.getElementById("m_count").value;
+    const calc=document.getElementById("m_doseCalc");
+    calc.textContent = (strength>0 && count>0)
+      ? L(`실제 용량: ${strength}mg × ${count}정 = ${Math.round(strength*count*1000)/1000}mg`,`Actual dose: ${strength}mg × ${count} = ${Math.round(strength*count*1000)/1000}mg`)
+      : L("실제 용량: —","Actual dose: —");
+  };
+  document.getElementById("m_strength").addEventListener("input", updateCalc);
+  document.getElementById("m_count").addEventListener("input", updateCalc);
+  const refreshSuggest=()=>{
+    const name=document.getElementById("m_name").value.trim();
+    document.getElementById("m_strengthSuggest").innerHTML = name? tabletSuggestChipsHtml(name) : "";
+    bindTabletSuggestChips("m_strengthSuggest", "m_strength");
+  };
+  document.getElementById("m_name").addEventListener("input", refreshSuggest);
+  document.getElementById("m_name").addEventListener("blur", refreshSuggest);
   document.getElementById("m_save").onclick=()=>{
     const name=document.getElementById("m_name").value.trim(); if(!name){ toast(L("약 이름을 입력하세요","Please enter a medication name")); return; }
-    db.meds.push({ id:uid(), name, dose:(+document.getElementById("m_dose").value)||null, note:document.getElementById("m_note").value.trim() });
+    const strength=+document.getElementById("m_strength").value||null;
+    const count=+document.getElementById("m_count").value||1;
+    /* 검토(2026-08-08, 실사용): "퍼킨 50mg"으로 기록해 오셨는데 실제론 50mg 정제가
+       존재하지 않고 100mg 정제를 반 쪼갠 것이었다는 걸 확인 — mg만 받으면 실재하지
+       않는 강도의 약이 등록된 것처럼 보인다. 이제 실제 정제 강도와 개수를 따로 받아,
+       그 둘을 곱한 최종 mg만 dose에 저장한다(LEDD·곡선 계산은 그대로 mg을 쓰므로
+       하위 계산에는 영향 없음) — 화면 표시만 "100mg × 0.5정"처럼 정확해진다. */
+    const dose = strength? Math.round(strength*count*1000)/1000 : null;
+    db.meds.push({ id:uid(), name, dose, tabletMg:strength, tabletCount:strength?count:null, note:document.getElementById("m_note").value.trim() });
     save(); renderMeds(); closeSheet();
     if(fromMedFlow) openMedSheet();
   };
 }
 
+/* v2.10: 처방전으로 한 번에 등록 — 실사용 요청: 약을 하나씩 "+약 추가"로 등록하는 대신,
+   처방전에 적힌 대로 여러 약을 한 화면에서 한 번에 등록한다. 처방전은 보통 "1일 O회"로
+   복용 횟수를 적지, 정확한 시각을 안 적으므로 흔한 기본 시각(1회=아침, 2회=아침·저녁,
+   3회=아침·점심·저녁, 4회=6시간 간격)으로 자동 배정한다 — 실제와 다르면 나중에 "내 약"
+   에서 개별 수정하면 된다.
+   같은 횟수(=같은 시각대)로 등록된 약들은 어차피 같은 시각에 같이 먹게 되므로, 그 시각대
+   묶음마다 복용 세트를 자동으로 만들어 준다(자동기록 여부는 켜지 않은 채로 — 그건
+   사람이 며칠 써보고 믿음이 생긴 뒤에 직접 켜는 게 안전하다). */
+const FREQ_TIMES = {
+  1: ["08:00"],
+  2: ["08:00","20:00"],
+  3: ["08:00","13:00","19:00"],
+  4: ["06:00","12:00","17:00","22:00"],
+};
+const FREQ_LABEL = {1:L("1일 1회","Once daily"), 2:L("1일 2회","Twice daily"), 3:L("1일 3회","3x daily"), 4:L("1일 4회","4x daily")};
+/* openPrescriptionEntry(약 목록 입력)와 runRxOcr(인식 결과로 목록을 다시 그림) 둘 다에서
+   써야 해서 전역으로 둔다 — 지역함수로 두면 runRxOcr에서 참조하지 못해 조용히 실패한다
+   (실제로 겪은 버그: bindRxRemove가 openPrescriptionEntry 안에만 있어서 runRxOcr이
+   부를 때 ReferenceError가 나고, 그게 catch에 먹혀 "인식 실패"로만 보였다). */
+function bindRxRemove(){
+  document.querySelectorAll("#rxRows button[data-rmrow]").forEach(b=>{
+    b.onclick=()=>{ const row=b.closest("[data-row]"); if(row) row.remove(); };
+  });
+}
+function prescriptionRowHtml(idx){
+  const freqOpts=[1,2,3,4].map(n=>`<option value="${n}">${FREQ_LABEL[n]}</option>`).join("");
+  return `<div class="li" data-row="${idx}" style="align-items:flex-start; gap:8px; flex-wrap:wrap">
+    <input type="text" class="rx-name" placeholder="${L("약 이름","Medication name")}" style="flex:2; min-width:120px">
+    <input type="number" class="rx-strength" placeholder="${L("정제 강도(mg)","Tablet mg")}" style="flex:1; min-width:80px">
+    <input type="number" class="rx-count" placeholder="${L("개수(정)","Count")}" value="1" step="0.5" style="flex:1; min-width:70px">
+    <select class="rx-freq" style="flex:1; min-width:100px">${freqOpts}</select>
+    <button class="btn ghost" data-rmrow="${idx}" style="width:auto">✕</button>
+  </div>`;
+}
+/* v2.10.1: 처방전 사진 — 실사용 요청: "사진 찍어서 입력해도 되게". 자동 글자인식(OCR)은
+   약 이름·용량을 하나라도 잘못 읽으면 그대로 복약 기록에 들어갈 수 있어 의료 데이터에는
+   위험이 크다고 판단해, 지금은 "사진을 옆에 띄워두고 보면서 사람이 직접 입력"하는 방식으로
+   만든다 — 입력 부담은 줄이되, 정확성 확인은 계속 사람이 한다. 사진은 입력하는 동안만
+   화면에 보이고 따로 저장되지 않는다(개인 처방전 이미지를 계속 남겨두지 않기 위해). */
+/* v2.10.2: OCR(글자 인식) — 실사용 요청: "OCR로 채워두고 사람이 확인을 누르게".
+   Tesseract.js를 CDN에서 필요할 때만 불러온다(앱 기본 동작은 계속 오프라인으로 되어야
+   하므로, 평소엔 이 라이브러리를 안 받는다 — 인식 버튼을 눌렀을 때만 인터넷이 필요함을
+   안내한다). 인식 결과는 절대 그대로 저장하지 않는다 — 칸에 채워 넣기만 하고, "사진과
+   대조해서 확인했다"는 걸 사람이 직접 체크해야만 등록 버튼이 활성화된다. */
+let _tesseractLoading=null;
+function loadTesseract(){
+  if(window.Tesseract) return Promise.resolve(window.Tesseract);
+  if(_tesseractLoading) return _tesseractLoading;
+  _tesseractLoading=new Promise((resolve,reject)=>{
+    const s=document.createElement("script");
+    s.src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js";
+    s.onload=()=>resolve(window.Tesseract);
+    s.onerror=()=>reject(new Error("Tesseract load failed"));
+    document.head.appendChild(s);
+  });
+  return _tesseractLoading;
+}
+/* 인식된 원문 텍스트를 줄 단위로 훑어, 약 이름·용량(mg)·복용횟수를 최대한 추측한다.
+   추측이 틀릴 수 있다는 전제 자체가 설계다 — 그래서 결과를 그대로 믿지 않고 사람이
+   보고 고치게 한다. */
+function parseRxText(text){
+  const lines=text.split(/\n+/).map(l=>l.trim()).filter(Boolean);
+  return lines.map(line=>{
+    const doseMatch=line.match(/([0-9]+(?:\.[0-9]+)?)\s*mg/i);
+    const freqMatch=line.match(/1일\s*([1-4])\s*회|하루\s*([1-4])\s*회|([1-4])\s*회/);
+    const freq=freqMatch? +(freqMatch[1]||freqMatch[2]||freqMatch[3]) : null;
+    let name=line;
+    if(doseMatch) name=name.replace(doseMatch[0],"");
+    if(freqMatch) name=name.replace(freqMatch[0],"");
+    name=name.replace(/[0-9]+정|1일|하루|mg|,|·/gi,"").trim();
+    return { name, dose: doseMatch? +doseMatch[1] : null, freq: freq||null };
+  }).filter(r=>r.name);
+}
+function runRxOcr(){
+  const img=document.getElementById("rxPhotoPreview");
+  if(!img || !img.src || img.style.display==="none"){ toast(L("먼저 사진을 선택해 주세요","Please choose a photo first")); return; }
+  const btn=document.getElementById("rxOcrBtn");
+  const origLabel=btn.textContent; btn.disabled=true; btn.textContent=L("인식 중… (인터넷 필요)","Recognizing… (needs internet)");
+  loadTesseract().then(Tesseract=>Tesseract.recognize(img.src, "kor+eng"))
+    .then(result=>{
+      const parsed=parseRxText(result.data.text||"");
+      if(!parsed.length){ toast(L("글자를 읽지 못했어요. 손으로 입력해 주세요.","Couldn't read any text — please enter manually.")); return; }
+      const rowsWrap=document.getElementById("rxRows"); rowsWrap.innerHTML="";
+      let idx=0;
+      parsed.forEach(p=>{
+        rowsWrap.insertAdjacentHTML("beforeend", prescriptionRowHtml(idx++));
+      });
+      [...rowsWrap.querySelectorAll("[data-row]")].forEach((row,i)=>{
+        const p=parsed[i];
+        row.querySelector(".rx-name").value=p.name;
+        if(p.dose!=null) row.querySelector(".rx-strength").value=p.dose; /* OCR은 정제강도만 추측 — 개수(기본 1)는 사람이 확인해서 고침 */
+        if(p.freq) row.querySelector(".rx-freq").value=String(p.freq);
+        /* 인식된 줄임을 시각적으로 표시 — "확신하지 못하는 값"이라는 신호를 계속 남겨둔다 */
+        row.style.background="var(--surface-2)"; row.style.borderLeft="3px solid #E0A030"; row.dataset.fromOcr="1";
+      });
+      bindRxRemove();
+      const confirmWrap=document.getElementById("rxConfirmWrap");
+      confirmWrap.style.display="block";
+      document.getElementById("rxConfirmed").checked=false;
+      document.getElementById("rxSave").disabled=true;
+      toast(L(`${parsed.length}줄 인식됨 — 사진과 비교해 확인해 주세요`,`${parsed.length} line(s) recognized — please review against the photo`));
+    })
+    .catch(()=>{ toast(L("인식에 실패했어요(인터넷 연결을 확인해 주세요). 손으로 입력해 주세요.","Recognition failed (check your connection) — please enter manually.")); })
+    .finally(()=>{ btn.disabled=false; btn.textContent=origLabel; });
+}
+function openPrescriptionEntry(){
+  let rowCount=2;
+  openSheet(`
+    <h2>${L("처방전으로 한 번에 등록","Add from a prescription")}</h2>
+    <div class="hint" style="margin-bottom:10px">${L("처방전에 적힌 약을 한 줄씩 입력하세요. 복용 횟수를 고르면 흔한 시각으로 자동 배정되고, 나중에 '내 약'에서 시각을 직접 고칠 수 있어요. 같은 횟수로 등록한 약들은 같은 시각에 먹는 세트로 자동 묶입니다.","Enter each medication on its own line. Frequency picks common default times, which you can fine-tune later. Medications with the same frequency are automatically grouped into a set.")}</div>
+    <div class="field">
+      <label>${L("처방전 사진 (선택 — 보면서 입력하는 용도, 저장되지 않음)","Prescription photo (optional — for reference only, not saved)")}</label>
+      <input type="file" id="rxPhotoInput" accept="image/*" capture="environment">
+      <img id="rxPhotoPreview" style="display:none; max-width:100%; border-radius:10px; margin-top:8px">
+      <button class="btn ghost" id="rxOcrBtn" style="display:none; margin-top:8px">${L("🔍 사진에서 글자 인식하기","🔍 Recognize text from photo")}</button>
+      <div class="hint" style="margin-top:4px">${L("인식은 참고용입니다 — 틀릴 수 있으니 반드시 사진과 비교해 확인해 주세요.","Recognition is a starting point only — always compare it against the photo before saving.")}</div>
+    </div>
+    <div id="rxRows">${prescriptionRowHtml(0)}${prescriptionRowHtml(1)}</div>
+    <button class="btn ghost" id="rxAddRow" style="margin:8px 0">${L("+ 약 한 줄 추가","+ Add another line")}</button>
+    <div id="rxConfirmWrap" style="display:none; margin:8px 0">
+      <label style="display:flex; align-items:center; gap:6px"><input type="checkbox" id="rxConfirmed"> ${L("사진과 비교해서 위 내용을 확인했습니다","I compared the above against the photo and confirmed it")}</label>
+    </div>
+    <div class="btn-row"><button class="btn ghost" onclick="closeSheet()">${L("취소","Cancel")}</button><button class="btn primary" id="rxSave">${L("전부 등록","Register all")}</button></div>
+  `);
+  document.getElementById("rxPhotoInput").onchange=(e)=>{
+    const file=e.target.files&&e.target.files[0]; if(!file) return;
+    const reader=new FileReader();
+    reader.onload=()=>{
+      const img=document.getElementById("rxPhotoPreview"); img.src=reader.result; img.style.display="block";
+      document.getElementById("rxOcrBtn").style.display="block";
+    };
+    reader.readAsDataURL(file);
+  };
+  document.getElementById("rxOcrBtn").onclick=runRxOcr;
+  document.getElementById("rxConfirmed").onchange=(e)=>{ document.getElementById("rxSave").disabled=!e.target.checked; };
+  document.getElementById("rxAddRow").onclick=()=>{
+    document.getElementById("rxRows").insertAdjacentHTML("beforeend", prescriptionRowHtml(rowCount++));
+    bindRxRemove();
+  };
+  bindRxRemove();
+  document.getElementById("rxSave").onclick=()=>{
+    const rows=[...document.querySelectorAll("#rxRows [data-row]")];
+    const entries=rows.map(r=>{
+      const strength=+r.querySelector(".rx-strength").value||null;
+      const count=+r.querySelector(".rx-count").value||1;
+      return {
+        name:r.querySelector(".rx-name").value.trim(),
+        strength, count,
+        dose: strength? Math.round(strength*count*1000)/1000 : null,
+        freq:+r.querySelector(".rx-freq").value,
+      };
+    }).filter(e=>e.name);
+    if(!entries.length){ toast(L("약 이름을 하나 이상 입력하세요","Enter at least one medication name")); return; }
+    const createdMedIdx=[];
+    entries.forEach(e=>{
+      const sched=(FREQ_TIMES[e.freq]||FREQ_TIMES[1]).slice();
+      const idx=db.meds.push({ id:uid(), name:e.name, dose:e.dose, tabletMg:e.strength, tabletCount:e.strength?e.count:null, note:"", sched }) - 1;
+      createdMedIdx.push({idx, freq:e.freq});
+    });
+    /* 같은 횟수(=같은 시각대)끼리 묶어서 세트를 자동 생성 — 2개 이상일 때만 의미가 있음 */
+    const byFreq={};
+    createdMedIdx.forEach(({idx,freq})=>{ (byFreq[freq]=byFreq[freq]||[]).push(idx); });
+    if(!db.medSets) db.medSets=[];
+    Object.entries(byFreq).forEach(([freq,idxs])=>{
+      if(idxs.length<2) return;
+      const items=idxs.map(i=>({name:db.meds[i].name, dose:db.meds[i].dose}));
+      db.medSets.push({ id:uid(), name:`${L("처방 세트","Prescription set")} (${FREQ_LABEL[freq]})`, items, schedTime:null });
+    });
+    save(); closeSheet(); renderMeds(); renderToday();
+    toast(`${entries.length}${L("개 약 등록됨","medications registered")}`);
+  };
+}
 function openAddPast(editingEvent, presetTs){
   const isEdit = !!editingEvent;
   const now = isEdit ? new Date(editingEvent.ts) : (presetTs? new Date(presetTs) : new Date());
@@ -4314,6 +5133,8 @@ function switchTab(name){
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
 /* v1.2.1: 중복이던 하단 "약 먹음" 버튼은 제거됨 (상단 [약 복용 기록]이 같은 기능) */
 document.getElementById("addMedBtn").onclick=()=>openAddMed(false);
+document.getElementById("addMedSetBtn").onclick=()=>openMedSetEditor(null);
+document.getElementById("addRxBtn").onclick=()=>openPrescriptionEntry();
 document.getElementById("addPastBtn").onclick=openAddPast;
 /* v1.2.1: 용어 설명은 출력 카드의 [ⓘ 도움말] 안으로 이동 */
 document.getElementById("qoMinus").onclick=()=>qoAdjust(-5);
@@ -4334,72 +5155,7 @@ document.getElementById("qoTrendRow").addEventListener("click", e=>{
 });
 /* v1.2.1: 첫 화면 단순화 — 기준점 재설정·기준 보기·기준 확인·용어 설명을 [ⓘ 도움말] 한 곳으로 모음 */
 document.getElementById("qoHelpBtn").onclick=openTodayHelp;
-document.getElementById("onoffOnBtn").onclick=()=>addState("on", {output:90, trend:"stable"});
-document.getElementById("onoffOffBtn").onclick=()=>addState("off", {output:10, trend:"stable"});
-/* v1.3.2: TWA(Play Store 설치판) 안에서 window.print()가 응답하지 않는 문제 —
-   실사용 신고(카카오톡 공유 링크로 여러 명이 동시에 겪음, GitHub 웹에서는 정상 작동해
-   TWA/WebView 환경 특유의 문제로 확인됨). window.print()에 의존하지 않고 앱 안에서
-   직접 PDF 파일을 만들어 다운로드하는 방식으로 바꾼다(html2canvas로 화면을 그대로
-   캡처해 jsPDF로 각 페이지를 조립) — PC·GitHub 웹·설치판 전부 같은 방식으로 동작한다.
-   라이브러리는 버튼을 실제로 눌렀을 때만 CDN에서 불러온다(평소엔 오프라인 유지). */
-let _pdfLibsLoading=null;
-function loadPdfLibs(){
-  if(window.jspdf && window.html2canvas) return Promise.resolve();
-  if(_pdfLibsLoading) return _pdfLibsLoading;
-  const loadScript=(src)=>new Promise((resolve,reject)=>{
-    const s=document.createElement("script"); s.src=src;
-    s.onload=resolve; s.onerror=()=>reject(new Error("load failed: "+src));
-    document.head.appendChild(s);
-  });
-  _pdfLibsLoading=loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js")
-    .then(()=>loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"));
-  return _pdfLibsLoading;
-}
-/* pageEls가 여러 개면 각각을 한 페이지씩(예: PHS의 phs-page들), 하나뿐이면 세로로 긴
-   내용을 A4 높이 단위로 잘라 여러 페이지로 나눈다(예: 보고서 탭 전체). */
-async function exportAsPdf(pageEls, filename, onDone){
-  const { jsPDF }=window.jspdf;
-  const pdf=new jsPDF({ unit:"mm", format:"a4" });
-  const pageW=210, pageH=297, margin=8;
-  const usableW=pageW-margin*2;
-  for(let i=0;i<pageEls.length;i++){
-    const canvas=await window.html2canvas(pageEls[i], { scale:2, useCORS:true, backgroundColor:"#ffffff" });
-    const imgH=canvas.height * (usableW/canvas.width);
-    if(imgH<=pageH-margin*2){
-      if(i>0) pdf.addPage();
-      pdf.addImage(canvas.toDataURL("image/jpeg",0.92),"JPEG", margin, margin, usableW, imgH);
-    } else {
-      /* 한 페이지보다 긴 요소(예: 보고서 탭 전체) — 캔버스를 세로로 잘라 여러 장으로 */
-      const pxPerMm=canvas.width/usableW;
-      const pageHeightPx=Math.floor((pageH-margin*2)*pxPerMm);
-      let y=0, first=true;
-      while(y<canvas.height){
-        const sliceH=Math.min(pageHeightPx, canvas.height-y);
-        const sliceCanvas=document.createElement("canvas");
-        sliceCanvas.width=canvas.width; sliceCanvas.height=sliceH;
-        sliceCanvas.getContext("2d").drawImage(canvas, 0, y, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
-        if(!(i===0&&first)) pdf.addPage();
-        pdf.addImage(sliceCanvas.toDataURL("image/jpeg",0.92),"JPEG", margin, margin, usableW, sliceH/pxPerMm);
-        y+=sliceH; first=false;
-      }
-    }
-  }
-  pdf.save(filename);
-  if(onDone) onDone();
-}
-document.getElementById("printBtn").onclick=async ()=>{
-  const btn=document.getElementById("printBtn"); const orig=btn.textContent;
-  btn.disabled=true; btn.textContent=L("PDF 만드는 중…","Creating PDF…");
-  try{
-    await loadPdfLibs();
-    const target=document.getElementById("tab-report");
-    const fname=(currentLang()==="en"? "Output_Report_" : "출력_보고서_")+todayKey()+".pdf";
-    await exportAsPdf([target], fname);
-  }catch(e){
-    toast(L("PDF 생성에 실패했어요 — 인터넷 연결을 확인해 주세요","Failed to create PDF — please check your connection"));
-    if(typeof window.print==="function") window.print();
-  }finally{ btn.disabled=false; btn.textContent=orig; }
-};
+document.getElementById("printBtn").onclick=()=>window.print();
 document.getElementById("repRange").onchange=renderReport;
 
 let toastT;
@@ -4458,14 +5214,19 @@ function renderLangToggle(){
   const btn=document.getElementById("langToggle");
   btn.textContent = currentLang()==="en" ? "English" : "한국어";
 }
-/* ---- Easter Egg: 설정의 버전 표시 7회 연속 터치 → easteregg/ (메뉴·버튼·설명 없음, 저장소 무접근) ---- */
+/* ---- Easter Egg: 설정의 버전 표시 7회 연속 터치 → easteregg/ (메뉴·버튼·설명 없음, 저장소 무접근) ----
+   검토(2026-08-06): 상대경로("easteregg/index.html")를 쓰면, 앱이 사이트 최상위가 아닌
+   하위 폴더(예: easteregg/v200p0/의 비공개 시험판)에서 열렸을 때 그 폴더 기준으로 또
+   한 단계 더 들어간 잘못된 주소가 되어 404가 났다(예: .../v200p0/easteregg/index.html).
+   토토 페이지는 사이트에 하나만 있으면 되므로, 앱이 어느 경로에서 열리든 항상 그
+   하나(사이트 최상위의 easteregg/)를 가리키도록 절대경로로 고정한다. */
 (function(){
   const el=document.getElementById("versionLabel"); if(!el) return;
   let n=0, t=null;
   el.addEventListener("click",()=>{
     n++;
     clearTimeout(t); t=setTimeout(()=>{ n=0; },2000); /* 2초 쉬면 처음부터 */
-    if(n>=7){ n=0; location.href="easteregg/index.html"; }
+    if(n>=7){ n=0; location.href="/parkinson/easteregg/index.html"; }
   });
 })();
 
@@ -4566,30 +5327,6 @@ document.getElementById("resetBtn").onclick=()=>{
   if(confirm(L("모든 기록과 약 목록이 삭제됩니다. 계속할까요?","All records and medications will be deleted. Continue?"))){ localStorage.removeItem(KEY); db=load(); applyTheme(); applyI18nStatic(); renderLangToggle(); renderAll(); switchTab("today"); toast(L("초기화했어요","Reset complete")); }
 };
 
-/* 숨김 기능(분석탭) 잠금해제 — 코드 맞으면 nav 버튼 노출, localStorage에 저장해 다음부터 자동 유지 */
-const HIDDEN_UNLOCK_KEY="yakhyo_hidden_unlock";
-function applyHiddenUnlock(){
-  if(localStorage.getItem(HIDDEN_UNLOCK_KEY)==="1"){
-    document.getElementById("navAnalysisBtn").style.display="";
-  }
-}
-applyHiddenUnlock();
-(function(){
-  const inp=document.getElementById("hiddenCodeInput");
-  if(!inp) return;
-  inp.addEventListener("keydown", e=>{
-    if(e.key!=="Enter") return;
-    if(inp.value==="y7992734@@"){
-      localStorage.setItem(HIDDEN_UNLOCK_KEY,"1");
-      applyHiddenUnlock();
-      inp.value=""; inp.blur();
-      toast(L("열렸어요","Unlocked"));
-    } else {
-      inp.value="";
-    }
-  });
-})();
-
 /* ---------- boot ---------- */
 function renderAll(){ renderToday();
   if(document.getElementById("tab-log").classList.contains("active")) renderLog();
@@ -4621,6 +5358,13 @@ if(typeof SIMDRUG!=="undefined" && SIMDRUG.loadDictionary){
 
 /* alarm loop: check every 30s while app is open */
 setInterval(alarmLoop, 30000); alarmLoop();
+/* 검토 발견(2026-08-11, 실사용): 예정시각 자동기록(reconcileAssumedDoses)이 화면을
+   다시 그릴 때만(탭 전환 등) 실행돼서, 앱을 켜놓고 그냥 보고만 있으면 예정 시각이
+   지나도 다른 조작을 하기 전까진 "예정" 표시에 멈춰 있었다 — "11시반 약이 입력되지
+   않았다"는 신고의 정확한 원인. 오늘 탭이 떠 있는 동안 1분마다 스스로 확인하도록
+   가벼운 타이머를 추가한다(기존 alarmLoop과 같은 패턴, 세트가 없으면 즉시 리턴이라
+   부담 없음). */
+setInterval(()=>{ if((db.medSets||[]).some(s=>s.schedTime)) renderMedSetQuickRow(); }, 60000);
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden) alarmLoop(); });
 
 /* first-run disclaimer + 용어 튜토리얼 (1분 설명) */
@@ -4925,11 +5669,90 @@ function phsGenerate(){
   if(!analysis.period.totalOutputRecords){ toast(L("이 기간에 출력 기록이 없어요","No output records in this period")); return; }
   const confidence=PHS.assessConfidence(analysis, obs.startSurvey);
   const challengeData=(typeof SHARED!=="undefined")? (SHARED.read().challengeSummaries||[]) : [];
-  const report=PHS.buildReport({profile:db.phs.profile, startSurvey:obs.startSurvey, endSurvey:obs.endSurvey, analysis, confidence, medsList:db.meds, lang:currentLang(), challengeTests:challengeData});
+  const therapeuticWindow=phsGatherTherapeuticWindow(obs);
+  const validation=(typeof SIMVAL!=="undefined")? anGatherValidationResults() : null;
+  const report=PHS.buildReport({profile:db.phs.profile, startSurvey:obs.startSurvey, endSurvey:obs.endSurvey, analysis, confidence, medsList:db.meds, lang:currentLang(), challengeTests:challengeData, therapeuticWindow, validation});
   const safety=PHS.checkReportSafety(report);
   if(safety.length){ console.warn("PHS safety check", safety); toast(L("보고서 안전 검사에서 문구를 보정했어요","Report safety check adjusted some wording")); }
   phsRenderReport(report, analysis, note);
 }
+/* v2.5 Phase 4: PHS 보고서용 후보안 비교 자료를 만든다. 실패하거나 자료가 부족하면
+   조용히 null을 반환한다 — buildReport가 그 경우를 "계산되지 않음"으로 안전하게 처리한다.
+   환자 화면(오늘·분석 탭)에는 이 결과를 절대 노출하지 않는다 — PHS 보고서 전용. */
+function phsGatherTherapeuticWindow(obs){
+  try{
+    if(typeof SIMTHR==="undefined" || typeof SIMCOV==="undefined" || typeof SIMCAND==="undefined") return null;
+    const keys=[]; const d=new Date(obs.startDate+"T00:00:00"); const end=new Date(obs.endDate+"T00:00:00");
+    while(d<=end){ keys.push(dkey(d)); d.setDate(d.getDate()+1); }
+    if(!keys.length) return null;
+    const period={keys, startKey:obs.startDate, endKey:obs.endDate};
+
+    const {offSamples, dyskSamples}=anGatherThresholdSamples(period);
+    const lower=SIMTHR.estimateLowerBound(offSamples);
+    const upper=SIMTHR.estimateUpperBound(dyskSamples);
+    if(lower.value==null) return null; /* 하한 자체가 없으면 후보안을 만들 이유가 없음 */
+    const window={lower:lower.value, upper: upper.value!=null? upper.value : null};
+
+    const agg=anGatherCoverageForPeriod(period, lower, upper);
+    if(!agg.valid || !agg.worstUnder) return {comparison:{valid:false, reasons:[L("이 기간에는 부족 구간이 없습니다","No deficit segment in this period")]}, window};
+
+    const {today, carry}=medsForSimulationDay(agg.worstUnder.dayKey);
+    const baselineDoses=carry.concat(today);
+    if(!baselineDoses.length) return {comparison:{valid:false, reasons:[L("그 날의 복약 기록이 없습니다","No medication records for that day")]}, window};
+
+    const {candidates}=SIMCAND.buildCandidates(baselineDoses, agg.worstUnder);
+    const comparison=SIMCAND.evaluate(baselineDoses, candidates, window);
+    phsSavePrediction(agg.worstUnder.dayKey, window, comparison, candidates);
+    return {comparison, window};
+  }catch(e){ console.warn("phsGatherTherapeuticWindow", e); return null; }
+}
+/* v2.6 Phase 5: 후보안 비교를 만들 때마다 "그때 예측한 값"을 남겨 둔다.
+   나중에 실제로 그 조합을 복용한 날이 기록되면 그 결과와 비교할 수 있다.
+   최근 20건만 보관(무한정 쌓이지 않게). */
+function phsSavePrediction(baselineDayKey, window, comparison, candidatesWithDoses){
+  if(!comparison || !comparison.valid || !comparison.candidates.length) return;
+  if(!db.phs) db.phs={};
+  if(!Array.isArray(db.phs.predictions)) db.phs.predictions=[];
+  const merged=candidatesWithDoses.map(c=>{
+    const row=comparison.candidates.find(r=>r.id===c.id);
+    return {id:c.id, label:c.label, doses:c.doses, predictedDeltaMin: (row&&row.valid)? row.deltaMin : null};
+  }).filter(c=>c.predictedDeltaMin!=null);
+  if(!merged.length) return;
+  db.phs.predictions.push({ts:Date.now(), baselineDayKey, window,
+    baselineInWindowMin:comparison.baseline.inWindowMin, candidates:merged});
+  if(db.phs.predictions.length>20) db.phs.predictions=db.phs.predictions.slice(-20);
+  save();
+}
+/* 저장된 예측들을 스캔해서, 그 후보안대로 실제 복용한 날을 찾으면 실측 결과와 비교한다.
+   아직 아무도 그 조합을 복용한 적이 없으면 그 예측은 조용히 건너뛴다(소음 방지). */
+function anGatherValidationResults(){
+  if(typeof SIMVAL==="undefined") return {results:[], pendingCount:0};
+  const preds=(db.phs&&db.phs.predictions)||[];
+  const days=byDay(); const allKeys=Object.keys(days).sort();
+  const results=[]; let pendingCount=0;
+  preds.forEach(p=>{
+    let matchedDay=null;
+    for(const k of allKeys){
+      if(k<=p.baselineDayKey) continue;
+      const {today, carry}=medsForSimulationDay(k);
+      const actualDoses=carry.concat(today);
+      for(const c of p.candidates){
+        const m=SIMVAL.dosesMatchCandidate(actualDoses, c.doses);
+        if(m.matches){ matchedDay={dayKey:k, candidate:c, actualDoses}; break; }
+      }
+      if(matchedDay) break;
+    }
+    if(!matchedDay){ pendingCount++; return; }
+    const composite=SIMDRUG.compositeCurve(matchedDay.actualDoses, 0, 1440, 10);
+    const cov=SIMCOV.analyze(composite.rawPoints, p.window, {step:10});
+    if(!cov.valid) return;
+    const actualDeltaMin=cov.inWindowMin-p.baselineInWindowMin;
+    const cmp=SIMVAL.compareOutcome(matchedDay.candidate.predictedDeltaMin, actualDeltaMin);
+    if(cmp.valid) results.push(Object.assign({label:matchedDay.candidate.label, appliedDayKey:matchedDay.dayKey, baselineDayKey:p.baselineDayKey}, cmp));
+  });
+  return {results, pendingCount};
+}
+
 /* ---- 보고서 렌더 ---- */
 function phsQHtml(q){
   const tag=q.type==="free"?L("환자 질문","Patient question"):(q.type==="selected"?L("선택 질문","Selected question"):L("제안 질문","Suggested question"));
@@ -4976,6 +5799,12 @@ function phsRenderReport(report, analysis, note){
       ${(det.medicationResponseTests)? `<h2>${escapeHtml(det.medicationResponseTests.title)}</h2>
         <div class="phs-meta">${escapeHtml(det.medicationResponseTests.note)}</div>
         <ul style="margin:4px 0 0 18px; padding:0">${det.medicationResponseTests.lines.map(l=>`<li style="white-space:pre-line">${escapeHtml(l)}</li>`).join("")}</ul>`:""}
+      ${(det.therapeuticWindowAnalysis)? `<h2>${escapeHtml(det.therapeuticWindowAnalysis.title)}</h2>
+        <div class="phs-meta">${escapeHtml(det.therapeuticWindowAnalysis.note)}</div>
+        <ul style="margin:4px 0 0 18px; padding:0">${det.therapeuticWindowAnalysis.lines.map(l=>`<li style="white-space:pre-line">${escapeHtml(l)}</li>`).join("")}</ul>`:""}
+      ${(det.predictionValidation)? `<h2>${escapeHtml(det.predictionValidation.title)}</h2>
+        <div class="phs-meta">${escapeHtml(det.predictionValidation.note)}</div>
+        <ul style="margin:4px 0 0 18px; padding:0">${det.predictionValidation.lines.map(l=>`<li style="white-space:pre-line">${escapeHtml(l)}</li>`).join("")}</ul>`:""}
       ${anchorRows.length? `<h2>${L("환자 정의 출력 기준","Patient-Defined Output Anchors")}</h2><table><thead><tr><th>${L("출력","Output")}</th><th>${L("환자에게의 의미","What it means to the patient")}</th></tr></thead><tbody>${anchorRows.map(([k,v])=>`<tr><td>${k}</td><td>${escapeHtml(v)}</td></tr>`).join("")}</tbody></table>`:""}
       <h2>${L("모니터링 요약","Monitoring Summary")} <span class="phs-conf">${L("신뢰도","Confidence")} ${CONF(conf.sectionConfidence.outputSummary)}</span></h2>
       <table><tbody>
@@ -5009,25 +5838,15 @@ function phsRenderReport(report, analysis, note){
     </div>`;
   ov.classList.add("open");
   document.getElementById("phsCloseBtn").onclick=()=>ov.classList.remove("open");
-  document.getElementById("phsPrintBtn").onclick=async ()=>{
-    const btn=document.getElementById("phsPrintBtn"); const orig=btn.textContent;
-    btn.disabled=true; btn.textContent=L("PDF 만드는 중…","Creating PDF…");
-    const fname=(currentLang()==="en"? `Patient_History_Summary_${report.period.end}` : `환자병력요약_${report.period.end}`)+".pdf";
-    try{
-      await loadPdfLibs();
-      const pages=[...ov.querySelectorAll(".phs-page")];
-      /* 그래프(SVG) 렌더가 화면에 반영된 뒤 캡처 — 빈 그래프 방지 */
-      await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
-      await exportAsPdf(pages, fname);
-    }catch(e){
-      toast(L("PDF 생성에 실패했어요 — 인터넷 연결을 확인해 주세요. 인쇄로 다시 시도합니다.","Failed to create PDF — check your connection. Falling back to print."));
-      if(typeof window.print==="function"){
-        document.body.classList.add("phs-print");
-        const done=()=>{ document.body.classList.remove("phs-print"); window.removeEventListener("afterprint",done); };
-        window.addEventListener("afterprint",done);
-        requestAnimationFrame(()=>requestAnimationFrame(()=>{ window.print(); setTimeout(done, 3000); }));
-      }
-    }finally{ btn.disabled=false; btn.textContent=orig; }
+  document.getElementById("phsPrintBtn").onclick=()=>{
+    if(typeof window.print!=="function"){ toast(L("이 환경에서는 인쇄가 지원되지 않아요 — 텍스트 복사나 JSON 저장을 이용해주세요","Printing is not supported here — use Copy Text or Save JSON")); return; }
+    const oldTitle=document.title;
+    document.title = currentLang()==="en"? `Patient_History_Summary_${report.period.end}` : `환자병력요약_${report.period.end}`; /* PDF 저장 시 기본 파일명 */
+    document.body.classList.add("phs-print");
+    const done=()=>{ document.body.classList.remove("phs-print"); document.title=oldTitle; window.removeEventListener("afterprint",done); };
+    window.addEventListener("afterprint",done);
+    /* 그래프(SVG) 렌더가 화면에 반영된 뒤 인쇄 — 빈 그래프 방지 */
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{ window.print(); setTimeout(done, 3000); }));
   };
   document.getElementById("phsCopyBtn").onclick=()=>{
     const txt=phsReportText(report);
@@ -5050,6 +5869,8 @@ function phsReportText(r){
     `${en?"Observation period":"관찰기간"} ${r.period.start} ~ ${r.period.end}`,
     ``,`[CC] ${one.cc}`,``,`[HPI] ${one.hpi}`,
     ...(det.medicationResponseTests? [``,`[${det.medicationResponseTests.title}]`, det.medicationResponseTests.note, ...det.medicationResponseTests.lines.map(l=>"- "+l)]:[]),
+    ...(det.therapeuticWindowAnalysis? [``,`[${det.therapeuticWindowAnalysis.title}]`, det.therapeuticWindowAnalysis.note, ...det.therapeuticWindowAnalysis.lines.map(l=>"- "+l)]:[]),
+    ...(det.predictionValidation? [``,`[${det.predictionValidation.title}]`, det.predictionValidation.note, ...det.predictionValidation.lines.map(l=>"- "+l)]:[]),
     ``,`[${en?"Key Findings":"핵심 관찰 결과"}]`, one.keyResults.map(k=>`- ${k}`).join("\n"),
     ``,`[${en?"Main Daily Pattern":"주요 일중 패턴"}] ${one.mainDailyPattern}`,
     ``,`[${en?"Patient Questions":"환자 질문"}]`, q(one.patientQuestions)||(en?"- None":"- 없음"),
