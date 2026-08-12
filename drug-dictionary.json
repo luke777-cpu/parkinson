@@ -44,14 +44,16 @@
       "role": "modifier",
       "durationMultiplier": 1.35,
       "coverageWindowMin": 1440,
-      "note": "오피카폰은 1일 1회 복용으로 다음 날까지 레보도파 지속을 보정"
+      "note": "오피카폰은 1일 1회 복용으로 다음 날까지 레보도파 지속을 보정",
+      "comtLeddFactor": 0.5
     },
     {
       "curveId": "ENTACAPONE",
       "role": "modifier",
       "durationMultiplier": 1.25,
       "coverageWindowMin": 240,
-      "note": "엔타카폰은 레보도파 매 복용과 함께 투여하며 작용 시간이 더 짧음"
+      "note": "엔타카폰은 레보도파 매 복용과 함께 투여하며 작용 시간이 더 짧음",
+      "comtLeddFactor": 0.33
     },
     {
       "curveId": "PRAMI_IR",
@@ -138,10 +140,10 @@
       "curveId": "STALEVO",
       "roleLabel": "빠른 레보도파 곡선 (엔타카폰 포함)",
       "roleLabelEn": "Fast-acting levodopa curve (with entacapone)",
-      "leddFactor": 1.0,
+      "leddFactor": 1.33,
       "leddIncluded": true,
       "refDoseMg": 100,
-      "note": "표기 용량을 레보도파 함량으로 간주한 근사치",
+      "note": "표기 용량을 레보도파 함량으로 간주한 근사치. LEDD는 표준공식(Tomlinson 2010 등: 레보도파×1.33, 엔타카폰 병용분 포함)에 따라 순수 레보도파(×1)보다 33% 높게 계산됨",
       "aliases": [
         "스타레보",
         "트리레보",
@@ -173,10 +175,9 @@
       "curveId": "ONGENTYS",
       "roleLabel": "레보도파 지속 보정 (COMT 억제제, 1일 1회)",
       "roleLabelEn": "Levodopa duration extender (COMT inhibitor, once daily)",
-      "leddFactor": 0.5,
       "leddIncluded": false,
       "refDoseMg": 50,
-      "note": "COMT 억제제는 자체 mg 환산이 확립되지 않아 LEDD 합계에서 제외",
+      "note": "COMT 억제제 자체엔 고정 mg 환산이 없어 이 목록엔 안 잡히지만, 표준공식대로 그 약효가 걸리는 레보도파 용량의 50%가 LEDD 합계에 자동으로 더해집니다",
       "aliases": [
         "온젠티스",
         "오피카폰",
@@ -190,10 +191,9 @@
       "curveId": "ENTACAPONE",
       "roleLabel": "레보도파 지속 보정 (COMT 억제제, 매 복용 병용)",
       "roleLabelEn": "Levodopa duration extender (COMT inhibitor, taken with each dose)",
-      "leddFactor": 0.5,
       "leddIncluded": false,
       "refDoseMg": 200,
-      "note": "COMT 억제제는 자체 mg 환산이 확립되지 않아 LEDD 합계에서 제외",
+      "note": "COMT 억제제 자체엔 고정 mg 환산이 없어 이 목록엔 안 잡히지만, 표준공식대로 그 약효가 걸리는 레보도파 용량의 33%가 LEDD 합계에 자동으로 더해집니다",
       "aliases": [
         "엔타카폰",
         "컴탄",
