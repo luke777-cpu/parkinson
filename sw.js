@@ -1,4 +1,4 @@
-const CACHE = "yakhyo-v2138-safinamidefix";
+const CACHE = "yakhyo-v2139-fullmerge";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -7,6 +7,8 @@ const APP_SHELL = [
   "./analysis-clinical.js",
   "./analysis-threshold.js",
   "./analysis-coverage.js",
+  "./analysis-candidates.js",
+  "./analysis-validation.js",
   "./drug-dictionary.json",
   "./phs-engine.js",
   "./phs-report.js",
