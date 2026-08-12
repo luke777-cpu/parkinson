@@ -51,7 +51,7 @@ DM.DRUGS = [
   {"genericName": "rotigotine", "formulation": "패치", "curveId": "ROTIGOTINE", "roleLabel": "도파민 작용제 배경효과 (패치)", "leddFactor": 30, "leddIncluded": true, "refDoseMg": 4, "note": "도파민 작용제는 곡선 모양에서는 완만한 배경효과로만 표시하지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "aliases": ["뉴프로", "로티고틴"]},
   {"genericName": "amantadine", "formulation": "정", "curveId": "ADJUNCT", "roleLabel": "보조약 (곡선 미포함)", "leddFactor": 1.0, "leddIncluded": true, "refDoseMg": 100, "note": "아만타딘은 등록된 보정값이 없어 복합 약효 추정곡선(곡선 모양)에는 포함하지 않지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "aliases": ["아만타딘", "피케이멜즈"]},
   {"genericName": "rasagiline / selegiline (MAO-B 억제제)", "formulation": "정", "curveId": "ADJUNCT", "roleLabel": "보조약 (곡선 미포함)", "leddFactor": 100, "leddIncluded": true, "refDoseMg": 1, "note": "MAO-B 억제제는 등록된 보정값이 없어 복합 약효 추정곡선(곡선 모양)에는 포함하지 않지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "aliases": ["아질렉트", "라사길린", "셀레길린", "마오비"]},
-  {"genericName": "safinamide (MAO-B 억제제)", "formulation": "정", "curveId": "ADJUNCT", "roleLabel": "보조약 (곡선 미포함)", "leddFactor": 100, "leddIncluded": true, "refDoseMg": 50, "note": "MAO-B 억제제는 등록된 보정값이 없어 복합 약효 추정곡선(곡선 모양)에는 포함하지 않지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "aliases": ["사피나미드", "엑스어답션", "자디아고"]},
+  {"genericName": "safinamide (MAO-B 억제제)", "formulation": "정", "curveId": "ADJUNCT", "roleLabel": "보조약 (곡선 미포함)", "leddFactor": 2, "leddIncluded": true, "refDoseMg": 50, "note": "사피나이드는 50mg=100 LEDD, 100mg=125 LEDD로 용량-LEDD가 비선형입니다(Cilia 2023). 이 앱은 단순 배수(mg×2)만 지원해 50mg 기준(정확)엔 맞지만 100mg 복용시엔 200으로 계산되어 실제(125)보다 다소 높게 나올 수 있습니다", "aliases": ["사피나미드", "사피나이드", "엑스어답션", "자디아고"]},
 ];
 
 DM.UNREGISTERED_NOTE = "이 약물은 현재 곡선 모델이 등록되어 있지 않습니다. 실제 복용 기록에는 표시되지만 복합 약효 추정곡선 계산에는 포함되지 않습니다.";
