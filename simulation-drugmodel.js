@@ -24,8 +24,8 @@ DM.CURVES = {
   LEVO_HBS: {"role": "direct_curve", "onsetMin": 45, "peakMin": 110, "durationMin": 300, "riseShape": "slow", "decayShape": "slow"},
   STALEVO: {"role": "direct_curve", "onsetMin": 25, "peakMin": 60, "durationMin": 220, "riseShape": "fast", "decayShape": "slow"},
   APOMORPHINE: {"role": "direct_curve", "onsetMin": 8, "peakMin": 25, "durationMin": 90, "riseShape": "fast", "decayShape": "moderate"},
-  ONGENTYS: {"role": "modifier", "durationMultiplier": 1.35, "coverageWindowMin": 1440, "note": "오피카폰은 1일 1회 복용으로 다음 날까지 레보도파 지속을 보정"},
-  ENTACAPONE: {"role": "modifier", "durationMultiplier": 1.25, "coverageWindowMin": 240, "note": "엔타카폰은 레보도파 매 복용과 함께 투여하며 작용 시간이 더 짧음"},
+  ONGENTYS: {"role": "modifier", "durationMultiplier": 1.35, "coverageWindowMin": 1440, "comtLeddFactor": 0.5, "note": "오피카폰은 1일 1회 복용으로 다음 날까지 레보도파 지속을 보정"},
+  ENTACAPONE: {"role": "modifier", "durationMultiplier": 1.25, "coverageWindowMin": 240, "comtLeddFactor": 0.33, "note": "엔타카폰은 레보도파 매 복용과 함께 투여하며 작용 시간이 더 짧음"},
   PRAMI_IR: {"role": "background", "riseTauMin": 90, "durationMin": 480, "amp": 0.3},
   PRAMI_ER: {"role": "background", "riseTauMin": 150, "durationMin": 1440, "amp": 0.35},
   ROPI_IR: {"role": "background", "riseTauMin": 90, "durationMin": 420, "amp": 0.3},
@@ -40,10 +40,10 @@ DM.CURVES = {
 DM.DRUGS = [
   {"genericName": "levodopa/carbidopa (즉방형)", "formulation": "IR", "curveId": "LEVO_IR", "roleLabel": "빠른 레보도파 곡선", "leddFactor": 1.0, "leddIncluded": true, "refDoseMg": 100, "aliases": ["마도파", "시네메트", "퍼킨", "레보도파", "도파민정"]},
   {"genericName": "levodopa/carbidopa (서방형)", "formulation": "HBS/CR", "curveId": "LEVO_HBS", "roleLabel": "지속형 레보도파 곡선", "leddFactor": 0.75, "leddIncluded": true, "refDoseMg": 100, "aliases": ["마도파 HBS", "시네메트 CR"]},
-  {"genericName": "levodopa/carbidopa/entacapone", "formulation": "IR 복합", "curveId": "STALEVO", "roleLabel": "빠른 레보도파 곡선 (엔타카폰 포함)", "leddFactor": 1.0, "leddIncluded": true, "refDoseMg": 100, "note": "표기 용량을 레보도파 함량으로 간주한 근사치", "aliases": ["스타레보", "트리레보"], "source": "식약처: 트리레보정(레보도파/카르비도파/엔타카폰) — 스타레보와 동일 성분·용량비, 1:1 대체 가능"},
+  {"genericName": "levodopa/carbidopa/entacapone", "formulation": "IR 복합", "curveId": "STALEVO", "roleLabel": "빠른 레보도파 곡선 (엔타카폰 포함)", "leddFactor": 1.33, "leddIncluded": true, "refDoseMg": 100, "note": "표기 용량을 레보도파 함량으로 간주한 근사치. LEDD는 표준공식(Tomlinson 2010 등: 레보도파×1.33, 엔타카폰 병용분 포함)에 따라 순수 레보도파(×1)보다 33% 높게 계산됨", "aliases": ["스타레보", "트리레보"], "source": "식약처: 트리레보정(레보도파/카르비도파/엔타카폰) — 스타레보와 동일 성분·용량비, 1:1 대체 가능"},
   {"genericName": "apomorphine", "formulation": "주사", "curveId": "APOMORPHINE", "roleLabel": "속효성 구제 요법 곡선", "leddFactor": 10, "leddIncluded": true, "refDoseMg": 3, "note": "피하주사 구제 요법 — 발현이 매우 빠르고 지속이 짧음", "aliases": ["아포모르핀", "아포카인"]},
-  {"genericName": "opicapone", "formulation": "1일 1회", "curveId": "ONGENTYS", "roleLabel": "레보도파 지속 보정 (COMT 억제제, 1일 1회)", "leddFactor": 0.5, "leddIncluded": false, "refDoseMg": 50, "note": "COMT 억제제는 자체 mg 환산이 확립되지 않아 LEDD 합계에서 제외", "aliases": ["온젠티스", "오피카폰"]},
-  {"genericName": "entacapone", "formulation": "레보도파 병용", "curveId": "ENTACAPONE", "roleLabel": "레보도파 지속 보정 (COMT 억제제, 매 복용 병용)", "leddFactor": 0.5, "leddIncluded": false, "refDoseMg": 200, "note": "COMT 억제제는 자체 mg 환산이 확립되지 않아 LEDD 합계에서 제외", "aliases": ["엔타카폰", "컴탄", "콤탄"]},
+  {"genericName": "opicapone", "formulation": "1일 1회", "curveId": "ONGENTYS", "roleLabel": "레보도파 지속 보정 (COMT 억제제, 1일 1회)", "leddIncluded": false, "refDoseMg": 50, "note": "COMT 억제제 자체엔 고정 mg 환산이 없어 이 목록엔 안 잡히지만, 표준공식대로 그 약효가 걸리는 레보도파 용량의 50%가 LEDD 합계에 자동으로 더해집니다", "aliases": ["온젠티스", "오피카폰"]},
+  {"genericName": "entacapone", "formulation": "레보도파 병용", "curveId": "ENTACAPONE", "roleLabel": "레보도파 지속 보정 (COMT 억제제, 매 복용 병용)", "leddIncluded": false, "refDoseMg": 200, "note": "COMT 억제제 자체엔 고정 mg 환산이 없어 이 목록엔 안 잡히지만, 표준공식대로 그 약효가 걸리는 레보도파 용량의 33%가 LEDD 합계에 자동으로 더해집니다", "aliases": ["엔타카폰", "컴탄", "콤탄"]},
   {"genericName": "pramipexole (즉방형)", "formulation": "IR", "curveId": "PRAMI_IR", "roleLabel": "도파민 작용제 배경효과 (즉방형)", "leddFactor": 100, "leddIncluded": true, "refDoseMg": 0.375, "note": "도파민 작용제는 곡선 모양에서는 완만한 배경효과로만 표시하지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "aliases": ["미라펙스", "미라팩스", "피디팩솔", "피디펙솔", "프라미펙솔", "프라펙솔", "미라프"], "source": "식약처: 피디펙솔정(프라미펙솔염산염일수화물) — 미라펙스와 동일 성분"},
   {"genericName": "pramipexole (서방형)", "formulation": "ER", "curveId": "PRAMI_ER", "roleLabel": "도파민 작용제 배경효과 (서방형)", "leddFactor": 100, "leddIncluded": true, "refDoseMg": 0.375, "note": "도파민 작용제는 곡선 모양에서는 완만한 배경효과로만 표시하지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "aliases": ["미라펙스 ER", "미라펙스ER", "프라미펙솔 ER", "피디펙솔 ER"]},
   {"genericName": "ropinirole (즉방형)", "formulation": "IR", "curveId": "ROPI_IR", "roleLabel": "도파민 작용제 배경효과 (즉방형)", "leddFactor": 20, "leddIncluded": true, "refDoseMg": 2, "note": "도파민 작용제는 곡선 모양에서는 완만한 배경효과로만 표시하지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "aliases": ["리큅", "로피니롤"]},
@@ -201,6 +201,7 @@ DM.compositeCurve = function(doses, t0, t1, step){
   const timeMin=t=>{ const [h,m]=String(t).split(":").map(Number); return h*60+m; };
   const absTime=x=>((x.dayOffset||0)*1440)+timeMin(x.time);
   const modifiersApplied=[];
+  let comtLeddBonus=0; const comtLeddBreakdown=[];
   directs.forEach(dx=>{
     const dTime=absTime(dx.dose);
     const hit=modifiers.find(mx=>{
@@ -213,6 +214,24 @@ DM.compositeCurve = function(doses, t0, t1, step){
       let rec=modifiersApplied.find(m=>m.name===hit.dose.name);
       if(!rec){ rec={name:hit.dose.name, affects:[]}; modifiersApplied.push(rec); }
       rec.affects.push(`${dx.dose.name} ${dx.dose.time}`);
+      /* v2.13.7: COMT억제제(온젠티스·엔타카폰)의 LEDD 기여분 — 자체 mg가 아니라
+         "그 효과가 걸리는 레보도파 용량의 일정 비율"로 계산하는 게 표준 공식(Tomlinson 2010,
+         오피카폰·톨카폰=0.5, 엔타카폰=0.33)이다. 예전엔 COMT억제제를 LEDD 합계에서 통째로
+         제외했는데, 이러면 트리레보/스타레보처럼 이미 정제 안에 내장된 경우와 계산 기준이
+         달라져서 "같은 mg인데 트리레보만 부족해보이는" 왜곡이 생겼다(형님 지적으로 발견). */
+      if(hit.model.comtLeddFactor){
+        const dxLedd=(dx.dose.dose||0)*dx.model.leddFactor;
+        const bonus=dxLedd*hit.model.comtLeddFactor;
+        comtLeddBonus+=bonus;
+        let brec=comtLeddBreakdown.find(b=>b.name===hit.dose.name);
+        if(!brec){ brec={name:hit.dose.name, ledd:0}; comtLeddBreakdown.push(brec); }
+        brec.ledd+=bonus;
+        /* 곡선 높이도 같이 보정 — LEDD 합계에만 반영하고 곡선은 그대로 두면, 같은 표준LEDD인데도
+           트리레보(엔타카폰 내장, leddFactor 자체가 1.33)만 곡선이 높고 퍼킨+컴탄(별도 정제)은
+           안 높아지는 불일치가 생긴다. 같은 기전(엔타카폰)이면 내장이든 별도 정제든 동일하게
+           반영돼야 한다. */
+        dx.potencyBoost = 1+hit.model.comtLeddFactor;
+      }
     }
   });
 
@@ -224,7 +243,7 @@ DM.compositeCurve = function(doses, t0, t1, step){
     directs.forEach(dx=>{
       const dt=absTime(dx.dose);
       const doseFactor=(dx.dose.dose==null?1:(+dx.dose.dose/(dx.model.refDoseMg||100)));
-      const v=DM.directDoseValue(dx.model, t-dt, dx.durationOverrideMin)*doseFactor*dx.model.leddFactor;
+      const v=DM.directDoseValue(dx.model, t-dt, dx.durationOverrideMin)*doseFactor*dx.model.leddFactor*(dx.potencyBoost||1);
       raw+=v; rowPerDrug[dx.dose.name]=(rowPerDrug[dx.dose.name]||0)+v;
     });
     backgrounds.forEach(bx=>{
@@ -253,6 +272,8 @@ DM.compositeCurve = function(doses, t0, t1, step){
     const led=(x.dose.dose||0)*x.model.leddFactor;
     leddTotal+=led; leddBreakdown.push({name:x.dose.name, dose:x.dose.dose, ledd:Math.round(led)});
   });
+  leddTotal+=comtLeddBonus;
+  comtLeddBreakdown.forEach(b=>{ leddBreakdown.push({name:b.name, dose:null, ledd:Math.round(b.ledd)}); });
 
   return { points, rawPoints, perDrug, unregistered, adjuncts, modifiersApplied, leddTotal:Math.round(leddTotal), leddBreakdown };
 };
