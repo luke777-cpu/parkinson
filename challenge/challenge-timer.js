@@ -8,7 +8,7 @@
 "use strict";
 const CHGTIMER = { _timers:[] };
 
-CHGTIMER.STAGE_MINUTES = [30,60,90,120];
+CHGTIMER.STAGE_MINUTES = [30,60,90,120,180,240,300];
 
 CHGTIMER.requestPermission = function(){
   try{
