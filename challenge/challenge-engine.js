@@ -89,6 +89,9 @@ CHG.STAGES = [
   {stage:"m60",      minutes:60,  ko:"복용 60분 후"},
   {stage:"m90",      minutes:90,  ko:"복용 90분 후"},
   {stage:"m120",     minutes:120, ko:"복용 120분 후"},
+  {stage:"m180",     minutes:180, ko:"복용 3시간 후"},
+  {stage:"m240",     minutes:240, ko:"복용 4시간 후"},
+  {stage:"m300",     minutes:300, ko:"복용 5시간 후"},
 ];
 CHG.OVERALL = [
   {code:"marked_effect",   ko:"효과가 뚜렷했다"},
@@ -177,6 +180,12 @@ CHG.analyzeTest = function(test){
     const m120=stages.find(s=>s.stage==="m120");
     const m120v=(m120&&m120.recorded)? m120.groupAvg[g] : null;
     const minPost=best? best.groupAvg[g]:null;
+    /* v2.13.10: m120으로 고정돼있던 재상승 감지를, 실제 기록된 마지막 시점 기준으로 일반화.
+       HBS처럼 지속시간이 긴 약은 120분 이후(3~5시간)에도 관찰이 필요해서 시점을 늘렸는데,
+       기존 rebound120은 여전히 m120 하나만 봐서 그 뒤의 재상승을 놓치고 있었다. */
+    const recordedPost=stages.filter(s=>s.recorded && s.stage!=="baseline" && s.groupAvg[g]!=null);
+    const last=recordedPost.length? recordedPost[recordedPost.length-1] : null;
+    const lastv=last? last.groupAvg[g] : null;
     groupSummary[g]={
       baseline:b,
       perStage:Object.fromEntries(stages.map(s=>[s.stage, s.recorded? s.groupAvg[g]:null])),
@@ -185,7 +194,9 @@ CHG.analyzeTest = function(test){
       bestStage:best? {stage:best.stage,minutes:best.minutes,avg:best.groupAvg[g]}:null,
       maxImprovement:(b!=null&&minPost!=null)? round1(b-minPost):null,
       at120:m120v,
-      rebound120:(m120v!=null&&minPost!=null&&m120!==best)? m120v>minPost : false, /* 최저점 이후 120분 재상승 */
+      rebound120:(m120v!=null&&minPost!=null&&m120!==best)? m120v>minPost : false, /* 최저점 이후 120분 재상승 (하위호환, m120 고정) */
+      atLast:lastv,
+      reboundLast:(lastv!=null&&minPost!=null&&last!==best)? lastv>minPost : false, /* 최저점 이후 실제 마지막 기록시점 재상승 */
     };
   });
   const firstPerceived=stages.find(s=>s.recorded&&s.perceivedScore!=null&&s.perceivedScore>=1)||null;
