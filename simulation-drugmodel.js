@@ -132,7 +132,9 @@ DM.classify = function(name){
   const curve=DM.CURVES[drug.curveId] || {};
   const en=DM_lang()==="en";
   return Object.assign({}, curve, {
-    curveId:drug.curveId, genericName:drug.genericName, formulation:drug.formulation,
+    curveId:drug.curveId,
+    genericName: (en && drug.genericNameEn) ? drug.genericNameEn : drug.genericName,
+    formulation:drug.formulation,
     roleLabel: (en && drug.roleLabelEn) ? drug.roleLabelEn : drug.roleLabel,
     leddFactor:drug.leddFactor, leddIncluded:drug.leddIncluded,
     refDoseMg:drug.refDoseMg, note: (en && drug.noteEn) ? drug.noteEn : drug.note,
