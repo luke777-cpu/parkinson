@@ -82,8 +82,8 @@
 .omvp-chart svg {display: block; width: 100%; min-width: 620px}
 .omvp-grid-line {stroke: var(--line); stroke-width: 1}
 .omvp-grid-vertical {opacity: .6}
-.omvp-axis-text {fill: var(--ink-2); font-size: 11px; font-weight: 700}
-.omvp-output-line {fill: none; stroke: #5C93D6; stroke-width: 4; stroke-linejoin: round; stroke-linecap: round}
+.omvp-axis-text {fill: var(--ink-2); font-size: 13px; font-weight: 700}
+.omvp-output-line {fill: none; stroke: #5C93D6; stroke-width: 4.5; stroke-linejoin: round; stroke-linecap: round}
 .omvp-output-point {fill: #5C93D6; stroke: var(--surface); stroke-width: 2}
 .omvp-anchor-point {fill: var(--accent); stroke-width: 3}
 .omvp-retrospective-point {fill: #8A6BBF; stroke: var(--surface); stroke-width: 3}
@@ -96,11 +96,11 @@
 .omvp-freezing-marker {fill: #50A7A1; stroke: var(--surface); stroke-width: 2}
 .omvp-near-fall-marker {fill: #E0A030; stroke: #7A5200; stroke-width: 2}
 .omvp-clinical-marker circle {stroke: var(--surface); stroke-width: 2}
-.omvp-clinical-marker text {fill: #fff; font-size: 9px; font-weight: 900; pointer-events: none}
+.omvp-clinical-marker text {fill: #fff; font-size: 11px; font-weight: 900; pointer-events: none}
 .omvp-clinical-marker.delayed_on circle {fill: #5C93D6}
 .omvp-clinical-marker.incomplete_on circle {fill: #C88718}
 .omvp-clinical-marker.on_failure circle {fill: #9C4051}
-.omvp-chart-legend {display: flex; flex-wrap: wrap; gap: 12px; padding: 8px 8px 4px; font-size: 11px; color: var(--ink-2)}
+.omvp-chart-legend {display: flex; flex-wrap: wrap; gap: 12px; padding: 8px 8px 4px; font-size: 13px; color: var(--ink-2)}
 .omvp-chart-legend span {display: inline-flex; align-items: center; gap: 5px}
 .omvp-legend-dot {width: 10px; height: 10px; background: #5C93D6; border-radius: 50%; display: inline-block}
 .omvp-legend-dot.anchor {background: var(--accent)}
