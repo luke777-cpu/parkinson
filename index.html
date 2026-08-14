@@ -528,6 +528,9 @@ body{font-size:calc(15px*var(--app-font-scale))}
       <div class="disclaimer" style="margin-top:10px" data-i18n="simChangeDisclaimer">
         약물의 용량이나 복용시간 변경은 담당 의료진과 상의해야 합니다. 실제 반응은 약효 비교 테스트와 진료를 통해 확인하십시오.
       </div>
+      <div class="disclaimer" style="margin-top:6px" data-i18n-html="medicalDisclaimer">
+        이 앱은 개인의 증상과 약효 반응을 기록하기 위한 용도입니다. 파킨슨병을 진단하거나, 치료 방침을 정하거나, 약물 변경을 권고하지 않습니다. 약물이나 치료 계획을 바꾸기 전에는 반드시 자격을 갖춘 의료 전문가와 상의하세요.
+      </div>
     </div>
 
     <div class="hint no-print" style="text-align:center; margin:6px 0 16px" data-i18n-html="simChallengeLinkHtml">
@@ -628,6 +631,10 @@ body{font-size:calc(15px*var(--app-font-scale))}
     <div class="disclaimer" data-i18n-html="guideText">
       <b>약효일지는 증상과 약효 패턴을 기록·관찰하는 도구입니다.</b> 의학적 진단이나 처방을 대체하지 않습니다.
       약물 용량·복용 간격 조정은 반드시 주치의와 상의하세요. 모든 기록은 이 기기 안에만 저장되며, 다른 곳으로 전송되지 않습니다.
+    </div>
+    <div class="section-label" data-i18n="medicalDisclaimerLabel">의료 고지</div>
+    <div class="disclaimer" data-i18n-html="medicalDisclaimer">
+      이 앱은 개인의 증상과 약효 반응을 기록하기 위한 용도입니다. 파킨슨병을 진단하거나, 치료 방침을 정하거나, 약물 변경을 권고하지 않습니다. 약물이나 치료 계획을 바꾸기 전에는 반드시 자격을 갖춘 의료 전문가와 상의하세요.
     </div>
     <button class="btn danger no-print" id="resetBtn" style="margin-top:14px" data-i18n="resetAll">모든 기록 삭제</button>
     <div id="versionLabel" style="text-align:center; color:var(--ink-2); font-size:12px; margin:18px 0 8px" data-i18n="versionLabel">약효일지 · 테스트판 0.9.2</div>
@@ -732,7 +739,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음",
-    versionLabel:"파킨슨 약효 기록 · 2.14.1",
+    versionLabel:"파킨슨 약효 기록 · 2.14.2",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -753,6 +760,8 @@ const I18N = {
     phsStatusLine:"설문과 기록을 결합해 진료용 요약을 만들어요. 모든 처리는 이 기기 안에서만 이뤄져요.",
     outputInputLabel:"출력 입력 방식", outputInputMeta:"버튼(기본) · 슬라이더 · 함께",
     oiButtons:"버튼", oiSlider:"슬라이더", oiBoth:"함께",
+    medicalDisclaimerLabel:"의료 고지",
+    medicalDisclaimer:"이 앱은 개인의 증상과 약효 반응을 기록하기 위한 용도입니다. 파킨슨병을 진단하거나, 치료 방침을 정하거나, 약물 변경을 권고하지 않습니다. 약물이나 치료 계획을 바꾸기 전에는 반드시 자격을 갖춘 의료 전문가와 상의하세요.",
   },
   en:{
     appTitle:"Med Log", appSub:"Output Diary",
@@ -820,7 +829,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests",
-    versionLabel:"Parkinson's Medication Diary · 2.14.1",
+    versionLabel:"Parkinson's Medication Diary · 2.14.2",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -841,6 +850,8 @@ const I18N = {
     phsStatusLine:"Combines surveys and records into a clinic-ready summary. Everything stays on this device.",
     outputInputLabel:"Output input style", outputInputMeta:"Buttons (default) · Slider · Both",
     oiButtons:"Buttons", oiSlider:"Slider", oiBoth:"Both",
+    medicalDisclaimerLabel:"Medical Disclaimer",
+    medicalDisclaimer:"This app is intended for personal symptom and medication-response tracking. It does not diagnose Parkinson's disease, determine treatment, or recommend medication changes. Always consult a qualified healthcare professional before making changes to your medication or treatment plan.",
   }
 };
 function currentLang(){ try{ return (db && db.settings && db.settings.lang) || "ko"; }catch(e){ return "ko"; } }
@@ -4044,7 +4055,8 @@ function renderReport(){
     <div class="rsec">${L("주치의에게 묻고 싶은 것","Questions for my doctor")}</div>${q}
     <button class="btn ghost no-print" onclick="addQ()" style="margin-top:8px">${L("+ 질문 추가","+ Add question")}</button>
     <div class="rsec">${L("참고","Note")}</div>
-    <div class="disclaimer">${L("이 기록은 환자가 직접 관찰한 약효 패턴 참고자료입니다. 약물 조정은 주치의 판단에 따릅니다.","This record is reference material based on the patient's own observations of medication response. Medication adjustments are at the physician's discretion.")}</div>`;
+    <div class="disclaimer">${L("이 기록은 환자가 직접 관찰한 약효 패턴 참고자료입니다. 약물 조정은 주치의 판단에 따릅니다.","This record is reference material based on the patient's own observations of medication response. Medication adjustments are at the physician's discretion.")}</div>
+    <div class="disclaimer" style="margin-top:6px">${tr("medicalDisclaimer")}</div>`;
 }
 window.toggleQ=i=>{ db.questions[i].done=!db.questions[i].done; save(); };
 window.rmQ=i=>{ db.questions.splice(i,1); save(); renderReport(); };
