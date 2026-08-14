@@ -1,4 +1,4 @@
-const CACHE = "yakhyo-v2139-fullmerge";
+const CACHE = "yakhyo-v2140-simenglish";
 const APP_SHELL = [
   "./",
   "./index.html",
