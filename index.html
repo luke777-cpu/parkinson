@@ -1253,13 +1253,22 @@ function medRole(name){
   return {category:"other", leddIncluded:false, pkIncluded:false, certainty:"unknown", note:"약물 종류를 확인할 수 없어 계산에서 제외"};
 }
 
+/* 2026-08: 미국 배포 준비 — 신규 설치(기존 데이터 없음)만 기기 언어를 따라가게 한다.
+   기존 사용자는 이 분기를 절대 타지 않으므로(위 if(d&&d.events) 경로로 빠짐) 영향 없음.
+   사용자가 언어 토글을 한 번이라도 누르면 그 값이 settings.lang에 저장되어 이후 계속 유지된다. */
+function detectInitialLang(){
+  try{
+    const nav=((navigator.language)||(navigator.languages&&navigator.languages[0])||"").toLowerCase();
+    return nav.startsWith("ko") ? "ko" : "en";
+  }catch(e){ return "ko"; }
+}
 let db = load();
 function load(){
   try{ const d = JSON.parse(localStorage.getItem(KEY)); if(d&&d.events){ d.meds=(d.meds||[]).map(m=>({sched:[],...m})); d.settings=d.settings||{theme:"light"}; d.outputChecks=d.outputChecks||[]; d.dayMemos=d.dayMemos||{};
     if(typeof PHS!=="undefined") PHS.migrate(d); /* v0.9.19: db.phs 네임스페이스 추가 (기존 키 무변경·가역적) */
     d.primarySymptoms = d.primarySymptoms||[]; /* v0.9.20: 주증상 폴더 구조 준비 (기존 키 무변경) */
     return d; } }catch(e){}
-  return { events:[], meds:[], questions:defaultQuestions(), settings:{theme:"light",notify:false}, outputChecks:[], dayMemos:{}, phs:{v:(typeof PHS!=="undefined"?PHS.SCHEMA_VERSION:1), profile:null, observations:[], range:null, survey:null}, primarySymptoms:[] };
+  return { events:[], meds:[], questions:defaultQuestions(), settings:{theme:"light",notify:false,lang:detectInitialLang()}, outputChecks:[], dayMemos:{}, phs:{v:(typeof PHS!=="undefined"?PHS.SCHEMA_VERSION:1), profile:null, observations:[], range:null, survey:null}, primarySymptoms:[] };
 }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){ toast(L("저장 공간이 부족합니다","Storage space is full")); }
   syncSharedProfile(); }
@@ -3353,19 +3362,25 @@ function forgetPersonalAlias(typedName){
   save();
 }
 /* 성분 선택지 — SIMDRUG.DRUGS(약물 사전)를 그대로 쓴다. 새 성분을 여기 하드코딩하지
-   않는다 — 사전에 추가되면 이 목록에도 자동으로 나타난다. */
+   않는다 — 사전에 추가되면 이 목록에도 자동으로 나타난다.
+   2026-08: 영어 모드에서도 한국어가 그대로 나오던 버그 수정 — FAMILY를 ko/en 쌍으로,
+   MAO-B/아만타딘 분기도 L()로 처리. */
 function ingredientChoiceLabel(d){
   const FAMILY={
-    LEVO_IR:"레보도파 (즉방형)", LEVO_HBS:"레보도파 (서방형)", STALEVO:"레보도파+엔타카폰 복합",
-    APOMORPHINE:"아포모르핀 (구제요법)", ONGENTYS:"COMT 억제제 (1일 1회형)", ENTACAPONE:"COMT 억제제 (매 복용 병용형)",
-    PRAMI_IR:"프라미펙솔 (즉방형)", PRAMI_ER:"프라미펙솔 (서방형)",
-    ROPI_IR:"로피니롤 (즉방형)", ROPI_ER:"로피니롤 (서방형)", ROTIGOTINE:"로티고틴 (패치)",
+    LEVO_IR:["레보도파 (즉방형)","Levodopa (IR)"], LEVO_HBS:["레보도파 (서방형)","Levodopa (ER)"],
+    STALEVO:["레보도파+엔타카폰 복합","Levodopa + entacapone (combo)"],
+    APOMORPHINE:["아포모르핀 (구제요법)","Apomorphine (rescue therapy)"],
+    ONGENTYS:["COMT 억제제 (1일 1회형)","COMT inhibitor (once daily)"],
+    ENTACAPONE:["COMT 억제제 (매 복용 병용형)","COMT inhibitor (taken with each dose)"],
+    PRAMI_IR:["프라미펙솔 (즉방형)","Pramipexole (IR)"], PRAMI_ER:["프라미펙솔 (서방형)","Pramipexole (ER)"],
+    ROPI_IR:["로피니롤 (즉방형)","Ropinirole (IR)"], ROPI_ER:["로피니롤 (서방형)","Ropinirole (ER)"],
+    ROTIGOTINE:["로티고틴 (패치)","Rotigotine (patch)"],
   };
-  if(FAMILY[d.curveId]) return FAMILY[d.curveId];
-  if(/rasagiline/i.test(d.genericName)) return "MAO-B 억제제 (라사길린/셀레길린 계열)";
-  if(/safinamide/i.test(d.genericName)) return "MAO-B 억제제 (사피나미드)";
-  if(/amantadine/i.test(d.genericName)) return "아만타딘";
-  return d.genericName;
+  if(FAMILY[d.curveId]) return L(...FAMILY[d.curveId]);
+  if(/rasagiline/i.test(d.genericName)) return L("MAO-B 억제제 (라사길린/셀레길린 계열)","MAO-B inhibitor (rasagiline/selegiline)");
+  if(/safinamide/i.test(d.genericName)) return L("MAO-B 억제제 (사피나미드)","MAO-B inhibitor (safinamide)");
+  if(/amantadine/i.test(d.genericName)) return L("아만타딘","Amantadine");
+  return (currentLang()==="en" && d.genericNameEn) ? d.genericNameEn : d.genericName;
 }
 function openIngredientPicker(typedName){
   const items=SIMDRUG.DRUGS.map(d=>({d, label:ingredientChoiceLabel(d), example:d.aliases[0]}));
@@ -3544,7 +3559,7 @@ function renderSimVariantBuilder(dayKey){
     : `${L("현재안","Current plan")}: <b>${escapeHtml(b.time)} ${escapeHtml(b.name)} ${doseLabel(b.dose)}</b>${model?` · ${escapeHtml(model.roleLabel)}`:` · ${L("곡선 모델 미등록","No curve model registered")}`}`;
 
   const steps = model && model.category==="levodopa" ? [-50,-25,25,50]
-    : (model && model.category==="dopamine_agonist" ? (b.name.includes("리큅")||b.name.includes("로피니롤")? [-0.5,-0.25,0.25,0.5] : [-0.25,-0.125,0.125,0.25])
+    : (model && model.category==="dopamine_agonist" ? ((model.curveId==="ROPI_IR"||model.curveId==="ROPI_ER")? [-0.5,-0.25,0.25,0.5] : [-0.25,-0.125,0.125,0.25])
     : (model && model.category==="amantadine" ? [-100,100] : null));
 
   const kinds=[["dose",L("용량 변경","Change dose")],["time",L("시간 변경","Change time")],["add",L("약 추가","Add medication")],["remove",L("약 삭제","Remove medication")],["replace",L("약 교체","Replace medication")]];
@@ -3630,7 +3645,7 @@ function renderSimMainChart(dayKey, planDoses, composite){
   const compLine=composite.points.length? `<polyline points="${composite.points.map(p=>`${x(p.t,t0,t1)},${y(p.val)}`).join(" ")}" fill="none" stroke="#5C93D6" stroke-width="2"/>` : "";
   const markers=simDoseMarkers(planDoses, x, t0, t1, H-padB);
   document.getElementById("simMainChart").innerHTML = (!planDoses.length&&!actual.length)
-    ? `<div class="hint" style="padding:20px 0; text-align:center">이 날짜에는 기록이 없습니다.</div>`
+    ? `<div class="hint" style="padding:20px 0; text-align:center">${L("이 날짜에는 기록이 없습니다.","No records for this date.")}</div>`
     : `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${axisLbl}${compLine}${actLine}${markers}</svg>`;
 }
 function renderSimPerDrugChart(dayKey, planDoses, composite){
