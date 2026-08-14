@@ -60,13 +60,20 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
 .ribbon{position:relative; height:34px; border-radius:8px; overflow:hidden; background:var(--surface-2); border:1px solid var(--line)}
 .ribbon .seg{position:absolute; top:0; bottom:0}
 .ribbon .medmark{position:absolute; top:-3px; width:2px; height:40px; background:var(--ink); opacity:.55}
-.ribbon-axis{display:flex; justify-content:space-between; font-size:11px; color:var(--ink-2); margin-top:5px; font-variant-numeric:tabular-nums}
+.ribbon-axis{display:flex; justify-content:space-between; font-size:12.5px; color:var(--ink-2); margin-top:5px; font-variant-numeric:tabular-nums}
 .ribbon-empty{font-size:13px; color:var(--ink-2); text-align:center; padding:6px 0}
 .daysum-card{background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px 18px; margin-bottom:14px}
 .daysum-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px 6px}
 .daysum-item{text-align:center}
 .daysum-item .dn{font-size:18px; font-weight:900; font-variant-numeric:tabular-nums; letter-spacing:-.02em}
 .daysum-item .dl{font-size:11px; color:var(--ink-2); font-weight:600; margin-top:2px}
+
+/* 2026-08: 레이아웃 정리 — 접이식 카드(오늘 해석·자동 요약), 빠른 기록 탭 */
+.collapse-toggle{background:none; border:none; padding:0; margin:0; font-family:inherit; cursor:pointer; width:100%; -webkit-tap-highlight-color:transparent}
+.collapse-arrow{font-size:12px; color:var(--ink-2); transition:transform .15s ease; flex:0 0 auto}
+.collapsible:not(.collapsed) .collapse-arrow{transform:rotate(90deg)}
+.collapsible.collapsed .collapse-body{display:none}
+.quick-record-panel .hint{color:var(--ink-2); line-height:1.4}
 
 /* state buttons */
 .grid-title{font-size:14px; font-weight:700; color:var(--ink-2); margin:4px 2px 10px}
@@ -134,7 +141,7 @@ section.tab{display:none; padding-top:16px} section.tab.active{display:block; an
 
 /* trend chart */
 .chart-card{background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px}
-.legend{display:flex; flex-wrap:wrap; gap:12px; font-size:12px; color:var(--ink-2); margin-top:8px}
+.legend{display:flex; flex-wrap:wrap; gap:12px; font-size:13.5px; color:var(--ink-2); margin-top:8px}
 .legend span{display:inline-flex; align-items:center; gap:5px}
 .legend i{width:11px; height:11px; border-radius:3px; display:inline-block}
 
@@ -344,24 +351,41 @@ body{font-size:calc(15px*var(--app-font-scale))}
       <div class="ribbon-axis"><span data-i18n="h6">6시</span><span data-i18n="h10">10시</span><span data-i18n="h14">14시</span><span data-i18n="h18">18시</span><span data-i18n="h22">22시</span></div>
     </div>
 
-    <div class="daysum-card" id="todayInterpretCard" style="display:none">
-      <div class="card-title"><span data-i18n="todayInterpretTitle">오늘 해석</span></div>
-      <div id="todayInterpretBody" style="font-size:13.5px; line-height:1.95"></div>
+    <!-- 2026-08: 레이아웃 정리 — 오늘 해석은 기본 접힘(자주 안 보는 카드) -->
+    <div class="daysum-card collapsible collapsed" id="todayInterpretCard" style="display:none">
+      <button type="button" class="card-title collapse-toggle" data-collapse-target="todayInterpretCard">
+        <span data-i18n="todayInterpretTitle">오늘 해석</span><span class="collapse-arrow">▸</span>
+      </button>
+      <div id="todayInterpretBody" class="collapse-body" style="font-size:13.5px; line-height:1.95"></div>
     </div>
 
-    <!-- v2.11: 임시 기록 — 순간엔 방향만 남기고, 점수는 시간 날 때 몰아서 매김 -->
-    <div class="grid-title" data-i18n="tempNoteTitle">🕐 임시 기록 — 지금은 방향만, 점수는 나중에</div>
-    <div class="quick-grid" id="tempNoteGrid"></div>
-
-    <div class="grid-title" data-i18n="symptomTitle">⚡ 증상 기록 — 시작할 때 누르고, 끝나면 한 번 더</div>
-    <div class="quick-grid" id="symptomGrid"></div>
-
-    <!-- v2.8: 생활기록(특히 단백질 식사)이 너무 드물어서 매번 시트를 열어야 하는 게
-         마찰이라는 실사용 피드백 — OFF 버튼과 같은 원탭 방식으로 가장 자주 궁금해하는
-         신호(저녁 단백질 식사)만 시트 없이 바로 기록하게 한다. 나머지 항목(수면·운동·
-         배변 등)은 기존처럼 "약·생활 기록"에서 상세히 기록. -->
-    <div class="grid-title" style="margin-top:16px" data-i18n="quickLifeTitle">🍽 빠른 생활기록</div>
-    <div class="quick-grid" id="quickLifeGrid"></div>
+    <!-- 2026-08: 레이아웃 정리 — 임시기록/증상기록/빠른생활기록을 탭 하나로 묶음.
+         증상 기록은 기록 빈도가 높아 기본으로 열린 탭 유지(추가 클릭 부담 방지).
+         각 그리드(tempNoteGrid/symptomGrid/quickLifeGrid)의 id·렌더 함수는 그대로라
+         기존 저장 로직에는 영향 없음. -->
+    <div class="daysum-card" id="quickRecordCard">
+      <div class="card-title"><span data-i18n="quickTitle">⚡ 빠른 기록 — 한 번 누르면 바로 저장</span></div>
+      <div class="chips" id="quickRecordTabs" style="margin-bottom:10px">
+        <button type="button" class="chip" data-panel="tempnote" data-i18n="tempNoteTab">🕐 임시기록</button>
+        <button type="button" class="chip sel" data-panel="symptom" data-i18n="symptomTab">⚡ 증상</button>
+        <button type="button" class="chip" data-panel="life" data-i18n="quickLifeTab">🍽 생활</button>
+      </div>
+      <div class="quick-record-panel" id="qrPanel-tempnote" style="display:none">
+        <div class="hint" style="margin-bottom:8px" data-i18n="tempNoteTitle">🕐 임시 기록 — 지금은 방향만, 점수는 나중에</div>
+        <div class="quick-grid" id="tempNoteGrid"></div>
+      </div>
+      <div class="quick-record-panel" id="qrPanel-symptom">
+        <div class="hint" style="margin-bottom:8px" data-i18n="symptomTitle">⚡ 증상 기록 — 시작할 때 누르고, 끝나면 한 번 더</div>
+        <div class="quick-grid" id="symptomGrid"></div>
+      </div>
+      <!-- v2.8: 생활기록(특히 단백질 식사)이 너무 드물어서 매번 시트를 열어야 하는 게
+           마찰이라는 실사용 피드백 — OFF 버튼과 같은 원탭 방식으로 가장 자주 궁금해하는
+           신호(저녁 단백질 식사)만 시트 없이 바로 기록하게 한다. -->
+      <div class="quick-record-panel" id="qrPanel-life" style="display:none">
+        <div class="hint" style="margin-bottom:8px" data-i18n="quickLifeTitle">🍽 빠른 생활기록</div>
+        <div class="quick-grid" id="quickLifeGrid"></div>
+      </div>
+    </div>
 
     <div class="grid-title" style="margin-top:16px" data-i18n="medLifeTitle">약·생활 기록</div>
     <!-- v2.9: 복용 세트 원탭 — 같이 드시는 약들을 한 번에 같은 시각으로 기록 -->
@@ -369,9 +393,12 @@ body{font-size:calc(15px*var(--app-font-scale))}
     <div class="recent-med-row" id="recentMedRow"></div>
     <div class="life-grid" id="lifeGrid"></div>
 
-    <div class="daysum-card" id="daysumCard" style="display:none">
-      <div class="card-title"><span data-i18n="daySummary">오늘 자동 요약</span><span style="font-weight:400" data-i18n="realtimeCalc">실시간 계산</span></div>
-      <div class="daysum-grid" id="daysumGrid"></div>
+    <!-- 2026-08: 레이아웃 정리 — 자동 요약도 기본 접힘 -->
+    <div class="daysum-card collapsible collapsed" id="daysumCard" style="display:none">
+      <button type="button" class="card-title collapse-toggle" data-collapse-target="daysumCard">
+        <span><span data-i18n="daySummary">오늘 자동 요약</span> <span style="font-weight:400" data-i18n="realtimeCalc">실시간 계산</span></span><span class="collapse-arrow">▸</span>
+      </button>
+      <div class="daysum-grid collapse-body" id="daysumGrid"></div>
     </div>
 
     <div style="margin:14px 0"><button class="btn ghost no-print" id="dayMemoToggle" style="width:100%; text-align:left; font-size:13px"></button></div>
@@ -735,11 +762,12 @@ const I18N = {
     pastDateSaved:"기록을 추가했습니다", viewAddedRecord:"추가한 기록 보기", refState:"참고 상태",
     symptomTitle:"⚡ 증상 기록 — 시작할 때 누르고, 끝나면 한 번 더", medLifeTitle:"약·생활 기록", quickLifeTitle:"🍽 빠른 생활기록",
     tempNoteTitle:"🕐 임시 기록 — 지금은 방향만, 점수는 나중에",
+    tempNoteTab:"🕐 임시기록", symptomTab:"⚡ 증상", quickLifeTab:"🍽 생활",
     outputOverlayTitle:"출력 곡선 + 생활기록 + 이벤트", overlayTapHint:"그래프를 눌러 그 시각의 출력·약효·이벤트를 확인하세요",
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음",
-    versionLabel:"파킨슨 약효 기록 · 2.14.2",
+    versionLabel:"파킨슨 약효 기록 · 2.15.0",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -825,11 +853,12 @@ const I18N = {
     pastDateSaved:"Record added", viewAddedRecord:"View added record", refState:"Reference state",
     symptomTitle:"⚡ Symptoms — tap to start, tap again to end", medLifeTitle:"Medication & life records", quickLifeTitle:"🍽 Quick life log",
     tempNoteTitle:"🕐 Quick notes — direction now, score later",
+    tempNoteTab:"🕐 Quick note", symptomTab:"⚡ Symptom", quickLifeTab:"🍽 Life",
     outputOverlayTitle:"Output curve + life records + events", overlayTapHint:"Tap the chart to see output, drug level, and events at that time",
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests",
-    versionLabel:"Parkinson's Medication Diary · 2.14.2",
+    versionLabel:"Parkinson's Medication Diary · 2.15.0",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -1342,7 +1371,7 @@ const TEMPNOTE_TIME_PRESETS = [
 function openTempNoteQuick(){
   openSheet(`
     <h2>${L("🕐 지금 느낌만 짧게","🕐 Quick note")}</h2>
-    <div class="hint" style="margin-bottom:10px">${L("점수는 나중에 몰아서 매길게요 — 지금은 모양만 눌러 주세요.","Score it later — just pick a shape for now.")}</div>
+    <div class="hint" style="margin-bottom:10px">${L("점수는 나중에 몰아서 매길게요 — 지금은 방향만 골라 주세요.","Score it later — just pick a direction for now.")}</div>
     <div class="chips" style="display:flex; gap:6px; flex-wrap:wrap">
       ${TEMPNOTE_DIRS.map((d,i)=>`<button class="btn ghost" data-dir="${d.key}" style="flex:1; min-width:60px"><span style="font-size:20px">${d.ic}</span><br>${L(d.ko,d.en)}</button>`).join("")}
     </div>
@@ -2217,7 +2246,7 @@ function renderOutputGraph(){
     const x=xOf(Math.min(t,dayEnd.getTime()));
     axis += `<line x1="${x.toFixed(1)}" y1="${plotTop}" x2="${x.toFixed(1)}" y2="${(hasSym?symY+6:plotTop+plotH+4)}" stroke="var(--line)" stroke-width="0.8" opacity="0.55"/>`;
     const anchor = h===6? "start" : (h===24? "end" : "middle");
-    axis += `<text x="${x.toFixed(1)}" y="${axisY}" font-size="8" fill="var(--ink-2)" text-anchor="${anchor}">${String(h).padStart(2,"0")}:00</text>`;
+    axis += `<text x="${x.toFixed(1)}" y="${axisY}" font-size="10" fill="var(--ink-2)" text-anchor="${anchor}">${String(h).padStart(2,"0")}:00</text>`;
   }
   /* 증상 시작~종료 구간 막대 (진행중이면 현재 시각까지 옅게) */
   let symBars="", symLegend="";
@@ -2553,7 +2582,9 @@ function evRow(e){
     row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">${title}</div>${extra?`<div class="m">${escapeHtml(extra)}</div>`:""}</div>
       <span class="pill" style="background:${s.color}">${hasOut?L("출력","Output"):L("상태","State")}</span>`;
   } else if(e.type==="med"){
-    row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">💊 ${escapeHtml(e.drug)}${e.dose?` ${e.dose}mg`:""}</div>${e.memo?`<div class="m">${escapeHtml(e.memo)}</div>`:""}</div>
+    /* 2026-08: 상품명 아래 성분명(genericName) 병기 — 계산 로직은 그대로, 표시만 추가 */
+    const medMeta=[drugIngredientLabel(e.drug), e.memo].filter(Boolean).join(" · ");
+    row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">💊 ${escapeHtml(e.drug)}${e.dose?` ${e.dose}mg`:""}</div>${medMeta?`<div class="m">${escapeHtml(medMeta)}</div>`:""}</div>
       <span class="pill" style="background:var(--ink-2)">${L("복약","Medication")}</span>`;
   } else if(e.type==="symptom"){
     const label = symQuickLabel(e.key) + (e.key==="other" && e.customText ? ` (${escapeHtml(e.customText)})` : "");
@@ -2965,7 +2996,7 @@ function renderOutputOverlay(dayKey){
       return `<circle cx="${x}" cy="${y}" r="3" fill="#D6455C"/>${trendMarkerSvg(e.trend, x, y)}`;
     }).join("");
   } else {
-    svg += `<text x="${pad}" y="${outTop+outH/2}" font-size="11" fill="var(--ink-2)">${L("이 날 출력 기록 없음","No output logged this day")}</text>`;
+    svg += `<text x="${pad}" y="${outTop+outH/2}" font-size="12" fill="var(--ink-2)">${L("이 날 출력 기록 없음","No output logged this day")}</text>`;
   }
   const dayChecks = (db.outputChecks||[]).filter(c=>dkey(new Date(c.ts))===dayKey);
   svg += dayChecks.map(c=>`<circle cx="${xOf(c.ts).toFixed(1)}" cy="${yOf(c.guidedOutput).toFixed(1)}" r="4" fill="none" stroke="#D6455C" stroke-width="1.6"/>`).join("");
@@ -3000,7 +3031,7 @@ function renderOutputOverlay(dayKey){
     const x=xOf(Math.min(t,dayEnd));
     svg += `<line x1="${x.toFixed(1)}" y1="${outTop}" x2="${x.toFixed(1)}" y2="${symY+8}" stroke="var(--line)" stroke-width="0.8" opacity="0.55"/>`;
     const anchor = h===6? "start" : (h===24? "end" : "middle");
-    svg += `<text x="${x.toFixed(1)}" y="${axisY}" font-size="8" fill="var(--ink-2)" text-anchor="${anchor}">${String(h).padStart(2,"0")}:00</text>`;
+    svg += `<text x="${x.toFixed(1)}" y="${axisY}" font-size="10" fill="var(--ink-2)" text-anchor="${anchor}">${String(h).padStart(2,"0")}:00</text>`;
   }
   const slotMin=30, slotMs=slotMin*60000;
   let hitRects="";
@@ -3068,7 +3099,7 @@ function buildChart(recent){
     ];
     segs.forEach(([v,col,op])=>{ const h=v/winMin*(base-10); if(h>0){ y-=h; bars+=`<rect x="${x}" y="${y}" width="${bw}" height="${h}" fill="${col}" opacity="${op}" rx="1.5"/>`; } });
     const lab=d.k.slice(5).replace("-","/");
-    bars+=`<text x="${x+bw/2}" y="${base+13}" font-size="9" fill="var(--ink-2)" text-anchor="middle">${lab}</text>`;
+    bars+=`<text x="${x+bw/2}" y="${base+13}" font-size="10" fill="var(--ink-2)" text-anchor="middle">${lab}</text>`;
   });
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet" style="display:block">${bars}</svg>`;
 }
@@ -3170,7 +3201,7 @@ function svgCurve(dayKey){
         const dirInfo=TEMPNOTE_DIRS.find(d=>d.key===p.dir);
         const ic=dirInfo? dirInfo.ic : "•";
         markers += `<circle cx="${cx}" cy="${cy}" r="8" fill="var(--card-bg,#fff)" stroke="#2C6FBF" stroke-width="1.4" opacity="${p.confidence==='low'?.7:.9}"/>
-          <text x="${cx}" y="${cy+4}" font-size="10" text-anchor="middle">${ic}</text>`;
+          <text x="${cx}" y="${cy+4}" font-size="11" text-anchor="middle">${ic}</text>`;
       }
     });
     return segs+markers;
@@ -3190,7 +3221,7 @@ function svgCurve(dayKey){
   for(let h=0; h<=(t1-t0)/3600000; h+=2){
     const tt = t0 + h*3600000;
     const lab = new Date(tt).getHours()%24;
-    axisLabels += `<text x="${x(tt)}" y="${H-8}" font-size="9" fill="var(--ink-2)" text-anchor="middle">${L(lab+"시", lab+"h")}</text>`;
+    axisLabels += `<text x="${x(tt)}" y="${H-8}" font-size="10" fill="var(--ink-2)" text-anchor="middle">${L(lab+"시", lab+"h")}</text>`;
   }
 
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet" style="display:block">
@@ -3302,6 +3333,16 @@ function carryoverDosesFor(dayKey){
    그래서 이 파일 하나만 고치면 Phase 1~5 전부에 자동으로 적용된다. */
 function personalAliasMap(){ return (db.personalDrugAliases)||{}; }
 function resolveDrugName(name){ return personalAliasMap()[name] || name; }
+/* 2026-08: 레이아웃 정리 — 기록 화면에 상품명만 보이고 성분명이 안 보인다는 요청 반영.
+   개인 별칭(resolveDrugName)까지 반영해 SIMDRUG 사전에서 찾고, 사전에 없는(성분 미선택)
+   이름이면 빈 문자열을 돌려줘 화면에 아무것도 안 붙는다 — 계산 로직·데이터 구조는 안 건드림. */
+function drugIngredientLabel(drugName){
+  if(!drugName || typeof SIMDRUG==="undefined") return "";
+  const drug = SIMDRUG.findDrug(resolveDrugName(drugName));
+  if(!drug) return "";
+  const en = currentLang()==="en";
+  return (en && drug.genericNameEn) ? drug.genericNameEn : (drug.genericName||"");
+}
 function savePersonalAlias(typedName, canonicalAlias){
   if(!db.personalDrugAliases) db.personalDrugAliases={};
   db.personalDrugAliases[typedName]=canonicalAlias;
@@ -3583,7 +3624,7 @@ function renderSimMainChart(dayKey, planDoses, composite){
   const W=700,H=210,padL=32,padR=10,padT=10,padB=26;
   const {x,y}=simSvgAxes(W,H,padL,padR,padT,padB);
   const t0=0,t1=1440;
-  const axisLbl=[0,20,50,80,100].map(p=>`<text x="${padL-6}" y="${y(p)+3}" font-size="8.5" fill="var(--ink-2)" text-anchor="end">${p}</text>`).join("");
+  const axisLbl=[0,20,50,80,100].map(p=>`<text x="${padL-6}" y="${y(p)+3}" font-size="10" fill="var(--ink-2)" text-anchor="end">${p}</text>`).join("");
   const actual=simActualPoints(dayKey);
   const actLine=actual.length? `<polyline points="${actual.map(p=>`${x(p.t,t0,t1)},${y(p.val)}`).join(" ")}" fill="none" stroke="#E8663C" stroke-width="1.6" stroke-dasharray="1,3"/>`+actual.map(p=>`<circle cx="${x(p.t,t0,t1)}" cy="${y(p.val)}" r="3.4" fill="#E8663C"/>`).join("") : "";
   const compLine=composite.points.length? `<polyline points="${composite.points.map(p=>`${x(p.t,t0,t1)},${y(p.val)}`).join(" ")}" fill="none" stroke="#5C93D6" stroke-width="2"/>` : "";
@@ -3613,7 +3654,7 @@ function renderSimCompareChart(dayKey, planDoses, virtDoses, curPlan, virtPlan){
   const W=700,H=200,padL=32,padR=10,padT=10,padB=26;
   const {x,y}=simSvgAxes(W,H,padL,padR,padT,padB);
   const t0=0,t1=1440;
-  const axisLbl=[0,20,50,80,100].map(p=>`<text x="${padL-6}" y="${y(p)+3}" font-size="8.5" fill="var(--ink-2)" text-anchor="end">${p}</text>`).join("");
+  const axisLbl=[0,20,50,80,100].map(p=>`<text x="${padL-6}" y="${y(p)+3}" font-size="10" fill="var(--ink-2)" text-anchor="end">${p}</text>`).join("");
   const actual=simActualPoints(dayKey);
   const actLine=actual.length? `<polyline points="${actual.map(p=>`${x(p.t,t0,t1)},${y(p.val)}`).join(" ")}" fill="none" stroke="#E8663C" stroke-width="1.4" stroke-dasharray="1,3"/>`+actual.map(p=>`<circle cx="${x(p.t,t0,t1)}" cy="${y(p.val)}" r="3" fill="#E8663C"/>`).join("") : "";
   const curLine=`<polyline points="${curPlan.points.map(p=>`${x(p.t,t0,t1)},${y(p.val)}`).join(" ")}" fill="none" stroke="#5C93D6" stroke-width="2"/>`;
@@ -5179,6 +5220,26 @@ function switchTab(name){
   window.scrollTo(0,0);
 }
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
+/* 2026-08: 레이아웃 정리 — 접이식 카드(오늘 해석·자동 요약) 토글. 정적 마크업이라
+   렌더마다 다시 바인딩할 필요 없이 최초 1회만 연결하면 됨(collapsed 상태는 render
+   함수들이 건드리지 않으므로 재렌더링돼도 사용자가 편 상태 그대로 유지된다). */
+document.querySelectorAll(".collapse-toggle").forEach(btn=>{
+  btn.onclick=()=>{
+    const card=document.getElementById(btn.dataset.collapseTarget);
+    if(card) card.classList.toggle("collapsed");
+  };
+});
+/* 2026-08: 레이아웃 정리 — 임시기록/증상기록/빠른생활기록 탭 전환.
+   기본 열린 탭은 증상(symptom) — 형님 지정: 기록 빈도가 가장 높아 추가 클릭 부담을
+   주면 안 되는 기능이라 접지 않고 유지. */
+document.querySelectorAll("#quickRecordTabs [data-panel]").forEach(btn=>{
+  btn.onclick=()=>{
+    document.querySelectorAll("#quickRecordTabs [data-panel]").forEach(b=>b.classList.toggle("sel", b===btn));
+    document.querySelectorAll(".quick-record-panel").forEach(p=>{
+      p.style.display = (p.id==="qrPanel-"+btn.dataset.panel) ? "" : "none";
+    });
+  };
+});
 /* v1.2.1: 중복이던 하단 "약 먹음" 버튼은 제거됨 (상단 [약 복용 기록]이 같은 기능) */
 document.getElementById("addMedBtn").onclick=()=>openAddMed(false);
 document.getElementById("addMedSetBtn").onclick=()=>openMedSetEditor(null);
@@ -5944,7 +6005,7 @@ function phsDaySvg(dayKey){
   }}
   for(let h=6;h<=24;h+=3){ const t=new Date(Y,Mo-1,Da,h,0,0).getTime(); const x=xOf(Math.min(t,dayEnd));
     svg+=`<line x1="${x.toFixed(1)}" y1="${plotTop}" x2="${x.toFixed(1)}" y2="${symY+6}" stroke="var(--line)" stroke-width="0.7" opacity="0.5"/>`;
-    svg+=`<text x="${x.toFixed(1)}" y="${axisY}" font-size="9" fill="var(--ink-2)" text-anchor="${h===6?"start":(h===24?"end":"middle")}">${String(h).padStart(2,"0")}:00</text>`; }
+    svg+=`<text x="${x.toFixed(1)}" y="${axisY}" font-size="10" fill="var(--ink-2)" text-anchor="${h===6?"start":(h===24?"end":"middle")}">${String(h).padStart(2,"0")}:00</text>`; }
   if(dayEvents.some(e=>e.type==="med")){
     const dp=computeCurve(dayEvents,dayKey).pts.filter(p=>p.t>=dayStart&&p.t<=dayEnd);
     if(dp.length>1) svg+=`<polyline points="${dp.map(p=>`${xOf(p.t).toFixed(1)},${yOf(p.val).toFixed(1)}`).join(" ")}" fill="none" stroke="#5C93D6" stroke-width="1.6" opacity="0.7"/>`;
