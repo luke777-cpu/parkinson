@@ -463,6 +463,15 @@ body{font-size:calc(15px*var(--app-font-scale))}
       <div class="disclaimer" style="margin-bottom:10px" data-i18n="anCoverageDisclaimer">이 계산은 추정된 치료 구간과 약효 추정곡선을 비교한 것으로, 처방을 권고하지 않습니다. 약물 조정은 담당 의료진과 상의하세요.</div>
       <div id="anCoverageBody"></div>
     </div>
+
+    <!-- 2026-08-14: Phase4 후보안 확장(실험용) — buildCandidatesExpanded, 최대 14개.
+         이 탭 전용이며 PHS 보고서엔 절대 안 붙는다(phsGatherTherapeuticWindow는 그대로
+         buildCandidates 5개짜리를 씀 — 이 카드와 완전히 별개 경로). 내부 검증용. -->
+    <div class="chart-card" id="anCandidatesCard" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px; display:none">
+      <div class="card-title"><span>후보안 비교 (실험용 확장, 최대 14개)</span></div>
+      <div class="disclaimer" style="margin-bottom:10px">이 표는 내부 검증 전용입니다 — 어떤 보고서에도 표시되지 않습니다. "추천"이 아니라 각 변경을 적용했을 때 치료구간 내 체류시간이 얼마나 바뀌는지 계산한 사실표이며, 정렬 순서를 우열로 해석하면 안 됩니다. 이 엔진은 등록된 최대 안전 용량을 확인하지 않으므로, 임상적으로 비합리적인 증량이 포함될 수 있습니다. 실제 처방 변경은 담당 의료진과 상의하세요.</div>
+      <div id="anCandidatesBody"></div>
+    </div>
   </section>
 
   <!-- SIM (LEDD 복약 시뮬레이션) -->
@@ -3750,6 +3759,7 @@ function renderAnalysis(){
     document.getElementById("anTable").innerHTML="";
     document.getElementById("anWindowCard").style.display="none";
     document.getElementById("anCoverageCard").style.display="none";
+    document.getElementById("anCandidatesCard").style.display="none";
     return;
   }
   const ROLE_TAG={background:L(" (배경형)"," (background)"), adjunct:L(" (보조형)"," (adjunct)")};
@@ -3889,7 +3899,7 @@ function anGatherThresholdSamples(period){
 }
 function renderTherapeuticWindow(period){
   const card=document.getElementById("anWindowCard");
-  if(typeof SIMTHR==="undefined"){ card.style.display="none"; document.getElementById("anCoverageCard").style.display="none"; return; }
+  if(typeof SIMTHR==="undefined"){ card.style.display="none"; document.getElementById("anCoverageCard").style.display="none"; document.getElementById("anCandidatesCard").style.display="none"; return; }
   const {offSamples, dyskSamples}=anGatherThresholdSamples(period);
   const lower=SIMTHR.estimateLowerBound(offSamples);
   const upper=SIMTHR.estimateUpperBound(dyskSamples);
@@ -3938,9 +3948,9 @@ function fmtDurMin(min){
 }
 function renderCoverage(period, lower, upper){
   const card=document.getElementById("anCoverageCard");
-  if(typeof SIMCOV==="undefined"){ card.style.display="none"; return; }
+  if(typeof SIMCOV==="undefined"){ card.style.display="none"; document.getElementById("anCandidatesCard").style.display="none"; return; }
   const agg=anGatherCoverageForPeriod(period, lower, upper);
-  if(!agg.valid){ card.style.display="none"; return; }
+  if(!agg.valid){ card.style.display="none"; document.getElementById("anCandidatesCard").style.display="none"; return; }
   card.style.display="block";
 
   const totalMin=agg.inWindowMin+agg.underMin+agg.overMin;
@@ -3972,6 +3982,59 @@ function renderCoverage(period, lower, upper){
         ${L("이상운동증 기록이 없어 높은 구간은 계산하지 않았습니다","No dyskinesia records — the above-window range was not calculated")}
       </div>`}
     </div>
+  `;
+  renderCandidatesExpanded(agg, lower, upper);
+}
+/* 2026-08-14: Phase4 확장 후보(최대 14개, buildCandidatesExpanded) — 분석 탭 전용 내부검증표.
+   agg.worstUnder(그 기간 최악 부족구간)을 그대로 재사용한다. phsGatherTherapeuticWindow
+   (PHS 보고서용, buildCandidates 5개짜리)와는 완전히 별개 경로 — 서로 안 건드림.
+   정렬은 있지만(체류시간 증가량 순) "추천"으로 안 읽히게 굵게/강조 없이 표로만 나열한다. */
+function renderCandidatesExpanded(agg, lower, upper){
+  const card=document.getElementById("anCandidatesCard");
+  if(typeof SIMCAND==="undefined" || !agg.valid || !agg.worstUnder){ card.style.display="none"; return; }
+  const window={lower: lower&&lower.value!=null? lower.value : null, upper: upper&&upper.value!=null? upper.value : null};
+  if(window.lower==null){ card.style.display="none"; return; }
+
+  const {today, carry}=medsForSimulationDay(agg.worstUnder.dayKey);
+  const baselineDoses=carry.concat(today);
+  if(!baselineDoses.length){ card.style.display="none"; return; }
+
+  const {candidates, reasons}=SIMCAND.buildCandidatesExpanded(baselineDoses, agg.worstUnder);
+  card.style.display="block";
+  if(!candidates.length){
+    document.getElementById("anCandidatesBody").innerHTML=`<div class="hint">${escapeHtml(reasons.join(" · ")||"후보를 만들 수 없습니다")}</div>`;
+    return;
+  }
+  const result=SIMCAND.evaluate(baselineDoses, candidates, window);
+  if(!result.valid){
+    document.getElementById("anCandidatesBody").innerHTML=`<div class="hint">${escapeHtml((result.reasons||[]).join(" · "))}</div>`;
+    return;
+  }
+  const FAMILY_LABEL={add_dose:"용량 추가", shift_earlier:"시각 이동", add_comt:"COMT 추가", increase_agonist:"작용제 증량", switch_formulation:"제형 교체"};
+  const famOf=id=>{ const c=candidates.find(x=>x.id===id); return c? (FAMILY_LABEL[c.family]||c.family) : ""; };
+  const rows=result.candidates.map(c=>`
+    <tr>
+      <td style="padding:6px 8px; font-size:12px; border-bottom:1px solid var(--line)">${escapeHtml(famOf(c.id))}</td>
+      <td style="padding:6px 8px; font-size:12px; border-bottom:1px solid var(--line)">${escapeHtml(c.label||"")}</td>
+      <td style="padding:6px 8px; font-size:12px; text-align:right; font-variant-numeric:tabular-nums; border-bottom:1px solid var(--line)">${c.valid? (c.deltaMin>=0?"+":"")+Math.round(c.deltaMin)+"분" : "–"}</td>
+      <td style="padding:6px 8px; font-size:12px; text-align:right; font-variant-numeric:tabular-nums; border-bottom:1px solid var(--line)">${c.valid? (c.overDeltaMin>=0?"+":"")+Math.round(c.overDeltaMin)+"분" : "–"}</td>
+      <td style="padding:6px 8px; font-size:12px; text-align:center; border-bottom:1px solid var(--line)">${c.valid&&c.crossesUpper? "⚠️":""}</td>
+    </tr>`).join("");
+  document.getElementById("anCandidatesBody").innerHTML=`
+    <div style="font-size:12.5px; margin-bottom:8px">기준일: ${escapeHtml(agg.worstUnder.dayKey)} · 기준 구간내체류 ${Math.round(result.baseline.inWindowMin)}분 · 총 후보 ${candidates.length}개</div>
+    <div style="overflow-x:auto">
+      <table style="width:100%; border-collapse:collapse; min-width:520px">
+        <thead><tr style="border-bottom:1.5px solid var(--line)">
+          <th style="padding:6px 8px; font-size:11px; text-align:left; color:var(--ink-2)">종류</th>
+          <th style="padding:6px 8px; font-size:11px; text-align:left; color:var(--ink-2)">내용</th>
+          <th style="padding:6px 8px; font-size:11px; text-align:right; color:var(--ink-2)">구간내체류 변화</th>
+          <th style="padding:6px 8px; font-size:11px; text-align:right; color:var(--ink-2)">상한초과 변화</th>
+          <th style="padding:6px 8px; font-size:11px; text-align:center; color:var(--ink-2)">상한초과↑</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    ${reasons.length? `<div class="hint" style="margin-top:8px">${escapeHtml(reasons.join(" · "))}</div>`:""}
   `;
 }
 let _anGroupId=null;
