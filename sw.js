@@ -1,4 +1,4 @@
-const CACHE = "yakhyo-v2141-i18ncleanup";
+const CACHE = "yakhyo-v2142-meddisclaimer";
 const APP_SHELL = [
   "./",
   "./index.html",
