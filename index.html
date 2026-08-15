@@ -767,7 +767,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음",
-    versionLabel:"파킨슨 약효 기록 · 2.15.1",
+    versionLabel:"파킨슨 약효 기록 · 2.15.2",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -858,7 +858,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests",
-    versionLabel:"Parkinson's Medication Diary · 2.15.1",
+    versionLabel:"Parkinson's Medication Diary · 2.15.2",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -1816,14 +1816,53 @@ function alarmLoop(){
     });
   });
 }
+/* 2026-08-15: Capacitor 네이티브 앱(플레이스토어 설치판)에서는 안드로이드 WebView가 웹
+   Notification API 자체를 지원하지 않아 "이 브라우저는 알림을 지원하지 않아요"가 뜨는
+   문제 발견 — @capacitor/local-notifications 플러그인 경로를 추가한다.
+   window.Capacitor.Plugins.LocalNotifications가 있으면(=네이티브 앱 안) 그쪽을 쓰고,
+   없으면(=카톡 공유링크 등으로 브라우저 접속) 기존 웹 Notification API를 그대로 쓴다 —
+   같은 index.html 한 파일이 두 환경 다 서비스하므로 두 경로 다 반드시 살려둬야 한다. */
+function capNotif(){ try{ return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) || null; }catch(e){ return null; } }
+const MED_NOTIF_CHANNEL="med-reminders";
+let _capNotifChannelReady=false;
+async function ensureCapNotifChannel(){
+  const LN=capNotif(); if(!LN || _capNotifChannelReady) return;
+  try{
+    await LN.createChannel({ id: MED_NOTIF_CHANNEL, name: L("약 알림","Medication alerts"), description: L("복용 시간 알림","Medication time reminders"), importance: 5, visibility: 1 });
+    _capNotifChannelReady=true;
+  }catch(e){}
+}
+/* LocalNotifications는 정수 id를 요구한다 — 약 id(문자열)+시각을 안정적인 정수로 변환 */
+function capNotifId(medId, t){
+  const s=String(medId)+"|"+String(t);
+  let h=0;
+  for(let i=0;i<s.length;i++){ h=(h*31 + s.charCodeAt(i))|0; }
+  return Math.abs(h) % 2147483647 || 1;
+}
 function fireAlarm(med,t){
   showAlarmBanner(med,t);
-  try{
-    if("Notification" in window && Notification.permission==="granted"){
-      const n=new Notification(L("💊 약 먹을 시간","💊 Time for medication"), { body:`${med.name}${med.dose?` ${med.dose}mg`:""} · ${t} · ${L("복용하셨습니까?","Have you taken it?")}`, tag:"med-"+med.id, requireInteraction:true });
-      n.onclick=()=>{ window.focus(); openMedConfirm(med); n.close(); };
-    }
-  }catch(e){}
+  const LN=capNotif();
+  if(LN){
+    ensureCapNotifChannel().then(()=>{
+      try{
+        LN.schedule({ notifications: [{
+          title: L("💊 약 먹을 시간","💊 Time for medication"),
+          body: `${med.name}${med.dose?` ${med.dose}mg`:""} · ${t} · ${L("복용하셨습니까?","Have you taken it?")}`,
+          id: capNotifId(med.id, t),
+          channelId: MED_NOTIF_CHANNEL,
+          schedule: { at: new Date() },
+          extra: { medId: med.id, schedTime: t },
+        }] });
+      }catch(e){}
+    });
+  } else {
+    try{
+      if("Notification" in window && Notification.permission==="granted"){
+        const n=new Notification(L("💊 약 먹을 시간","💊 Time for medication"), { body:`${med.name}${med.dose?` ${med.dose}mg`:""} · ${t} · ${L("복용하셨습니까?","Have you taken it?")}`, tag:"med-"+med.id, requireInteraction:true });
+        n.onclick=()=>{ window.focus(); openMedConfirm(med); n.close(); };
+      }
+    }catch(e){}
+  }
   try{ if(navigator.vibrate) navigator.vibrate([200,100,200]); }catch(e){}
   // 5분 내 응답 없으면 재알림 1회 (기록 누락 방지 핵심 요청 반영)
   clearTimeout(_snoozeTimers[med.id]);
@@ -1846,6 +1885,20 @@ function showAlarmBanner(med,t,isReminder){
   clearTimeout(b._t); b._t=setTimeout(()=>b.classList.remove("show"), 120000);
 }
 async function enableNotify(){
+  const LN=capNotif();
+  if(LN){
+    try{
+      let perm=await LN.checkPermissions();
+      if(perm.display==="prompt" || perm.display==="prompt-with-rationale") perm=await LN.requestPermissions();
+      if(perm.display==="granted"){
+        await ensureCapNotifChannel();
+        db.settings.notify=true; save(); toast(L("약 알림을 켰어요","Medication alerts enabled")); return true;
+      }
+      toast(L("알림이 차단돼 있어요. 폰 설정 → 앱 → 알림에서 허용해주세요","Notifications are blocked. Please allow them in phone Settings → Apps → Notifications")); return false;
+    }catch(e){
+      toast(L("알림 권한을 요청하는 중 문제가 생겼어요","Something went wrong while requesting notification permission")); return false;
+    }
+  }
   if(!("Notification" in window)){ toast(L("이 브라우저는 알림을 지원하지 않아요","This browser doesn't support notifications")); return false; }
   let p=Notification.permission;
   if(p==="default") p=await Notification.requestPermission();
@@ -5466,6 +5519,21 @@ function setHeadDate(){ const d=new Date();
   document.getElementById("headDate").textContent=`${d.getMonth()+1}.${d.getDate()} (${wd})`; }
 
 applyTheme(); applyI18nStatic(); renderLangToggle(); setHeadDate(); renderAll(); renderNotifyToggle(); setupVoice();
+/* 2026-08-15: 네이티브 알림을 탭했을 때 해당 약의 복용확인 화면을 열기 위한 리스너.
+   capNotif()가 null이면(브라우저 접속) 아무 것도 안 함 — Notification.onclick 쪽에서 이미 처리됨. */
+if(capNotif()){
+  try{
+    capNotif().addListener("localNotificationActionPerformed", (action)=>{
+      try{
+        const extra = action && action.notification && action.notification.extra;
+        if(extra && extra.medId){
+          const med=(db.meds||[]).find(m=>m.id===extra.medId);
+          if(med) openMedConfirm(med);
+        }
+      }catch(e){}
+    });
+  }catch(e){}
+}
 /* v0.9.21: Medication Challenge 통합 (본체와 챌린지는 독립 도구 — 시뮬레이터에서 강제 연결하지 않음) */
 syncSharedProfile(); ingestChallengeEvents();
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden) ingestChallengeEvents(); }); /* 챌린지에서 돌아오면 편입 */
