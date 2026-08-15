@@ -1,4 +1,4 @@
-const CACHE = "yakhyo-v2151-uslaunchprep";
+const CACHE = "yakhyo-v2152-capnotif";
 const APP_SHELL = [
   "./",
   "./index.html",
