@@ -1,4 +1,4 @@
-const CACHE = "yakhyo-v2152-capnotif";
+const CACHE = "yakhyo-v2153-setdelfix";
 const APP_SHELL = [
   "./",
   "./index.html",
