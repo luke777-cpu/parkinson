@@ -767,7 +767,7 @@ const I18N = {
     topMedBtn:"약 복용 기록", topPastBtn:"지난 기록 추가",
     chgEntryTitle:"약효 비교 테스트 (Medication Challenge)", chgEntryDesc:"기준·변경 복용안을 같은 방식으로 기록해 비교해요", chgEntryBtn:"열기",
     chgPillLabel:"챌린지", chgPhsNone:"완료된 약효 비교 시험 없음",
-    versionLabel:"파킨슨 약효 기록 · 2.15.2",
+    versionLabel:"파킨슨 약효 기록 · 2.15.3",
     takeMed:"복용함",
     since:"부터", elapsed:"경과",
     h6:"6시", h10:"10시", h14:"14시", h18:"18시", h22:"22시",
@@ -858,7 +858,7 @@ const I18N = {
     topMedBtn:"Log a dose", topPastBtn:"Add past record",
     chgEntryTitle:"Medication Challenge (response test)", chgEntryDesc:"Record baseline and changed regimens the same way and compare", chgEntryBtn:"Open",
     chgPillLabel:"Challenge", chgPhsNone:"No completed medication response tests",
-    versionLabel:"Parkinson's Medication Diary · 2.15.2",
+    versionLabel:"Parkinson's Medication Diary · 2.15.3",
     takeMed:"Taken",
     since:"since", elapsed:"elapsed",
     h6:"6am", h10:"10am", h14:"2pm", h18:"6pm", h22:"10pm",
@@ -2688,7 +2688,24 @@ function evRow(e){
     row.appendChild(edit);
   }
   const del=document.createElement("button"); del.className="del"; del.innerHTML="✕";
-  del.title=L("삭제","Delete"); del.onclick=()=>{ if(confirm(L("이 기록을 삭제할까요?","Delete this record?"))) delEvent(e.id); };
+  del.title=L("삭제","Delete");
+  /* 2026-08-15: 세트로 자동기록(assumed)된 복약 항목을 "지난 기록"에서 그냥 지우면,
+     reconcileAssumedDoses가 "오늘 이 세트 기록이 없네" 하고 60초 안에(또는 다음 렌더링에)
+     다시 채워 넣어 "지워도 생긴다"는 신고로 이어짐(카톡방 실사용자 신고로 확정) — 세트 항목
+     삭제는 markSetSkippedToday와 같은 경로(스킵 표시 남기기)로 처리해 재생성을 막는다.
+     오늘 날짜 건이 아니면 원래대로 그냥 지운다(과거 기록은 reconcile 대상이 아님). */
+  del.onclick=()=>{
+    if(e.type==="med" && e.fromSet && dkey(new Date(e.ts))===dkey(new Date())){
+      const set=(db.medSets||[]).find(s=>s.id===e.fromSet);
+      if(set){
+        if(!confirm(L("이 기록을 삭제할까요? (세트 기록이라 \'안 먹었어요\'로 표시되어, 다시 자동으로 채워지지 않게 해요)","Delete this record? (This is a set entry — it\'ll be marked as \"not taken\" so it won\'t reappear.)"))) return;
+        markSetSkippedToday(set.id);
+        renderLog();
+        return;
+      }
+    }
+    if(confirm(L("이 기록을 삭제할까요?","Delete this record?"))) delEvent(e.id);
+  };
   row.appendChild(del);
   const tEl=row.querySelector(".t"); if(tEl) tEl.onclick=()=>editEventTime(e.id);
   return row;
