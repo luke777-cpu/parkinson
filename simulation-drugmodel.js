@@ -26,11 +26,13 @@ DM.CURVES = {
   APOMORPHINE: {"role": "direct_curve", "onsetMin": 8, "peakMin": 25, "durationMin": 90, "riseShape": "fast", "decayShape": "moderate"},
   ONGENTYS: {"role": "modifier", "durationMultiplier": 1.35, "coverageWindowMin": 1440, "comtLeddFactor": 0.5, "note": "오피카폰은 1일 1회 복용으로 다음 날까지 레보도파 지속을 보정"},
   ENTACAPONE: {"role": "modifier", "durationMultiplier": 1.25, "coverageWindowMin": 240, "comtLeddFactor": 0.33, "note": "엔타카폰은 레보도파 매 복용과 함께 투여하며 작용 시간이 더 짧음"},
-  PRAMI_IR: {"role": "background", "riseTauMin": 90, "durationMin": 480, "amp": 0.3},
-  PRAMI_ER: {"role": "background", "riseTauMin": 150, "durationMin": 1440, "amp": 0.35},
+  PRAMI_IR: {"role": "steady_background", "absTauMin": 45, "elimTauMin": 950, "ledPerMg": 24.6, "note": "외부 약동학 시뮬레이터 기준곡선(2026-08, 0.75mg 10일 축적: 최고18.44/최저4.02 LED) 역산 — 소실 시정수 15.8h는 프라미펙솔 반감기와 일치"},
+  PRAMI_ER: {"role": "steady_background", "absTauMin": 300, "elimTauMin": 950, "ledPerMg": 24.6, "note": "즉방형과 동일 성분·동일 소실(약물 고유 특성), 흡수만 서방 — IR 기준곡선에서 유도"},
   ROPI_IR: {"role": "background", "riseTauMin": 90, "durationMin": 420, "amp": 0.3},
   ROPI_ER: {"role": "background", "riseTauMin": 150, "durationMin": 1440, "amp": 0.35},
   ROTIGOTINE: {"role": "background", "riseTauMin": 240, "durationMin": 1440, "amp": 0.3},
+  AMANTADINE: {"role": "steady_background", "absTauMin": 60, "elimTauMin": 1340, "ledPerMg": 0.244, "note": "외부 약동학 시뮬레이터 기준곡선(2026-08, 100mg 10일 축적: 최고24.42/최저8.34 LED) 역산 — 소실 시정수 22.3h는 아만타딘 반감기와 일치"},
+  MAOB_FLAT: {"role": "flat_background", "ledPerLedd": 0.102, "note": "외부 약동학 시뮬레이터 기준(2026-08, 라사길린 1.0mg=LEDD100: 24시간 평탄 10.2 LED) — MAO-B 억제는 매일 복용 시 상수 기여로 모델링, 크기는 LEDD에 비례(10.2%)"},
   ADJUNCT: {"role": "adjunct"},
 };
 
@@ -49,9 +51,9 @@ DM.DRUGS = [
   {"genericName": "ropinirole (즉방형)", "formulation": "IR", "curveId": "ROPI_IR", "roleLabel": "도파민 작용제 배경효과 (즉방형)", "roleLabelEn": "Dopamine agonist background effect (IR)", "leddFactor": 20, "leddIncluded": true, "refDoseMg": 2, "note": "도파민 작용제는 곡선 모양에서는 완만한 배경효과로만 표시하지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "noteEn": "Dopamine agonists are shown only as a gentle background effect in the curve shape, but are included in the total LEDD calculation (per the standard conversion table).", "aliases": ["리큅", "로피니롤"]},
   {"genericName": "ropinirole (서방형)", "formulation": "XL/ER", "curveId": "ROPI_ER", "roleLabel": "도파민 작용제 배경효과 (서방형)", "roleLabelEn": "Dopamine agonist background effect (ER)", "leddFactor": 20, "leddIncluded": true, "refDoseMg": 2, "note": "도파민 작용제는 곡선 모양에서는 완만한 배경효과로만 표시하지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "noteEn": "Dopamine agonists are shown only as a gentle background effect in the curve shape, but are included in the total LEDD calculation (per the standard conversion table).", "aliases": ["리큅 PD", "리큅PD", "리큅 XL", "로피니롤 서방"]},
   {"genericName": "rotigotine", "formulation": "패치", "curveId": "ROTIGOTINE", "roleLabel": "도파민 작용제 배경효과 (패치)", "roleLabelEn": "Dopamine agonist background effect (patch)", "leddFactor": 30, "leddIncluded": true, "refDoseMg": 4, "note": "도파민 작용제는 곡선 모양에서는 완만한 배경효과로만 표시하지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "noteEn": "Dopamine agonists are shown only as a gentle background effect in the curve shape, but are included in the total LEDD calculation (per the standard conversion table).", "aliases": ["뉴프로", "로티고틴"]},
-  {"genericName": "amantadine", "formulation": "정", "curveId": "ADJUNCT", "roleLabel": "보조약 (곡선 미포함)", "roleLabelEn": "Adjunct medication (not included in curve)", "leddFactor": 1.0, "leddIncluded": true, "refDoseMg": 100, "note": "아만타딘은 등록된 보정값이 없어 복합 약효 추정곡선(곡선 모양)에는 포함하지 않지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "noteEn": "Amantadine has no registered curve parameters, so it isn't included in the combined estimated-effect curve shape, but it is included in the total LEDD calculation (per the standard conversion table).", "aliases": ["아만타딘", "피케이멜즈"]},
-  {"genericName": "rasagiline / selegiline (MAO-B 억제제)", "formulation": "정", "curveId": "ADJUNCT", "roleLabel": "보조약 (곡선 미포함)", "roleLabelEn": "Adjunct medication (not included in curve)", "leddFactor": 100, "leddIncluded": true, "refDoseMg": 1, "note": "MAO-B 억제제는 등록된 보정값이 없어 복합 약효 추정곡선(곡선 모양)에는 포함하지 않지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "noteEn": "MAO-B inhibitors have no registered curve parameters, so they aren't included in the combined estimated-effect curve shape, but they are included in the total LEDD calculation (per the standard conversion table).", "aliases": ["아질렉트", "라사길린", "셀레길린", "마오비"]},
-  {"genericName": "safinamide (MAO-B 억제제)", "formulation": "정", "curveId": "ADJUNCT", "roleLabel": "보조약 (곡선 미포함)", "roleLabelEn": "Adjunct medication (not included in curve)", "leddFactor": 2, "leddIncluded": true, "refDoseMg": 50, "note": "사피나이드는 50mg=100 LEDD, 100mg=125 LEDD로 용량-LEDD가 비선형입니다(Cilia 2023). 이 앱은 단순 배수(mg×2)만 지원해 50mg 기준(정확)엔 맞지만 100mg 복용시엔 200으로 계산되어 실제(125)보다 다소 높게 나올 수 있습니다", "noteEn": "Safinamide's dose-to-LEDD relationship is non-linear (50mg=100 LEDD, 100mg=125 LEDD, per Cilia 2023). This app only supports a simple multiplier (mg×2), which is accurate at 50mg but may compute 200 (somewhat higher than the actual 125) at 100mg.", "aliases": ["사피나미드", "사피나이드", "엑스어답션", "자디아고"]},
+  {"genericName": "amantadine", "formulation": "정", "curveId": "AMANTADINE", "roleLabel": "완만한 배경효과 (아만타딘)", "roleLabelEn": "Gradual background effect (amantadine)", "leddFactor": 1.0, "leddIncluded": true, "refDoseMg": 100, "note": "외부 약동학 시뮬레이터 기준곡선(2026-08)을 반영해 완만한 축적형 배경효과로 곡선에 포함합니다", "noteEn": "Reflects an external pharmacokinetic simulator reference curve (2026-08) and is included in the curve as a gradual, accumulating background effect.", "aliases": ["아만타딘", "피케이멜즈"]},
+  {"genericName": "rasagiline / selegiline (MAO-B 억제제)", "formulation": "정", "curveId": "MAOB_FLAT", "roleLabel": "상시 배경효과 (MAO-B 억제제)", "roleLabelEn": "Constant background effect (MAO-B inhibitor)", "leddFactor": 100, "leddIncluded": true, "refDoseMg": 1, "note": "외부 약동학 시뮬레이터 기준(라사길린 1.0mg 기준 상수 기여)을 반영해 평탄한 배경효과로 곡선에 포함합니다", "noteEn": "Reflects an external pharmacokinetic simulator reference (based on rasagiline 1.0mg constant contribution) and is included in the curve as a flat background effect.", "aliases": ["아질렉트", "라사길린", "셀레길린", "마오비"]},
+  {"genericName": "safinamide (MAO-B 억제제)", "formulation": "정", "curveId": "MAOB_FLAT", "roleLabel": "상시 배경효과 (MAO-B 억제제)", "roleLabelEn": "Constant background effect (MAO-B inhibitor)", "leddFactor": 2, "leddIncluded": true, "refDoseMg": 50, "note": "표준 환산표 기준 50mg=LEDD 100으로 환산 계수를 수정(기존 100은 오류), 라사길린과 같은 평탄 배경효과로 곡선에 포함합니다", "noteEn": "Corrected the conversion factor to the standard table's 50mg=LEDD 100 (the previous factor of 100 was an error); included in the curve as a flat background effect, same as rasagiline.", "aliases": ["사피나미드", "사피나이드", "에퀴피나", "엑스어답션", "자디아고"]},
 ];
 
 Object.defineProperty(DM, "UNREGISTERED_NOTE", { get(){ return DM_lang()==="en" ? DM.UNREGISTERED_NOTE_EN : "이 약물은 현재 곡선 모델이 등록되어 있지 않습니다. 실제 복용 기록에는 표시되지만 복합 약효 추정곡선 계산에는 포함되지 않습니다."; } });
@@ -139,8 +141,9 @@ DM.classify = function(name){
     leddFactor:drug.leddFactor, leddIncluded:drug.leddIncluded,
     refDoseMg:drug.refDoseMg, note: (en && drug.noteEn) ? drug.noteEn : drug.note,
     category: drug.curveId==="LEVO_IR"||drug.curveId==="LEVO_HBS"||drug.curveId==="STALEVO" ? "levodopa"
-            : (curve.role==="background" ? "dopamine_agonist"
-            : (drug.curveId==="ADJUNCT" ? (drug.genericName==="amantadine"?"amantadine":"mao_b") : "comt")),
+            : (curve.role==="background"||curve.role==="steady_background" ? (drug.curveId==="AMANTADINE"?"amantadine":"dopamine_agonist")
+            : (curve.role==="flat_background" ? "mao_b"
+            : (drug.curveId==="ADJUNCT" ? (drug.genericName==="amantadine"?"amantadine":"mao_b") : "comt"))),
   });
 };
 
@@ -196,6 +199,30 @@ DM.backgroundDoseValue = function(model, sinceMin){
   return amp*rise*decay;
 };
 
+/* ---- 정상상태 배경효과 (외부 약동학 시뮬레이터 기준곡선 반영, 2026-08) ----
+   매일 같은 시각 반복 복용으로 축적된 정상상태를 닫힌식으로 계산한다:
+   C(s) = peak단위 × (1-e^(-s/ka)) × e^(-s/τ) / (1-e^(-1440/τ)),  s = 복용 후 경과분(음수면 +1440 순환)
+   순환(wrap) 처리로 "어제 같은 시각 복용분"이 자동 반영되므로 dayOffset<0 복용은 중복 방지를 위해 무시한다.
+   가정: 해당 약을 매일 같은 스케줄로 복용 중(축적 상태) — 기준 시뮬레이터의 "Days in treatment" 가정과 동일. */
+const RAW_PER_LED = 0.0095; /* 레보도파 100mg 단회 피크(raw≈0.95) = 100 LED 앵커 */
+const _steadyNormCache={};
+function steadyShape(model, s){
+  /* 정상상태 하루 궤적: 오늘 복용분 + 과거 모든 날 복용분의 꼬리(급수합) */
+  const ka=model.absTauMin, tau=model.elimTauMin;
+  const A=Math.exp(-1440/tau)/(1-Math.exp(-1440/tau)); /* 과거 복용분 누적항 */
+  return Math.exp(-s/tau)*((1-Math.exp(-s/ka))+A);
+}
+function steadyNorm(model){
+  const key=model.absTauMin+"/"+model.elimTauMin;
+  if(_steadyNormCache[key]) return _steadyNormCache[key];
+  let m=0; for(let s=0;s<1440;s+=5){ const v=steadyShape(model,s); if(v>m) m=v; }
+  return _steadyNormCache[key]=m;
+}
+DM.steadyBackgroundValue = function(model, sinceMin){
+  let s=sinceMin%1440; if(s<0) s+=1440;
+  return steadyShape(model, s)/steadyNorm(model); /* 최고점=1 → ledPerMg는 정상상태 최고 LED/mg */
+};
+
 /* ---- 복합곡선 계산 ----
    doses: [{name, dose, time:"HH:MM", dayOffset?}] — dayOffset 0=계산 대상일, -1=전날(이월분) 등.
    반환: {points, perDrug, unregistered, adjuncts, modifiersApplied, leddTotal, leddBreakdown} */
@@ -209,6 +236,9 @@ DM.compositeCurve = function(doses, t0, t1, step){
   const directs=classified.filter(x=>x.model && x.model.role==="direct_curve");
   const modifiers=classified.filter(x=>x.model && x.model.role==="modifier");
   const backgrounds=classified.filter(x=>x.model && x.model.role==="background");
+  /* 정상상태·평탄 배경효과는 순환식이 어제 복용분을 이미 포함하므로 당일(dayOffset 0)만 취한다 */
+  const steadies=classified.filter(x=>x.model && x.model.role==="steady_background" && !(x.dose.dayOffset<0));
+  const flats=classified.filter(x=>x.model && x.model.role==="flat_background" && !(x.dose.dayOffset<0));
 
   const timeMin=t=>{ const [h,m]=String(t).split(":").map(Number); return h*60+m; };
   const absTime=x=>((x.dayOffset||0)*1440)+timeMin(x.time);
@@ -263,6 +293,17 @@ DM.compositeCurve = function(doses, t0, t1, step){
       const doseFactor=(bx.dose.dose==null?1:(+bx.dose.dose/(bx.model.refDoseMg||1)));
       const v=DM.backgroundDoseValue(bx.model, t-dt)*Math.min(2,doseFactor);
       raw+=v; rowPerDrug[bx.dose.name]=(rowPerDrug[bx.dose.name]||0)+v;
+    });
+    steadies.forEach(sx=>{
+      const dt=absTime(sx.dose);
+      const mg=(sx.dose.dose==null? (sx.model.refDoseMg||1) : +sx.dose.dose);
+      const v=DM.steadyBackgroundValue(sx.model, t-dt)*sx.model.ledPerMg*mg*RAW_PER_LED;
+      raw+=v; rowPerDrug[sx.dose.name]=(rowPerDrug[sx.dose.name]||0)+v;
+    });
+    flats.forEach(fx=>{
+      const mg=(fx.dose.dose==null? (fx.model.refDoseMg||1) : +fx.dose.dose);
+      const v=(mg*(fx.model.leddFactor||1))*fx.model.ledPerLedd*RAW_PER_LED;
+      raw+=v; rowPerDrug[fx.dose.name]=(rowPerDrug[fx.dose.name]||0)+v;
     });
     pts.push({t, raw});
     Object.keys(rowPerDrug).forEach(k=>{
