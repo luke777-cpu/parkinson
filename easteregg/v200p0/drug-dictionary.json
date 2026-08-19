@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "note": "파킨슨 약물 사전 정본. 프로그램이 시작할 때 이 파일을 실제로 읽어 곡선·별칭을 구성한다(simulation-drugmodel.js의 내장 기본값은 오프라인/로드 실패 시 폴백). 새 카피약을 추가할 때는 해당 성분의 aliases 배열에 상품명만 추가하면 되고, 프로그램 코드는 수정하지 않는다.",
   "disclaimer": "곡선 파라미터는 약물군·제형의 일반적인 시간 특성을 단순화한 참조값이며, 실제 혈중농도나 개인의 약효를 예측하지 않는다.",
   "curves": [
@@ -101,8 +101,8 @@
     {
       "curveId": "MAOB_FLAT",
       "role": "flat_background",
-      "ledPerMg": 10.2,
-      "note": "외부 약동학 시뮬레이터 기준(2026-08, 라사길린 1.0mg: 24시간 평탄 10.2 LED) — 비가역 MAO-B 억제라 매일 복용 시 상수 기여로 모델링"
+      "note": "외부 약동학 시뮬레이터 기준(2026-08, 라사길린 1.0mg=LEDD100: 24시간 평탄 10.2 LED) — MAO-B 억제는 매일 복용 시 상수 기여로 모델링, 크기는 LEDD에 비례(10.2%)",
+      "ledPerLedd": 0.102
     },
     {
       "curveId": "ADJUNCT",
@@ -310,14 +310,15 @@
     {
       "genericName": "safinamide (MAO-B 억제제)",
       "formulation": "정",
-      "curveId": "ADJUNCT",
-      "roleLabel": "보조약 (곡선 미포함)",
-      "leddFactor": 100,
+      "curveId": "MAOB_FLAT",
+      "roleLabel": "상시 배경효과 (MAO-B 억제제)",
+      "leddFactor": 2.0,
       "leddIncluded": true,
       "refDoseMg": 50,
-      "note": "MAO-B 억제제는 등록된 보정값이 없어 복합 약효 추정곡선 계산에는 포함하지 않습니다",
+      "note": "표준 환산표 기준 50mg=LEDD 100으로 환산 계수를 수정(기존 100은 오류), 라사길린과 같은 평탄 배경효과로 곡선에 포함합니다",
       "aliases": [
         "사피나미드",
+        "에퀴피나",
         "엑스어답션",
         "자디아고"
       ]
