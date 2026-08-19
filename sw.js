@@ -1,4 +1,4 @@
-const CACHE = "yakhyo-v2153-setdelfix";
+const CACHE = "yakhyo-v2161-steadybg";
 const APP_SHELL = [
   "./",
   "./index.html",
