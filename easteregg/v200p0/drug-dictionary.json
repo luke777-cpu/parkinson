@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "note": "파킨슨 약물 사전 정본. 프로그램이 시작할 때 이 파일을 실제로 읽어 곡선·별칭을 구성한다(simulation-drugmodel.js의 내장 기본값은 오프라인/로드 실패 시 폴백). 새 카피약을 추가할 때는 해당 성분의 aliases 배열에 상품명만 추가하면 되고, 프로그램 코드는 수정하지 않는다.",
   "disclaimer": "곡선 파라미터는 약물군·제형의 일반적인 시간 특성을 단순화한 참조값이며, 실제 혈중농도나 개인의 약효를 예측하지 않는다.",
   "curves": [
@@ -55,17 +55,19 @@
     },
     {
       "curveId": "PRAMI_IR",
-      "role": "background",
-      "riseTauMin": 90,
-      "durationMin": 480,
-      "amp": 0.3
+      "role": "steady_background",
+      "absTauMin": 45,
+      "elimTauMin": 950,
+      "ledPerMg": 24.6,
+      "note": "외부 약동학 시뮬레이터 기준곡선(2026-08, 0.75mg 10일 축적: 최고18.44/최저4.02 LED) 역산 — 소실 시정수 15.8h는 프라미펙솔 반감기와 일치"
     },
     {
       "curveId": "PRAMI_ER",
-      "role": "background",
-      "riseTauMin": 150,
-      "durationMin": 1440,
-      "amp": 0.35
+      "role": "steady_background",
+      "absTauMin": 300,
+      "elimTauMin": 950,
+      "ledPerMg": 24.6,
+      "note": "즉방형과 동일 성분·동일 소실(약물 고유 특성), 흡수만 서방 — IR 기준곡선에서 유도"
     },
     {
       "curveId": "ROPI_IR",
@@ -87,6 +89,20 @@
       "riseTauMin": 240,
       "durationMin": 1440,
       "amp": 0.3
+    },
+    {
+      "curveId": "AMANTADINE",
+      "role": "steady_background",
+      "absTauMin": 60,
+      "elimTauMin": 1340,
+      "ledPerMg": 0.244,
+      "note": "외부 약동학 시뮬레이터 기준곡선(2026-08, 100mg 10일 축적: 최고24.42/최저8.34 LED) 역산 — 소실 시정수 22.3h는 아만타딘 반감기와 일치"
+    },
+    {
+      "curveId": "MAOB_FLAT",
+      "role": "flat_background",
+      "ledPerMg": 10.2,
+      "note": "외부 약동학 시뮬레이터 기준(2026-08, 라사길린 1.0mg: 24시간 평탄 10.2 LED) — 비가역 MAO-B 억제라 매일 복용 시 상수 기여로 모델링"
     },
     {
       "curveId": "ADJUNCT",
@@ -264,12 +280,12 @@
     {
       "genericName": "amantadine",
       "formulation": "정",
-      "curveId": "ADJUNCT",
-      "roleLabel": "보조약 (곡선 미포함)",
+      "curveId": "AMANTADINE",
+      "roleLabel": "완만한 배경효과 (아만타딘)",
       "leddFactor": 1.0,
       "leddIncluded": true,
       "refDoseMg": 100,
-      "note": "아만타딘은 등록된 보정값이 없어 복합 약효 추정곡선 계산에는 포함하지 않습니다",
+      "note": "외부 약동학 시뮬레이터 기준곡선(2026-08)을 반영해 완만한 축적형 배경효과로 곡선에 포함합니다",
       "aliases": [
         "아만타딘",
         "피케이멜즈"
@@ -278,12 +294,12 @@
     {
       "genericName": "rasagiline / selegiline (MAO-B 억제제)",
       "formulation": "정",
-      "curveId": "ADJUNCT",
-      "roleLabel": "보조약 (곡선 미포함)",
+      "curveId": "MAOB_FLAT",
+      "roleLabel": "상시 배경효과 (MAO-B 억제제)",
       "leddFactor": 100,
       "leddIncluded": true,
       "refDoseMg": 1,
-      "note": "MAO-B 억제제는 등록된 보정값이 없어 복합 약효 추정곡선 계산에는 포함하지 않습니다",
+      "note": "외부 약동학 시뮬레이터 기준(라사길린 1.0mg 기준 상수 기여)을 반영해 평탄한 배경효과로 곡선에 포함합니다",
       "aliases": [
         "아질렉트",
         "라사길린",
