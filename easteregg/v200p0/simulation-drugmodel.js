@@ -32,7 +32,7 @@ DM.CURVES = {
   ROPI_ER: {"role": "background", "riseTauMin": 150, "durationMin": 1440, "amp": 0.35},
   ROTIGOTINE: {"role": "background", "riseTauMin": 240, "durationMin": 1440, "amp": 0.3},
   AMANTADINE: {"role": "steady_background", "absTauMin": 60, "elimTauMin": 1340, "ledPerMg": 0.244, "note": "외부 약동학 시뮬레이터 기준곡선(2026-08, 100mg 10일 축적: 최고24.42/최저8.34 LED) 역산 — 소실 시정수 22.3h는 아만타딘 반감기와 일치"},
-  MAOB_FLAT: {"role": "flat_background", "ledPerMg": 10.2, "note": "외부 약동학 시뮬레이터 기준(2026-08, 라사길린 1.0mg: 24시간 평탄 10.2 LED) — 비가역 MAO-B 억제라 매일 복용 시 상수 기여로 모델링"},
+  MAOB_FLAT: {"role": "flat_background", "ledPerLedd": 0.102, "note": "외부 약동학 시뮬레이터 기준(2026-08, 라사길린 1.0mg=LEDD100: 24시간 평탄 10.2 LED) — MAO-B 억제는 매일 복용 시 상수 기여로 모델링, 크기는 LEDD에 비례(10.2%)"},
   ADJUNCT: {"role": "adjunct"},
 };
 
@@ -53,7 +53,7 @@ DM.DRUGS = [
   {"genericName": "rotigotine", "formulation": "패치", "curveId": "ROTIGOTINE", "roleLabel": "도파민 작용제 배경효과 (패치)", "leddFactor": 30, "leddIncluded": true, "refDoseMg": 4, "note": "도파민 작용제는 곡선 모양에서는 완만한 배경효과로만 표시하지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "aliases": ["뉴프로", "로티고틴"]},
   {"genericName": "amantadine", "formulation": "정", "curveId": "AMANTADINE", "roleLabel": "완만한 배경효과 (아만타딘)", "leddFactor": 1.0, "leddIncluded": true, "refDoseMg": 100, "note": "외부 약동학 시뮬레이터 기준곡선(2026-08)을 반영해 완만한 축적형 배경효과로 곡선에 포함합니다", "aliases": ["아만타딘", "피케이멜즈"]},
   {"genericName": "rasagiline / selegiline (MAO-B 억제제)", "formulation": "정", "curveId": "MAOB_FLAT", "roleLabel": "상시 배경효과 (MAO-B 억제제)", "leddFactor": 100, "leddIncluded": true, "refDoseMg": 1, "note": "외부 약동학 시뮬레이터 기준(라사길린 1.0mg 기준 상수 기여)을 반영해 평탄한 배경효과로 곡선에 포함합니다", "aliases": ["아질렉트", "라사길린", "셀레길린", "마오비"]},
-  {"genericName": "safinamide (MAO-B 억제제)", "formulation": "정", "curveId": "ADJUNCT", "roleLabel": "보조약 (곡선 미포함)", "leddFactor": 100, "leddIncluded": true, "refDoseMg": 50, "note": "MAO-B 억제제는 등록된 보정값이 없어 복합 약효 추정곡선(곡선 모양)에는 포함하지 않지만, LEDD 총량 계산에는 포함합니다 (표준 환산표 기준)", "aliases": ["사피나미드", "엑스어답션", "자디아고"]},
+  {"genericName": "safinamide (MAO-B 억제제)", "formulation": "정", "curveId": "MAOB_FLAT", "roleLabel": "상시 배경효과 (MAO-B 억제제)", "leddFactor": 2.0, "leddIncluded": true, "refDoseMg": 50, "note": "표준 환산표 기준 50mg=LEDD 100으로 환산 계수를 수정(기존 100은 오류), 라사길린과 같은 평탄 배경효과로 곡선에 포함합니다", "aliases": ["사피나미드", "에퀴피나", "엑스어답션", "자디아고"]},
 ];
 
 DM.UNREGISTERED_NOTE = "이 약물은 현재 곡선 모델이 등록되어 있지 않습니다. 실제 복용 기록에는 표시되지만 복합 약효 추정곡선 계산에는 포함되지 않습니다.";
@@ -271,7 +271,7 @@ DM.compositeCurve = function(doses, t0, t1, step){
     });
     flats.forEach(fx=>{
       const mg=(fx.dose.dose==null? (fx.model.refDoseMg||1) : +fx.dose.dose);
-      const v=fx.model.ledPerMg*mg*RAW_PER_LED;
+      const v=(mg*(fx.model.leddFactor||1))*fx.model.ledPerLedd*RAW_PER_LED;
       raw+=v; rowPerDrug[fx.dose.name]=(rowPerDrug[fx.dose.name]||0)+v;
     });
     pts.push({t, raw});
