@@ -1,4 +1,16 @@
-/* PHS 통합 테스트 — index.html 전체 로드 + 설문/생성/렌더/기존 기능 회귀 */
+/* PHS 통합 테스트 — index.html 전체 로드 + 설문/생성/렌더/기존 기능 회귀
+ * (5단계 승인, 2026-08-26: v1.2.0 개편 이후의 실제 버튼·흐름에 맞춰 갱신)
+ *
+ * v1.2.0 배포(커밋 3be92fa, 2026-08-04)에서 PHS 시작 화면이 "관찰 시작(phsStartBtn)/관찰
+ * 종료(phsEndBtn)"라는 미래형 2단계 설문에서 "1.기본정보(phsProfileBtn) → 2.기간선택
+ * (phsRangeBtn, 이미 쌓인 기록의 날짜 구간을 고르는 방식) → 3.설문/선택(phsSurveyBtn, 예전의
+ * 시작·종료 설문을 한 화면으로 합침) → 생성(phsGenBtn)"이라는 4버튼 흐름으로 바뀌었다. 이
+ * 테스트는 그 개편 이전 버튼(phsStartBtn/phsEndBtn/ps_save/pe_save/ps_date, db.phs.observations)을
+ * 그대로 참조하고 있어 4단계 조사에서 "낡은 테스트"로 분류됐다(기능 자체는 정상 — phsGenBtn을
+ * 직접 눌러 정상 생성됨을 별도 확인). 여기서는 없어진 버튼을 억지로 되살리지 않고, 지금 사용자가
+ * 실제로 누르는 버튼·이벤트 흐름만 그대로 따라간다. 없어진 개념 하나: 예전엔 "가장 큰 어려움"을
+ * 고르지 않으면 관찰 시작 자체가 막혔지만, 지금은 설문 전체가 선택 사항이라 그런 필수값 검증이
+ * 없다 — 이 테스트도 그 필수값 검증은 더 이상 존재하지 않는 동작으로 취급하고 검사하지 않는다. */
 const fs=require('fs'), path=require('path');
 const {JSDOM}=require('jsdom');
 const ROOT=path.join(__dirname,'..');
@@ -6,13 +18,19 @@ const html=fs.readFileSync(path.join(ROOT,'index.html'),'utf-8');
 
 let pass=0,fail=0;
 const ok=(c,n)=>{ c?pass++:fail++; console.log((c?"  ✔ ":"  ✘ FAIL: ")+n); };
+const tick=(ms)=>new Promise(r=>setTimeout(r,ms||30));
 
 /* file:// 로딩 대신 script src 인라인 치환 (jsdom 리소스 로더 없이 오프라인 로드) */
 const engine=fs.readFileSync(path.join(ROOT,'phs-engine.js'),'utf-8');
 const reportjs=fs.readFileSync(path.join(ROOT,'phs-report.js'),'utf-8');
+/* 5단계에서 처음으로 phsGenBtn까지 실제로 도달해 보니(예전엔 phsStartBtn에서 먼저 죽어서
+   몰랐던) phsDaySvg의 그래프 곡선 계산이 simulation-drugmodel.js의 SIMDRUG를 필요로 함이
+   드러났다 — pdf-export.test.js에서 이미 쓰던 동일한 인라인 처리를 여기도 추가한다. */
+const drugModelJs=fs.readFileSync(path.join(ROOT,'simulation-drugmodel.js'),'utf-8');
 const inlined=html
   .replace('<script src="phs-engine.js"></script>',`<script>${engine}</script>`)
-  .replace('<script src="phs-report.js"></script>',`<script>${reportjs}</script>`);
+  .replace('<script src="phs-report.js"></script>',`<script>${reportjs}</script>`)
+  .replace('<script src="simulation-drugmodel.js"></script>',`<script>${drugModelJs}</script>`);
 
 /* 레거시 데이터 사전 주입: PHS 도입 이전 db (phs 키 없음) */
 const legacyDb={events:[
@@ -27,6 +45,8 @@ const dom=new JSDOM(inlined,{runScripts:"dangerously",url:"https://localhost/",p
     ["medlog","yakhyo_v1","medlog_db"].forEach(k=>{}); }});
 const w=dom.window, d=w.document;
 w.addEventListener("error",e=>errs.push(e.message));
+
+(async ()=>{
 
 console.log("== 로드 & 마이그레이션 ==");
 const KEY=w.eval("KEY");
@@ -61,37 +81,41 @@ db.events.sort((a,b)=>a.ts-b.ts); save(); renderAll();
 `);
 ok(true,"7일 시드 완료");
 
-console.log("== 설문 플로우 ==");
+console.log("== 1~3단계 흐름 (기본정보 → 기간선택 → 설문) ==");
 d.getElementById("phsProfileBtn").click();
-ok(!!d.getElementById("ph_save"),"프로필 설문 시트 열림");
+ok(!!d.getElementById("ph_save"),"1. 기본 정보 시트 열림");
 d.getElementById("ph_years").value="14";
-d.getElementById("ph_age").value="60대";
+d.getElementById("ph_age").value="60s"; // 현재 <option value>는 코드화된 값(60s) — 화면 표시만 "60대"
 d.getElementById("ph_save").click();
-ok(w.eval("db.phs.profile.diagnosisYears")===14,"프로필 저장");
+ok(w.eval("db.phs.profile.diagnosisYears")===14,"기본 정보 저장");
 
-d.getElementById("phsStartBtn").click();
-ok(!!d.getElementById("ps_save"),"관찰 시작 설문 열림");
-// 필수 미선택 시 거부
-d.getElementById("ps_save").click();
-ok(w.eval("db.phs.observations.length")===0,"필수(가장 큰 어려움) 없으면 시작 안 됨");
+d.getElementById("phsRangeBtn").click();
+ok(!!d.getElementById("pr_save"),"2. 기간 선택 시트 열림(예전 '관찰 시작'을 대체)");
+const sd=new Date(); sd.setDate(sd.getDate()-6);
+const sdKey=sd.toISOString().slice(0,10), edKey=new Date().toISOString().slice(0,10);
+d.getElementById("pr_start").value=sdKey;
+d.getElementById("pr_end").value=edKey;
+d.getElementById("pr_save").click();
+ok(w.eval("db.phs.range.startDate")===sdKey && w.eval("db.phs.range.endDate")===edKey,"보고서 기간 저장");
+
+d.getElementById("phsSurveyBtn").click();
+ok(!!d.getElementById("psv_save"),"3. 설문(선택) 시트 열림 — 예전의 시작·종료 설문이 한 화면으로 합쳐짐");
 d.querySelector('#ps_primary .chip[data-k="delayed_response"]').click();
 d.querySelector('#ps_chief .chip[data-k="delayed_response"]').click();
 d.querySelector('#ps_chief .chip[data-k="afternoon_decline"]').click();
 d.querySelector('#ps_morn .chip[data-k="60_to_90_min"]').click();
-const sd=new Date(); sd.setDate(sd.getDate()-6);
-d.getElementById("ps_date").value=sd.toISOString().slice(0,10);
 d.getElementById("ps_freeq").value="오후 약을 더 일찍 먹는 것이 좋습니까?";
-d.getElementById("ps_save").click();
-const obs=w.eval("db.phs.observations[0]");
-ok(obs && obs.startSurvey.primaryProblem==="delayed_response","관찰 시작 저장");
-ok(obs.startSurvey.freeQuestion.includes("일찍"),"자유 질문 원문 보존");
+d.querySelector('#pe_overall .chip[data-k="varied"]').click(); // 예전 '관찰 종료' 설문에 해당하는 부분
+d.getElementById("psv_save").click();
+const sv=w.eval("db.phs.survey");
+ok(sv && sv.start && sv.start.primaryProblem==="delayed_response","설문 저장(예전 '관찰 시작' 쪽 내용)");
+ok(sv.start.freeQuestion.includes("일찍"),"자유 질문 원문 보존");
+ok(sv.end && sv.end.overallChange==="varied","설문 저장(예전 '관찰 종료' 쪽 내용) — 한 번의 저장으로 함께 기록됨");
+/* 예전 phsStartBtn 흐름엔 "가장 큰 어려움을 고르지 않으면 시작 자체가 거부"되는 필수값 검증이
+   있었다. 지금 psv_save 핸들러(index.html)에는 그런 차단이 없다 — 설문 전체가 선택 사항이라는
+   현재 설계다. 존재하지 않는 옛 차단을 다시 만들어 검사하지 않는다. */
 
-d.getElementById("phsEndBtn").click();
-d.querySelector('#pe_overall .chip[data-k="varied"]').click();
-d.getElementById("pe_save").click();
-ok(!!w.eval("db.phs.observations[0].endDate"),"관찰 종료 저장");
-
-console.log("== 보고서 생성 ==");
+console.log("== 보고서 생성 (다중 페이지) ==");
 d.getElementById("phsGenBtn").click();
 const ov=d.getElementById("phsOverlay");
 ok(ov.classList.contains("open"),"보고서 미리보기 열림");
@@ -107,21 +131,48 @@ ok(txt.includes("담당 의료진"),"검토 필요 문구");
 ok(txt.includes("자동 생성되었습니다"),"면책 문구");
 ok(txt.includes("신뢰도"),"신뢰도 표시");
 ok(ov.querySelectorAll("svg").length>=5,"그래프 리뷰 SVG 렌더 ("+ov.querySelectorAll("svg").length+"일)");
+ok(ov.querySelectorAll(".phs-page").length===3,"보고서가 3개 phs-page(요약/상세/그래프)로 다중 페이지 구성됨");
 // 금지 표현 부재
 const banned=[/delayed ON입니다/,/ON failure입니다/,/약을 증량해야/,/약을 감량해야/,/원인입니다/];
 ok(!banned.some(p=>p.test(txt)),"보고서에 금지 임상 표현 없음");
 // 설문(체감 60~90분) vs 기록(중앙값 ~100분) → agree 판단 검증은 엔진 테스트에서 완료
+
+console.log("== PHS→PDF 버튼 연결 (3/4단계에서 만든 saveFileSafely 경로까지 실제로 이어지는지) ==");
+{
+  /* html2canvas/jsPDF 자체의 정확도·페이지분할·오프라인 재시도 등 세부 오케스트레이션은
+     tests/pdf-export.test.js가 전담한다. 여기서는 "지금의 phsPrintBtn 클릭이 실제로 그
+     경로(runPdfExport→exportAsPdf→saveFileSafely)까지 끊기지 않고 연결되는지"만 통합
+     관점에서 재확인한다 — 가벼운 스텁으로 html2canvas/jsPDF만 대체한다. */
+  w.html2canvas=async(el,opts)=>({
+    width:800,height:400,
+    getContext:()=>({ getImageData:()=>({ data:new Uint8ClampedArray(3200).fill(255) }) }),
+    toDataURL:()=>"data:image/jpeg;base64,ZmFrZQ=="
+  });
+  class FakeJsPDF{ constructor(o){ this.o=o; this._p=1; } addPage(){ this._p++; } addImage(){} output(t){ return new w.Blob(["FAKE_PHS_PDF"],{type:"application/pdf"}); } }
+  w.jspdf={ jsPDF:FakeJsPDF };
+  let sharedFile=null;
+  w.navigator.canShare=(x)=>!!(x&&x.files&&x.files.length===1);
+  w.navigator.share=async(x)=>{ sharedFile=x.files[0]; };
+  const printBtn=d.getElementById("phsPrintBtn");
+  ok(!!printBtn,"phsPrintBtn이 보고서 툴바에 존재함");
+  printBtn.click();
+  await tick(150);
+  ok(!!sharedFile && sharedFile.type==="application/pdf","phsPrintBtn 클릭 → PDF 생성 → saveFileSafely 공유 경로까지 실제로 연결됨");
+  ok(!!sharedFile && /환자병력요약_.*\.pdf$/.test(sharedFile.name),"PHS PDF 파일명 규칙 유지: "+(sharedFile&&sharedFile.name));
+}
 
 console.log("== 툴바 기능 ==");
 ok(!!d.getElementById("phsPrintBtn") && !!d.getElementById("phsJsonBtn") && !!d.getElementById("phsCopyBtn"),"인쇄/복사/JSON 버튼 존재");
 d.getElementById("phsCloseBtn").click();
 ok(!ov.classList.contains("open"),"닫기 동작");
 
-console.log("== 관찰 없이 빠른 생성 (14일 fallback) ==");
-w.eval("db.phs.observations=[]; save();");
+console.log("== 기간 선택 없이 빠른 생성 (30일 기본값 fallback) ==");
+/* 예전엔 db.phs.observations=[] 로 관찰 자체를 비웠지만, 지금은 그 배열이 쓰이지 않는다(레거시
+   read-only 호환용으로만 남음) — 실제로 fallback을 유발하는 것은 db.phs.range를 비우는 것이다. */
+w.eval("db.phs.range=null; save();");
 d.getElementById("phsGenBtn").click();
-ok(ov.classList.contains("open"),"설문 없이도 최근 14일 보고서 생성");
-ok(ov.textContent.includes("설문 없이 최근 14일"),"fallback 안내 문구");
+ok(ov.classList.contains("open"),"기간을 고르지 않아도 최근 30일 보고서 생성");
+ok(ov.textContent.includes("최근 30일 기록으로 생성했어요"),"fallback 안내 문구(예전 14일 → 현재 30일 기본값으로 개편됨)");
 d.getElementById("phsCloseBtn").click();
 
 console.log("== 기존 기능 회귀 ==");
@@ -207,3 +258,5 @@ ok(errs.length===0,"콘솔/윈도우 에러 0건 ("+errs.join("; ")+")");
 
 console.log(`\nRESULT: ${pass} passed, ${fail} failed`);
 process.exit(fail?1:0);
+
+})().catch(e=>{ console.error("TEST HARNESS ERROR:", e); process.exit(1); });
