@@ -91,7 +91,9 @@ function stubPdfLibs(w, { tallCanvas=false, throwOnCanvas=false }={}){
     ok(sharedFile && sharedFile.type==="application/pdf", "공유된 파일의 MIME이 application/pdf: "+(sharedFile&&sharedFile.type));
     ok(sharedFile && /^출력_보고서_\d{4}-\d{2}-\d{2}\.pdf$/.test(sharedFile.name), "파일명 형식이 지시서 예시와 일치: "+(sharedFile&&sharedFile.name));
     ok(btn.disabled===false && !btn.textContent.includes("만드는 중"), "완료 후 버튼이 원상태로 복원됨");
-    ok(getToastText(w).includes("저장을 완료했어요"), "성공 토스트 문구 확인: "+getToastText(w));
+    /* PR #2 검수 반영: navigator.share() 완료는 파일 저장을 보장하지 않으므로 "저장을
+       완료했다"가 아니라 "공유를 완료했다"는 문구로 구분해야 한다. */
+    ok(getToastText(w)==="PDF 파일 공유를 완료했어요", "공유 성공 시 '저장'이 아니라 '공유 완료' 문구 사용(저장을 단정하지 않음): "+getToastText(w));
   }
 
   console.log("== B. .no-print 요소는 캡처에서 제외(ignoreElements) ==");
@@ -190,7 +192,48 @@ function stubPdfLibs(w, { tallCanvas=false, throwOnCanvas=false }={}){
     ok(getToastText(w).includes("저장을 요청했어요"), "이전 실패 이후에도 재시도가 정상적으로 성공함(재시도 가능 확인): "+getToastText(w));
   }
 
-  console.log("== G. 생성 전후 화면 스크롤 위치 복원 ==");
+  console.log("== G. 부분 실패 후 재시도 — 이미 로드된 라이브러리는 다시 삽입하지 않음 ==");
+  {
+    /* PR #2 검수 반영: html2canvas는 로드에 성공했는데 jsPDF만 실패한 뒤 재시도하면,
+       loadPdfLibs()가 html2canvas <script>를 다시 삽입해서는 안 된다 — 각 라이브러리는
+       전역 객체 존재 여부로 개별 판단해야 한다. */
+    const w=newWindow(); freshDb(w, []);
+    const btn=w.document.getElementById("printBtn");
+    btn.click();
+    const h2cScript=w.document.querySelector('script[src*="html2canvas"]');
+    ok(!!h2cScript, "1차 시도: html2canvas 스크립트 태그 삽입됨");
+    /* 실제로는 vendor 스크립트가 로드되며 전역에 등록되는 것을 흉내(캡처까지 실제로
+       완주시켜야 하므로 stubPdfLibs()와 동일한 모양의 최소 fake canvas를 반환) */
+    w.html2canvas=async(el,opts)=>({
+      width:800, height:400,
+      getContext:()=>({ getImageData:()=>({ data:new Uint8ClampedArray(3200).fill(255) }) }),
+      toDataURL:()=>"data:image/jpeg;base64,ZmFrZQ=="
+    });
+    h2cScript.onload();
+    await tick(20);
+    const jspdfScript1=w.document.querySelector('script[src*="jspdf"]');
+    ok(!!jspdfScript1, "1차 시도: html2canvas 성공 후 이어서 jsPDF 스크립트 태그도 삽입됨");
+    jspdfScript1.onerror(new Error("jsPDF load failed"));
+    await tick(80);
+    ok(getToastText(w).includes("실패"), "jsPDF만 실패해도 전체가 실패로 처리됨: "+getToastText(w));
+
+    console.log("-- 재시도: html2canvas는 이미 로드됨(window.html2canvas 존재) → 다시 삽입되지 않아야 함 --");
+    btn.click();
+    await tick(20);
+    const h2cScriptsAfterRetry=w.document.querySelectorAll('script[src*="html2canvas"]');
+    const jspdfScriptsAfterRetry=w.document.querySelectorAll('script[src*="jspdf"]');
+    ok(h2cScriptsAfterRetry.length===1, "재시도 후에도 html2canvas 스크립트 태그는 여전히 1개뿐(중복 삽입 없음, 실제 "+h2cScriptsAfterRetry.length+"개)");
+    ok(jspdfScriptsAfterRetry.length===2, "실패했던 jsPDF만 새로 다시 삽입됨(누적 2개 — 1차 실패분 + 재시도분)");
+    const jspdfScript2=jspdfScriptsAfterRetry[jspdfScriptsAfterRetry.length-1];
+    class FakeJsPDF2{ constructor(o){this.o=o; this._p=1;} addPage(){this._p++;} addImage(){} output(t){ return new w.Blob(["FAKE"],{type:"application/pdf"}); } }
+    w.jspdf={jsPDF:FakeJsPDF2};
+    w.navigator.canShare=()=>false;
+    jspdfScript2.onload();
+    await tick(80);
+    ok(getToastText(w).includes("저장을 요청했어요"), "html2canvas 재사용 + jsPDF만 재로드로 재시도가 정상적으로 성공함: "+getToastText(w));
+  }
+
+  console.log("== H. 생성 전후 화면 스크롤 위치 복원 ==");
   {
     const w=newWindow(); freshDb(w, []);
     stubPdfLibs(w, {});

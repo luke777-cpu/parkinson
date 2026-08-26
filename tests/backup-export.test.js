@@ -46,7 +46,9 @@ console.log("== A. Web Share 지원 + canShare 성공 → 공유 경로 ==");
     ok(sharedWith && sharedWith.files && sharedWith.files.length===1, "공유 데이터에 파일 1개 포함");
     ok(sharedWith && sharedWith.files[0].type==="application/json", "공유 파일의 MIME이 application/json");
     ok(sharedWith && /약효일지_백업_.*\.json/.test(sharedWith.files[0].name), "파일명이 기존 규칙과 동일: "+ (sharedWith&&sharedWith.files[0].name));
-    ok(getToastText(w).includes("저장을 완료했어요"), "공유 성공 시 '완료했어요' 문구 사용: "+getToastText(w));
+    /* PR #2 검수 반영: navigator.share() 완료는 파일 저장을 보장하지 않으므로 "저장을
+       완료했다"가 아니라 "공유를 완료했다"는 문구로 구분해야 한다. */
+    ok(getToastText(w)==="백업 파일 공유를 완료했어요", "공유 성공 시 '저장'이 아니라 '공유 완료' 문구 사용(저장을 단정하지 않음): "+getToastText(w));
 
     console.log("== B. canShare가 false → 공유 시도하지 않고 다운로드로 대체 ==");
     const w2=newWindow(); freshDb(w2, []);

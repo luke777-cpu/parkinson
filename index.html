@@ -5370,9 +5370,20 @@ function loadPdfLibs(){
     s.onload=resolve; s.onerror=()=>reject(new Error("PDF 라이브러리 로드 실패: "+src));
     document.head.appendChild(s);
   });
-  _pdfLibsLoading=loadScript("./vendor/html2canvas.min.js")
-    .then(()=>loadScript("./vendor/jspdf.umd.min.js"))
-    .catch(err=>{ _pdfLibsLoading=null; throw err; }); /* 실패하면 다음 클릭 때 다시 시도할 수 있도록 캐시를 비운다 */
+  /* v2.16.3: html2canvas는 로드에 성공했는데 jsPDF만 실패한 뒤 재시도하는 경우(그 반대도
+     마찬가지), 이미 있는 라이브러리의 <script>를 다시 삽입하지 않도록 전역 객체 존재
+     여부로 각각 개별 판단한다(PR #2 검수 반영) — 중복 삽입은 불필요한 재실행/네트워크
+     요청일 뿐 아니라, 라이브러리에 따라 재정의 시 부작용이 있을 수 있다. */
+  const missing=[];
+  if(!window.html2canvas) missing.push("./vendor/html2canvas.min.js");
+  if(!window.jspdf) missing.push("./vendor/jspdf.umd.min.js");
+  /* missing[0]의 <script> 삽입은 (기존 동작과 동일하게) 이 호출과 같은 동기 구간 안에서
+     바로 일어나야 한다 — Promise.resolve().then(...)으로 감싸면 마이크로태스크 한 틱이
+     늦게 삽입되어, 호출 직후 곧바로 DOM에서 <script> 태그를 확인하는 코드(호출부 재시도
+     로직 등)가 어긋난다. */
+  let chain=loadScript(missing[0]);
+  for(let i=1;i<missing.length;i++){ const src=missing[i]; chain=chain.then(()=>loadScript(src)); }
+  _pdfLibsLoading=chain.catch(err=>{ _pdfLibsLoading=null; throw err; }); /* 실패하면 다음 클릭 때 다시 시도할 수 있도록 캐시를 비운다 */
   return _pdfLibsLoading;
 }
 /* 캔버스를 세로로 자를 때, 잘라야 하는 지점(idealY) 바로 위쪽으로 최대 maxBacktrackPx까지
@@ -5447,13 +5458,20 @@ async function runPdfExport(btn, pageEls, filename){
     await loadPdfLibs();
     const blob=await exportAsPdf(pageEls, filename);
     const result=await saveFileSafely(blob, filename, {title:filename, mimeType:"application/pdf"});
-    if(result.status==="shared") toast(L(`${filename} 저장을 완료했어요`,`Saved ${filename}`));
+    /* v2.16.3: Web Share API의 navigator.share() 완료(status:"shared")는 사용자가 공유
+       시트에서 실제로 "무엇을" 했는지(파일로 저장/다른 앱으로 전달/취소하지 않고 그냥 닫기 등)
+       보장하지 않는다 — 시스템에 "공유를 요청해 처리됨" 이상은 확정할 수 없으므로, 파일이
+       "저장"됐다고 단정하는 문구 대신 "공유를 완료했다"는 문구로 구분한다(PR #2 검수 반영). */
+    if(result.status==="shared") toast(L("PDF 파일 공유를 완료했어요","PDF file shared"));
     else if(result.status==="downloaded") toast(L(`${filename} 파일 저장을 요청했어요`,`Requested to save ${filename}`));
     else if(result.status==="error") toast(L("PDF 저장에 실패했어요","Failed to save PDF"));
     /* status:"cancelled" — 공유 시트를 사용자가 직접 취소한 것이므로 조용히 처리 */
   }catch(e){
+    /* v2.16.3: loadPdfLibs()/exportAsPdf() 실패는 네트워크 문제뿐 아니라 로컬 vendor
+       스크립트 파싱 실패, 캔버스 렌더링 실패, 메모리 부족 등 다양한 원인일 수 있어
+       "인터넷 연결을 확인해 주세요"로 단정하지 않는다(PR #2 검수 반영). */
     console.error("PDF 생성 실패:", e);
-    toast(L("PDF 생성에 실패했어요 — 인터넷 연결을 확인해 주세요","Failed to create PDF — please check your connection"));
+    toast(L("PDF 생성에 실패했어요. 다시 시도해주세요.","Failed to create PDF. Please try again."));
   }finally{
     btn.disabled=false; btn.textContent=orig;
     window.scrollTo(0, scrollY);
@@ -5665,7 +5683,9 @@ document.getElementById("exportBtn").onclick=async ()=>{
   const filename=L(`약효일지_백업_${todayKey()}.json`,`medlog_backup_${todayKey()}.json`);
   const blob=new Blob([JSON.stringify(db,null,2)],{type:"application/json"});
   const result=await saveFileSafely(blob, filename, {title:filename, mimeType:"application/json"});
-  if(result.status==="shared") toast(L(`${filename} 저장을 완료했어요`,`Saved ${filename}`));
+  /* v2.16.3: navigator.share() 완료는 파일이 실제로 저장됐음을 보장하지 않으므로
+     "공유를 완료했다"는 문구로 구분한다(PR #2 검수 반영). */
+  if(result.status==="shared") toast(L("백업 파일 공유를 완료했어요","Backup file shared"));
   else if(result.status==="downloaded") toast(L(`${filename} 파일 저장을 요청했어요`,`Requested to save ${filename}`));
   else if(result.status==="error") toast(L("백업 저장에 실패했어요","Failed to save backup"));
   /* status:"cancelled" — 사용자가 공유창을 직접 취소한 것이므로 조용히 아무 토스트도 띄우지 않는다 */
