@@ -338,6 +338,10 @@ body{font-size:calc(15px*var(--app-font-scale))}
       <div id="outputGraphWrap"></div>
     </div>
 
+    <!-- 승인 3단계(2026-08-26): 3시간(180분) 초과 공백 복구 카드. 2시간 사전 안내
+         (curveGapNoticeHtml, 그래프 탭 하단)와는 별개 — 여기서는 강제 없이 매번 다시 뜬다. -->
+    <div class="daysum-card no-print" id="gapRecoveryCard" style="display:none"></div>
+
     <div class="ribbon-card">
       <div class="card-title"><span data-i18n="todayFlow">오늘 흐름</span><span id="ribbonRange"></span></div>
       <div class="ribbon" id="ribbon"><div class="ribbon-empty" id="ribbonEmpty" data-i18n="noTodayRecord">아직 오늘 기록이 없어요</div></div>
@@ -885,6 +889,10 @@ function isLegacyState(e){ return e.type==="state" && !Number.isFinite(e.output)
 /* 미기록 판단 기준: phs-engine.js의 PHS.config.maxGapMin이 유일한 정의 지점.
    (엔진 파일이 로드되지 않는 예외 상황에서만 동일 값 180을 대체 사용) */
 const MAX_INTERPOLATION_GAP_MINUTES = (typeof PHS!=="undefined"&&PHS.config&&PHS.config.maxGapMin) ? PHS.config.maxGapMin : 180;
+/* 승인 3단계(2026-08-26): "사전 안내"(2시간) 임계값. PHS.config.maxGapMin(180=공백 판정)과
+   통일하지 않고 별개로 관리한다 — 둘 다 이 파일의 이 지점과 phs-engine.js의 PHS.config
+   한 곳에서만 정의되며, 서로 다른 역할(안내 vs 판정)을 명확히 분리해 둔다. */
+const PRE_NOTICE_GAP_MINUTES = (typeof PHS!=="undefined"&&PHS.config&&PHS.config.preNoticeMinutes) ? PHS.config.preNoticeMinutes : 120;
 /* 출력 구간 (진단이 아니라 시각적 참고 영역) */
 const OUTPUT_ZONES = [
   {key:"z80", min:80, max:100, ko:"출력 80~100", en:"Output 80–100", color:"var(--on)"},
@@ -1192,8 +1200,9 @@ function load(){
   try{ const d = JSON.parse(localStorage.getItem(KEY)); if(d&&d.events){ d.meds=(d.meds||[]).map(m=>({sched:[],...m})); d.settings=d.settings||{theme:"light"}; d.outputChecks=d.outputChecks||[]; d.dayMemos=d.dayMemos||{};
     if(typeof PHS!=="undefined") PHS.migrate(d); /* v0.9.19: db.phs 네임스페이스 추가 (기존 키 무변경·가역적) */
     d.primarySymptoms = d.primarySymptoms||[]; /* v0.9.20: 주증상 폴더 구조 준비 (기존 키 무변경) */
+    d.gapResolutions = d.gapResolutions||[]; /* 승인 3단계(2026-08-26): 3시간 공백 복구 상태 저장 (가산적·반복 실행해도 중복 생성 없음) */
     return d; } }catch(e){}
-  return { events:[], meds:[], questions:defaultQuestions(), settings:{theme:"light",notify:false}, outputChecks:[], dayMemos:{}, phs:{v:(typeof PHS!=="undefined"?PHS.SCHEMA_VERSION:1), profile:null, observations:[], range:null, survey:null}, primarySymptoms:[] };
+  return { events:[], meds:[], questions:defaultQuestions(), settings:{theme:"light",notify:false}, outputChecks:[], dayMemos:{}, phs:{v:(typeof PHS!=="undefined"?PHS.SCHEMA_VERSION:1), profile:null, observations:[], range:null, survey:null}, primarySymptoms:[], gapResolutions:[] };
 }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){ toast(L("저장 공간이 부족합니다","Storage space is full")); }
   syncSharedProfile(); }
@@ -1766,7 +1775,20 @@ function addLife(kind, data={}){
     (data.phase==="nap"?L("낮잠","Nap"):(data.phase==="start"?(kind==="sleep"?L("취침","Bedtime"):L("운동","Exercise")):(kind==="sleep"?L("기상","Wake up"):L("운동 종료","Exercise ended"))));
   toast(`${lf.icon} ${lab} ${L("기록됨","recorded")} · ${hm(ts)}`);
 }
-function delEvent(id){ db.events = db.events.filter(e=>e.id!==id); save(); renderAll(); }
+function delEvent(id){
+  const ev=db.events.find(e=>e.id===id);
+  db.events = db.events.filter(e=>e.id!==id);
+  /* stableRange 안전성(총괄 검수 반영): '큰 변화 없이 비슷함'으로 확정했던 구간을 지우면,
+     그 결정의 근거였던 데이터가 사라지는 것이므로 연결된 gapResolutions 레코드를
+     unresolved로 되돌려 다시 판단할 수 있게 한다. 그대로 stable_confirmed/conflict_review로
+     남겨두면 실제로는 아무 근거 데이터도 없는데 "해결됨"으로 영구히 고아 상태가 된다. */
+  if(ev && ev.type==="stableRange"){
+    const gid=gapId(ev.startAt, ev.endAt);
+    const g=(db.gapResolutions||[]).find(r=>r.id===gid && (r.status==="stable_confirmed"||r.status==="conflict_review"));
+    if(g){ g.status="unresolved"; g.resolutionType=null; g.note=""; g.resolvedAt=null; g.updatedAt=Date.now(); }
+  }
+  save(); renderAll();
+}
 
 /* ---------- quick record (원터치 저장, 시트 안 열림) ---------- */
 function quickSave(q){
@@ -2496,6 +2518,7 @@ function renderToday(){
     const trendTxt = last.trend ? ` ${trendSymbol(last.trend)} (${trendLabel(last.trend)})` : "";
     stateLine.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${s.color};margin-right:5px;vertical-align:middle"></span>${L("출력","Output")} ${last.output}${trendTxt} · ${fmtDur((Date.now()-last.ts)/60000)} ${L("경과","elapsed")}`;
   } else { stateLine.textContent = tr("tapToStart"); }
+  renderGapRecoveryCard();
   renderRibbon(tEvents);
   renderDaySummary(tEvents);
   renderQuickOutput();
@@ -2594,8 +2617,19 @@ function evRow(e){
     const dirInfo=TEMPNOTE_DIRS.find(d=>d.key===e.dir);
     const dirLabel=dirInfo? `${dirInfo.ic} ${L(dirInfo.ko,dirInfo.en)}` : L("임시 기록","Note");
     const tagTxt=(e.tags&&e.tags.length)? e.tags.map(k=>{ const t=TEMPNOTE_TAGS.find(x=>x.key===k); return t?L(t.ko,t.en):k; }).join(", ") : "";
-    row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">🕐 ${dirLabel}</div>${(tagTxt||e.memo)?`<div class="m">${[tagTxt,e.memo].filter(Boolean).map(escapeHtml).join(" · ")}</div>`:""}</div>
-      <span class="pill" style="background:var(--ink-2)">${L("임시","Note")}</span>`;
+    /* 승인 2단계: finalized는 "이미 정식 출력기록으로 바뀐 원본"임을 표시해, 같은 시각에
+       뜨는 state 행과 별개의 새 데이터로 오해하지 않게 한다(이중 계산 아님을 화면에서도 명확히). */
+    const isFinalized = e.status==="finalized";
+    const scoreTxt = isFinalized && e.score!=null ? ` · ${L("전환됨→출력","Converted→output")} ${e.score}` : "";
+    row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">🕐 ${dirLabel}${scoreTxt}</div>${(tagTxt||e.memo)?`<div class="m">${[tagTxt,e.memo].filter(Boolean).map(escapeHtml).join(" · ")}</div>`:""}</div>
+      <span class="pill" style="background:var(--ink-2)">${isFinalized? L("전환됨","Converted") : L("임시","Note")}</span>`;
+  } else if(e.type==="stableRange"){
+    /* 승인 4단계: '큰 변화 없이 비슷함' 확인 구간. 기존 if-chain 어디에도 안 걸리면
+       tempnote 때와 같은 부류의 오류(LIFE[e.kind] undefined)가 나므로 전용 분기를 둔다. */
+    const rangeTxt = `${hm(e.startAt)}~${hm(e.endAt)}`;
+    const anchorTxt = e.hasAnchor && e.anchorScore!=null ? ` · ${L("기준","baseline")} ${e.anchorScore}` : ` · ${L("기준점 없음","no baseline")}`;
+    row.innerHTML=`<div class="t">${hm(e.startAt)}</div><div class="b"><div class="s">${L("큰 변화 없이 비슷함","No major change")} · ${rangeTxt}${anchorTxt}</div>${e.note?`<div class="m">⚠ ${escapeHtml(e.note)}</div>`:""}</div>
+      <span class="pill" style="background:var(--ink-2)">${L("안정구간","Stable")}</span>`;
   } else {
     const {s, extraTxt} = lifeRowInfo(e);
     const memoLine=[extraTxt, e.memo].filter(Boolean).join(" · ");
@@ -2608,8 +2642,12 @@ function evRow(e){
     insight.onclick=(ev)=>{ ev.stopPropagation(); openFactorInsight(e); };
     row.appendChild(insight);
   }
-  {
-    /* v0.9.18: 증상 기록도 ✎ 수정 가능 (시각·증상 종류·시작/종료 변경, 다른 종류로 전환 포함) */
+  if(e.type!=="stableRange"){
+    /* v0.9.18: 증상 기록도 ✎ 수정 가능 (시각·증상 종류·시작/종료 변경, 다른 종류로 전환 포함)
+       승인 4단계: stableRange는 editEvent()가 처리하는 종류(state/med/challenge/life/symptom)
+       에 없어 openAddPast()로 떨어지면 "종류: 출력"으로 잘못 열려 저장 시 안정구간이 조용히
+       state 기록으로 뒤바뀔 위험이 있다 — 이번 단계 승인 범위(전용 편집 화면 신설은 없음)에서는
+       수정 버튼을 아예 노출하지 않는 것으로 막는다(삭제는 기존과 동일하게 가능). */
     const edit=document.createElement("button"); edit.className="edit"; edit.innerHTML="✎";
     edit.title=L("수정","Edit"); edit.onclick=()=>editEvent(e);
     row.appendChild(edit);
@@ -3299,11 +3337,199 @@ function curveGapNoticeHtml(k){
   if(!evs.length) return "";
   const last=evs[evs.length-1].ts;
   const gapH=(Date.now()-last)/3600000;
-  if(gapH<2) return "";
+  if(gapH < PRE_NOTICE_GAP_MINUTES/60) return "";
   return `<div class="hint no-print" style="margin-top:8px; padding:10px 12px; background:var(--surface-2); border-radius:10px">
     ${L(`${hm(last)} 이후 ${Math.floor(gapH)}시간 동안 기록이 없습니다.`,`No records for ${Math.floor(gapH)} hours since ${hm(last)}.`)}
     <button class="btn ghost small" style="width:auto; margin-left:8px" onclick="openAddPast()">${L("지난 출력 추가","Add past output")}</button>
     <span style="color:var(--ink-2)"> · ${L("기억나지 않으면 그대로 두어도 됩니다","Leave it unrecorded if you don't remember")}</span></div>`;
+}
+
+/* ============================================================
+   3시간 공백 탐지·복구 (v2.16 신설 — 총괄 승인 2026-08-26, 12장 3~4단계)
+   ------------------------------------------------------------
+   원칙:
+   - 임계값은 PHS.config.maxGapMin(180)·preNoticeMinutes(120) 두 곳만 참조한다(단일 정의
+     지점). 이 파일에서는 그 값을 그대로 물려받은 MAX_INTERPOLATION_GAP_MINUTES만 쓴다.
+   - 정확히 180분은 공백이 아니다(기존 dayOutputStats()·gapCapMs와 동일 규칙: g>gapMs).
+   - 공백을 감지해도 즉시 분석에서 빼지 않는다 — 사용자가 세 가지 중 하나를 명시적으로
+     선택해야 상태가 바뀐다. "기억나지 않음"도 자동 확정하지 않는다.
+   - 원본 출력 기록(type:"state")은 이 로직으로 절대 삭제·수정하지 않는다.
+   ============================================================ */
+function gapId(startAt, endAt){ return `gap_${startAt}_${endAt}`; }
+/* 그 날 실측 출력 기록(anchor) 사이의 180분 초과 간격만 찾는다. 그 날 실측이 하나도
+   없으면(하루 전체가 미기록) 이번 승인 범위 밖이므로 다루지 않는다 — 두 실측 사이/앞뒤
+   경계 공백만 대상. '오늘'은 아직 오지 않은 자정까지를 공백으로 오판하지 않도록 현재
+   시각까지만 본다(dayOutputStats()와 동일한 처리). */
+function detectDayGaps(dayKey){
+  if(typeof PHS==="undefined" || !PHS.config || !PHS.config.dayWindow) return [];
+  const outs = outputStates(byDay()[dayKey]||[]);
+  if(!outs.length) return [];
+  const gapMs = MAX_INTERPOLATION_GAP_MINUTES*60000;
+  const [Y,Mo,Da]=dayKey.split("-").map(Number);
+  const winStart=new Date(Y,Mo-1,Da,PHS.config.dayWindow.startH,0,0).getTime();
+  const hardEnd=new Date(Y,Mo-1,Da,PHS.config.dayWindow.endH,0,0).getTime();
+  const winEnd = dayKey===todayKey()? Math.min(Date.now(), hardEnd) : hardEnd;
+  const pts=[winStart, ...outs.map(e=>e.ts), winEnd].sort((a,b)=>a-b);
+  const gaps=[];
+  for(let i=0;i<pts.length-1;i++){
+    const g=pts[i+1]-pts[i];
+    if(g>gapMs){
+      const startAt=pts[i], endAt=pts[i+1];
+      const anchorEv=outs.filter(e=>e.ts<=startAt).pop();
+      gaps.push({ startAt, endAt, durationMinutes:Math.round(g/60000), anchorScore: anchorEv? anchorEv.output : null });
+    }
+  }
+  return gaps;
+}
+/* 감지된 공백을 db.gapResolutions에 반영한다(재계산 안정성 — 총괄 검수 반영).
+   1) 새로 감지된 공백만 추가한다. 이미 같은 id(같은 시작~끝)가 있으면 절대 덮어쓰지
+      않는다 — 사용자가 이미 손댄 상태(backfilled 등)를 재실행이 되돌리면 안 된다.
+   2) 아직 사용자가 판단하지 않은(status:"unresolved") 레코드 중, 이 dayKey에 속하지만
+      "지금 다시 계산해 보니 더 이상 존재하지 않는" 것은 정리(제거)한다. 공백 중간에
+      실제 출력 기록이 새로 생기면(예: 정식 기록으로 직접 입력) 그 공백은 사라지거나
+      두 개의 더 작은 공백으로 쪼개질 수 있는데, 그때 옛 unresolved 레코드를 그대로 두면
+      이미 존재하지 않는 공백이 카드에 계속 뜨는 문제(중복·유령 공백)가 생긴다.
+      이미 사용자가 확정한 상태(backfilled/stable_confirmed/unknown_excluded/conflict_review)는
+      절대 건드리지 않는다 — 그 뒤에 데이터가 바뀌어도 사용자의 그 시점 판단은 영구 기록으로
+      남긴다("결측 구간은 결측으로 남긴다" 원칙과 동일하게, 확정된 결정도 뒤집지 않는다). */
+function syncGapResolutions(dayKey){
+  db.gapResolutions = db.gapResolutions||[];
+  const now=Date.now();
+  const detected = detectDayGaps(dayKey);
+  const detectedIds = new Set(detected.map(g=>gapId(g.startAt, g.endAt)));
+  let changed=false;
+
+  detected.forEach(g=>{
+    const id=gapId(g.startAt, g.endAt);
+    if(db.gapResolutions.some(r=>r.id===id)) return;
+    db.gapResolutions.push({ id, startAt:g.startAt, endAt:g.endAt, durationMinutes:g.durationMinutes,
+      status:"unresolved", resolutionType:null, anchorScore:g.anchorScore, confidence:"unknown",
+      note:"", resolvedAt:null, createdAt:now, updatedAt:now });
+    changed=true;
+  });
+
+  const beforeLen=db.gapResolutions.length;
+  db.gapResolutions = db.gapResolutions.filter(r=>{
+    if(r.status!=="unresolved") return true; /* 확정된 결정은 절대 유지 */
+    /* startAt 기준으로 이 dayKey 소속 여부를 판단한다(끝시각은 자정 정각일 때 다음 날
+       00:00으로 정규화되는 Date 특성 때문에 날짜 경계 판단에 부적합 — 시작시각은 항상
+       그 날의 dayWindow.startH 이후이므로 안전하다). */
+    if(dkey(new Date(r.startAt))!==dayKey) return true; /* 다른 날짜 레코드는 이 호출과 무관 */
+    return detectedIds.has(r.id); /* 오늘 재계산 결과에 더 이상 없으면 제거(유령 공백 정리) */
+  });
+  if(db.gapResolutions.length!==beforeLen) changed=true;
+
+  /* 새로 감지되거나 정리된 것이 있을 때만 저장한다 — 매 렌더링마다(recentDayKeysForGapScan)
+     불필요하게 쓰지 않기 위함. 이 저장이 빠지면 새로 감지된 unresolved 공백이 다음 저장
+     전까지는 메모리에만 있다가 앱 재시작 시 사라지는 문제가 있었다(테스트로 발견). */
+  if(changed) save();
+}
+function recentDayKeysForGapScan(n){
+  const days=[]; for(let i=0;i<n;i++){ const d=new Date(); d.setDate(d.getDate()-i); days.push(dkey(d)); }
+  return days;
+}
+function resolveGap(id, status, extra){
+  const g=(db.gapResolutions||[]).find(r=>r.id===id); if(!g) return;
+  Object.assign(g, extra||{}, { status, resolvedAt:Date.now(), updatedAt:Date.now() });
+  save(); renderAll();
+}
+/* 하루 마무리 카드 — 가장 이른 미해결(unresolved) 공백 1개만 보여주고, 나머지는 개수로만
+   안내한다(여러 개를 한꺼번에 복잡하게 보여주지 않는다). "나중에 확인"을 위한 별도 닫기
+   버튼은 두지 않는다 — 이 카드 자체가 매번 다시 뜨는 비강제 안내이므로, 그냥 넘어가면
+   자연히 "나중에"가 되고 명시적으로 세 선택지 중 하나를 고르기 전엔 상태가 바뀌지 않는다. */
+function renderGapRecoveryCard(){
+  const card=document.getElementById("gapRecoveryCard"); if(!card) return;
+  recentDayKeysForGapScan(7).forEach(syncGapResolutions);
+  const unresolved=(db.gapResolutions||[]).filter(r=>r.status==="unresolved").sort((a,b)=>a.startAt-b.startAt);
+  if(!unresolved.length){ card.style.display="none"; card.innerHTML=""; return; }
+  const g=unresolved[0];
+  card.style.display="";
+  card.innerHTML=`
+    <div class="card-title">${L("확인이 필요한 기록 공백이 있습니다","A record gap needs your review")}</div>
+    <div style="font-size:13px; color:var(--ink-2); margin-bottom:10px">
+      ${hm(g.startAt)}~${hm(g.endAt)} · ${fmtDur(g.durationMinutes)}${unresolved.length>1? ` · ${L(`오늘 공백 ${unresolved.length}개 중 1개`,`1 of ${unresolved.length} gaps today`)}` : ""}
+    </div>
+    <div style="display:flex; flex-direction:column; gap:8px">
+      <button class="btn primary" id="gapBackfillBtn" type="button">${L("중간 변화 추가","Add change in between")}</button>
+      <button class="btn ghost" id="gapStableBtn" type="button">${L("큰 변화 없이 비슷함","No major change")}</button>
+      <button class="btn ghost" id="gapUnknownBtn" type="button">${L("기억나지 않음","I don't remember")}</button>
+    </div>`;
+  document.getElementById("gapBackfillBtn").onclick=()=>openGapBackfillFlow(g);
+  document.getElementById("gapStableBtn").onclick=()=>openGapStableConfirm(g);
+  document.getElementById("gapUnknownBtn").onclick=()=>resolveGapUnknown(g);
+}
+/* 선택 1: 중간 변화 추가 — 임시 신호(방향)를 공백 범위 안의 한 시각에 남긴다.
+   기존 임시기록 체계(addTempNote)를 그대로 재사용해 새 입력 방식을 만들지 않는다. */
+function openGapBackfillFlow(g){
+  openSheet(`
+    <h2>${L("중간 변화 추가","Add change in between")}</h2>
+    <div class="hint" style="margin-bottom:10px">${L(`${hm(g.startAt)}~${hm(g.endAt)} 사이에 있었던 변화를 골라주세요.`,`Pick what happened between ${hm(g.startAt)} and ${hm(g.endAt)}.`)}</div>
+    <div class="chips" style="display:flex; gap:6px; flex-wrap:wrap">
+      ${TEMPNOTE_DIRS.filter(d=>["up","peak","down","bottom"].includes(d.key)).map(d=>`<button type="button" class="btn ghost" data-gdir="${d.key}" style="flex:1; min-width:60px"><span style="font-size:20px">${d.ic}</span><br>${L(d.ko,d.en)}</button>`).join("")}
+    </div>
+    <div class="field" style="margin-top:10px" id="gapCustomTimeField"></div>
+    <button class="btn ghost" style="margin-top:8px" onclick="closeSheet()">${L("취소","Cancel")}</button>
+  `);
+  const mid=Math.round((g.startAt+g.endAt)/2);
+  document.getElementById("gapCustomTimeField").innerHTML=timeFieldHtml("gapBackfillTime", mid);
+  bindTimeField("gapBackfillTime");
+  let gapDirFired=false; /* 중복 탭 방지 — 방향 버튼은 한 번만 유효 */
+  document.querySelectorAll("[data-gdir]").forEach(b=>{
+    b.onclick=()=>{
+      if(gapDirFired) return; gapDirFired=true;
+      let ts=tsFromTimeField("gapBackfillTime", mid);
+      ts=Math.min(Math.max(ts,g.startAt), g.endAt); /* 공백 범위를 벗어나지 않게 보정 */
+      addTempNote(b.dataset.gdir, "", ts, [], "app");
+      resolveGap(g.id, "backfilled", {resolutionType:"retrospective_event"});
+      closeSheet();
+      toast(L("중간 변화를 추가했어요","Added the change"));
+    };
+  });
+}
+/* 선택 2: 큰 변화 없이 비슷함 — 가짜 점수를 여러 개 만들지 않고 하나의 구간(stableRange)
+   객체로만 저장한다. 앞뒤 점수가 20점 이상 차이 나면 경고를 보여주되 자동으로 막지는
+   않는다(승인 ③ — 경고 기준일 뿐 무효화 기준 아님). */
+function openGapStableConfirm(g){
+  const before = outputStates(db.events).filter(e=>e.ts<=g.startAt);
+  const after  = outputStates(db.events).filter(e=>e.ts>=g.endAt);
+  const anchor = before.length? before[before.length-1].output : null;
+  const closing = after.length? after[0].output : null;
+  const diff = (anchor!=null && closing!=null)? Math.abs(anchor-closing) : null;
+  const proceed=(conflict)=>{
+    createStableRange(g, anchor, {conflict:!!conflict});
+    resolveGap(g.id, conflict? "conflict_review" : "stable_confirmed",
+      {resolutionType:"stable_range", anchorScore:anchor, confidence: anchor!=null? "recalled":"unknown",
+       note: conflict? "점수와 회상 내용 불일치" : ""});
+    closeSheet();
+    toast(conflict? L("불일치 표시와 함께 저장했어요","Saved with a mismatch note") : L("변화 없음 구간으로 저장했어요","Saved as a stable period"));
+  };
+  if(diff!=null && diff>=20){
+    openSheet(`
+      <h2>${L("확인해 주세요","Please check")}</h2>
+      <div class="hint" style="margin-bottom:10px">${L(`시작과 끝의 점수 차이가 큽니다(${anchor}→${closing}). 언제부터 달라졌는지 기억나시나요?`,`The scores differ a lot (${anchor}→${closing}). Do you remember when it changed?`)}</div>
+      <div style="display:flex; flex-direction:column; gap:8px">
+        <button class="btn ghost" id="gapConflictBackBtn" type="button">${L("중간 변화 추가","Add change in between")}</button>
+        <button class="btn primary" id="gapConflictStillBtn" type="button">${L("그래도 비슷했다고 저장","Save as similar anyway")}</button>
+        <button class="btn ghost" type="button" onclick="closeSheet()">${L("취소","Cancel")}</button>
+      </div>`);
+    document.getElementById("gapConflictBackBtn").onclick=()=>openGapBackfillFlow(g);
+    document.getElementById("gapConflictStillBtn").onclick=()=>proceed(true);
+  } else {
+    proceed(false);
+  }
+}
+function createStableRange(g, anchor, opts){
+  opts=opts||{};
+  db.events.push({ id:uid(), type:"stableRange", ts:g.startAt, startAt:g.startAt, endAt:g.endAt,
+    anchorScore: anchor??null, hasAnchor: anchor!=null, confidence:"recalled", source:"retrospective",
+    note: opts.conflict? "점수와 회상 내용 불일치" : "" });
+  db.events.sort((a,b)=>a.ts-b.ts); save();
+}
+/* 선택 3: 기억나지 않음 — 명시적 확인(confirm)을 거쳐야만 확정한다. 자동 확정 없음. */
+function resolveGapUnknown(g){
+  if(!confirm(L("이 구간의 중간 상태를 기억할 수 없다고 확정할까요?","Mark this gap as unrecoverable?"))) return;
+  resolveGap(g.id, "unknown_excluded", {resolutionType:"give_up"});
+  toast(L("공백을 미확인으로 남겼어요","Marked as unrecorded"));
 }
 
 /* ============================================================
