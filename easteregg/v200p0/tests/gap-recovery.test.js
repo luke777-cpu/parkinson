@@ -399,5 +399,76 @@ console.log("== M. stableRange 안전성 추가 검증 (총괄 검수 반영) ==
   ok(afterRT && afterRT.hasAnchor===beforeRT.hasAnchor && afterRT.anchorScore===beforeRT.anchorScore, "JSON 왕복 후에도 stableRange의 hasAnchor·anchorScore 그대로 유지됨");
 }
 
+console.log("== N. finalized 임시신호 타임라인 표시 정리 (총괄 검수 반영, 다음 병합 전 UX 보완) ==");
+{
+  const w=loadFresh(null);
+  const tnId=w.eval(`addTempNote("peak","",${Date.now()-3600000},[],"app").id`);
+
+  console.log("-- 전환 전: 임시신호 한 줄만 표시 --");
+  let rows=w.eval(`(function(){
+    const list=document.createElement("div");
+    visibleEvents(db.events).forEach(e=>list.appendChild(evRow(e)));
+    return [...list.children].map(r=>r.querySelector(":scope > .pill").textContent);
+  })()`);
+  ok(rows.length===1 && rows[0]==="임시", "전환 전에는 화면에 임시신호 1줄만 보임(정식 기록 없음): "+JSON.stringify(rows));
+
+  // 전환(review sheet와 동일한 절차)
+  w.eval(`openTempNoteReview()`);
+  w.document.querySelector('[data-tn="'+tnId+'"] .tn-score').value="85";
+  w.document.getElementById("tnSaveAll").click();
+
+  console.log("-- 전환 후: 정식 출력 한 줄만 표시(원본 tempnote 행은 숨김) --");
+  rows=w.eval(`(function(){
+    const list=document.createElement("div");
+    visibleEvents(db.events).forEach(e=>list.appendChild(evRow(e)));
+    return [...list.children].map(r=>({pill:r.querySelector(":scope > .pill").textContent, html:r.innerHTML}));
+  })()`);
+  ok(rows.length===1, "전환 후 화면에는 정식 출력 1줄만 보임(임시신호 원본 행 숨김): "+rows.length+"줄");
+  ok(rows[0] && rows[0].pill==="출력", "남은 한 줄은 '출력' 배지");
+  ok(rows[0] && rows[0].html.includes("임시신호에서 전환됨"), "'임시신호에서 전환됨' 배지 표시됨");
+  ok(rows[0] && rows[0].html.includes("피크에서 전환"), "원래 신호 종류(피크)가 함께 표시됨: 예) 출력 85 · 피크에서 전환");
+
+  console.log("-- finalized 원본은 localStorage(데이터)에는 그대로 남아 있음 --");
+  const KEY=w.eval("KEY");
+  const saved=JSON.parse(w.localStorage.getItem(KEY));
+  const savedNote=saved.events.find(e=>e.id===tnId);
+  ok(!!savedNote && savedNote.status==="finalized" && savedNote.score===85, "저장소에는 finalized tempnote 원본이 삭제되지 않고 그대로 있음");
+  const savedState=saved.events.find(e=>e.promotedFrom===tnId);
+  ok(!!savedState, "promotedFrom 연결이 저장소에도 유지됨");
+
+  console.log("-- 정량 분석에서는 한 번만 계산됨(이중 계산 없음, 기존 정책 재확인) --");
+  const outputCount=w.eval(`PHS.adaptEvents(db.events, 0, Date.now()+86400000).outputEvents.length`);
+  ok(outputCount===1, "PHS 엔진 입력 기준 출력 기록은 1건뿐(tempnote는애초에 type!=='state'라 집계 대상 아님): "+outputCount);
+
+  console.log("-- 미처리(temporary) 임시신호는 기존처럼 그대로 표시 --");
+  w.eval(`addTempNote("up","",${Date.now()-1800000},[],"app")`);
+  rows=w.eval(`(function(){
+    const list=document.createElement("div");
+    visibleEvents(db.events).forEach(e=>list.appendChild(evRow(e)));
+    return [...list.children].map(r=>r.querySelector(":scope > .pill").textContent);
+  })()`);
+  ok(rows.includes("임시"), "새로 추가한 미처리 임시신호는 정상적으로 화면에 보임: "+JSON.stringify(rows));
+
+  console.log("-- JSON 왕복 후에도 한 줄만 표시됨 --");
+  const exported=w.eval(`JSON.stringify(db)`);
+  w.eval(`(function(){ const d=JSON.parse(${JSON.stringify(exported)}); db=Object.assign({questions:defaultQuestions(),settings:{theme:db.settings.theme,notify:false},meds:[]}, d); db.meds=(db.meds||[]).map(m=>({sched:[],...m})); save(); })()`);
+  const rowsAfterRT=w.eval(`(function(){
+    const list=document.createElement("div");
+    visibleEvents(db.events).forEach(e=>list.appendChild(evRow(e)));
+    return [...list.children].map(r=>r.querySelector(":scope > .pill").textContent);
+  })()`);
+  ok(rowsAfterRT.filter(p=>p==="출력").length===1, "왕복 후에도 finalized 건은 여전히 정식 출력 1줄로만 표시됨: "+JSON.stringify(rowsAfterRT));
+
+  console.log("-- 원본을 찾을 수 없는 고아 promotedFrom도 오류 없이 표시 --");
+  const w2=loadFresh(null);
+  w2.eval(`db.events.push({id:uid(), type:"state", state:"on", ts:Date.now(), output:60, trend:"stable",
+    symptoms:[], customSymptom:"", promotedFrom:"nonexistent-id-12345", source:"app"}); save(); renderAll();`);
+  ok(w2._errs.length===0, "원본이 없는 promotedFrom을 가진 state 기록도 렌더링 오류 없음: "+w2._errs.join("; "));
+  const orphan=w2.eval(`(function(){ const e=db.events.find(x=>x.promotedFrom==="nonexistent-id-12345"); const row=evRow(e); return {title:row.querySelector(".s").textContent, hasBadge: row.innerHTML.includes("임시신호에서 전환됨")}; })()`);
+  ok(orphan.title.includes("출력 60"), "고아 promotedFrom이어도 출력값 등 나머지 정보는 정상 표시");
+  ok(!orphan.title.includes("에서 전환"), "원본을 못 찾으면 '~에서 전환' 같은 구체적 신호 종류 문구는 조용히 생략됨(추측 텍스트 없음): "+orphan.title);
+  ok(orphan.hasBadge, "다만 '임시신호에서 전환됨' 일반 배지는 promotedFrom이 있다는 사실만으로 그대로 표시됨(원본을 못 찾아도 전환된 기록이라는 사실 자체는 알려줌)");
+}
+
 console.log(`\nRESULT: ${pass} passed, ${fail} failed`);
 process.exit(fail?1:0);

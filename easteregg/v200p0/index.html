@@ -2538,7 +2538,7 @@ function renderToday(){
   if(tEvents.length){
     const title=document.createElement("div"); title.className="card-title"; title.style.marginTop="6px"; title.textContent=tr("todayRecords");
     list.appendChild(title);
-    [...tEvents].reverse().forEach(e=>list.appendChild(evRow(e)));
+    [...visibleEvents(tEvents)].reverse().forEach(e=>list.appendChild(evRow(e)));
   }
 }
 function editEventTime(id){
@@ -2581,6 +2581,14 @@ function lifeRowInfo(e){
   }
   return {s, extraTxt};
 }
+/* 총괄 검수 반영(UX 보완, 다음 병합 전): finalized 임시신호는 데이터로는 그대로
+   보존하지만(백업·삭제·promotedFrom 추적 모두 그대로), 일반 타임라인 목록에서는
+   숨긴다 — 같은 사건이 이미 promotedFrom으로 연결된 정식 state 기록 한 줄로 대표되므로
+   두 줄로 중복 표시하지 않는다. status가 아직 없는 옛 tempnote(이 기능 이전 데이터)는
+   temporary로 간주해 그대로 보인다(기존 pendingTempNotes()와 동일한 판단 기준). */
+function visibleEvents(list){
+  return (list||[]).filter(e=>!(e.type==="tempnote" && e.status==="finalized"));
+}
 function evRow(e){
   const row=document.createElement("div"); row.className="evrow";
   if(e.type==="state"){ const s=SMAP[e.state];
@@ -2590,10 +2598,27 @@ function evRow(e){
        구분되도록 "참고 상태: ON" 형태로 표시한다 (출력 곡선에는 영향을 주지 않는 별도 정보). */
     const hasOut = e.output!=null;
     const outTitle = hasOut ? `${L("출력","Output")} ${e.output}${trendSymbol(e.trend)}` : `${L("참고 상태","Reference state")}: ${stateName(e.state)}`;
-    const title = riseTxt? `${outTitle} · ${riseTxt}` : (e.state==="dysk" && e.dysk!=null ? `${outTitle} · ${L("강도","intensity")} ${e.dysk}` : outTitle);
+    /* 총괄 검수 반영(UX 보완): 임시 신호에서 전환된 정식 기록은 원래 신호 종류를 함께
+       표시한다(예: "출력 78 · 피크에서 전환"). 원본 임시기록(promotedFrom)이 삭제됐거나
+       옛 데이터라 못 찾아도(고아 promotedFrom) 조용히 생략할 뿐 오류를 내지 않는다 —
+       화면 표시만의 문제이므로 나머지 정보는 정상 표시돼야 한다. */
+    let originTxt = "";
+    if(e.promotedFrom){
+      const origin = db.events.find(x=>x.id===e.promotedFrom && x.type==="tempnote");
+      const dirInfo = origin && TEMPNOTE_DIRS.find(d=>d.key===origin.dir);
+      if(dirInfo) originTxt = ` · ${L(`${dirInfo.ko}에서 전환`,`Converted from ${dirInfo.en}`)}`;
+    }
+    const title = (riseTxt? `${outTitle} · ${riseTxt}` : (e.state==="dysk" && e.dysk!=null ? `${outTitle} · ${L("강도","intensity")} ${e.dysk}` : outTitle)) + originTxt;
     const trendTxt = hasOut && e.trend ? trendLabel(e.trend) : "";
     const extra=[trendTxt, e.gait!=null?`${L("보행","Gait")} ${e.gait}`:"", symTxt?`${L("동반증상","Symptoms")}: ${symTxt}`:"", e.memo].filter(Boolean).join(" · ");
-    row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">${title}</div>${extra?`<div class="m">${escapeHtml(extra)}</div>`:""}</div>
+    /* 360px 확인 중 발견(총괄 검수 반영): 이 배지를 시간 열(.t) 오른쪽의 다른 배지(.pill)와
+       나란한 flex 형제로 두면, flex-basis:0인 .b가 flex-basis:auto인 배지들에 밀려 폭이
+       0으로 짜부라지고 제목이 세로로 한 글자씩 쪼개져 보이는 버그가 있었다(flex-wrap만
+       추가해서는 해결 안 됨 — 배지들의 flex-basis가 우선 배치돼 .b가 항상 손해를 봄).
+       그래서 이 배지는 .b 안, 제목 바로 아래 자체 줄로 넣는다 — .b의 원래 폭 안에서만
+       줄바꿈되므로 옆 배지 폭과 절대 경쟁하지 않는다. */
+    const promotedBadgeLine = e.promotedFrom? `<div class="m" style="margin-top:2px"><span class="pill" style="background:var(--ink-2); display:inline-block">${L("임시신호에서 전환됨","From quick signal")}</span></div>` : "";
+    row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">${title}</div>${extra?`<div class="m">${escapeHtml(extra)}</div>`:""}${promotedBadgeLine}</div>
       <span class="pill" style="background:${s.color}">${hasOut?L("출력","Output"):L("상태","State")}</span>`;
   } else if(e.type==="med"){
     row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">💊 ${escapeHtml(e.drug)}${e.dose?` ${e.dose}mg`:""}</div>${e.memo?`<div class="m">${escapeHtml(e.memo)}</div>`:""}</div>
@@ -2931,8 +2956,11 @@ function renderLog(){
   keys.forEach(k=>{
     const card=document.createElement("div"); card.className="daycard"; card.dataset.day=k;
     const h=document.createElement("h3"); h.textContent=fmtDateK(k); card.appendChild(h);
-    const sub=document.createElement("div"); sub.className="sub"; sub.textContent=L(`${days[k].length}건`,`${days[k].length} records`); card.appendChild(sub);
-    [...days[k]].reverse().forEach(e=>card.appendChild(evRow(e)));
+    /* finalized 임시신호는 화면에서 숨기므로, 건수도 실제로 보이는 줄 수에 맞춘다
+       (숨긴 행까지 세면 "3건"인데 2줄만 보이는 불일치가 생긴다). */
+    const shown=visibleEvents(days[k]);
+    const sub=document.createElement("div"); sub.className="sub"; sub.textContent=L(`${shown.length}건`,`${shown.length} records`); card.appendChild(sub);
+    [...shown].reverse().forEach(e=>card.appendChild(evRow(e)));
     body.appendChild(card);
   });
 }
@@ -3282,7 +3310,9 @@ function svgCurve(dayKey){
   }).join("")}</svg>`;
 }
 function curveEventListHtml(dayKey){
-  const days=byDay(); const evs=(days[dayKey]||[]).slice().sort((a,b)=>a.ts-b.ts);
+  const days=byDay();
+  /* finalized 임시신호는 여기서도 숨긴다(evRow와 동일 정책) — 정식 전환 기록 한 줄로 대표됨 */
+  const evs=visibleEvents(days[dayKey]||[]).slice().sort((a,b)=>a.ts-b.ts);
   if(!evs.length) return "";
   const rows = evs.map(e=>{
     if(e.type==="challenge") return `<div class="li"><div class="grow"><div class="name">🧪 ${escapeHtml(e.title||"Medication Challenge")}</div><div class="meta">${hm(e.ts)}${(e.lines&&e.lines[0])?" · "+escapeHtml(e.lines[0]):""}</div></div></div>`;
@@ -3290,12 +3320,30 @@ function curveEventListHtml(dayKey){
     if(e.type==="state"){ const s=SMAP[e.state];
       const riseTxt = e.riseResult? riseLabel(e.riseResult) : "";
       const symTxt = [...(e.symptoms||[]).map(k=>symLabel(k)), e.customSymptom].filter(Boolean).join(", ");
+      /* evRow()와 동일하게, 임시신호에서 전환된 기록이면 원래 신호 종류를 함께 표시한다.
+         원본을 못 찾아도(고아 promotedFrom) 조용히 생략한다. */
+      let originTxt = "";
+      if(e.promotedFrom){
+        const origin = db.events.find(x=>x.id===e.promotedFrom && x.type==="tempnote");
+        const dirInfo = origin && TEMPNOTE_DIRS.find(d=>d.key===origin.dir);
+        if(dirInfo) originTxt = ` · ${L(`${dirInfo.ko}에서 전환`,`Converted from ${dirInfo.en}`)}`;
+      }
       const extra=[e.output!=null?`${L("출력","Output")} ${e.output}`:"",e.gait!=null?`${L("보행","Gait")} ${e.gait}`:"",e.dysk!=null?`${L("이상운동 강도","Dyskinesia intensity")} ${e.dysk}`:"",symTxt?`${L("동반증상","Symptoms")} ${symTxt}`:""].filter(Boolean).join(" · ");
-      return `<div class="li"><div class="grow"><div class="name" style="color:${s.color}">${stateName(e.state)}${riseTxt?` · ${riseTxt}`:""}</div><div class="meta">${hm(e.ts)}${extra?" · "+extra:""}</div></div></div>`; }
+      return `<div class="li"><div class="grow"><div class="name" style="color:${s.color}">${stateName(e.state)}${riseTxt?` · ${riseTxt}`:""}${originTxt}</div><div class="meta">${hm(e.ts)}${extra?" · "+extra:""}</div></div></div>`; }
     if(e.type==="symptom"){
       const label = symQuickLabel(e.key) + (e.key==="other" && e.customText ? ` (${escapeHtml(e.customText)})` : "");
       const phaseLabel = e.phase==="start" ? L("시작","started") : L("종료","ended");
       return `<div class="li"><div class="grow"><div class="name">${label} ${phaseLabel}</div><div class="meta">${hm(e.ts)}</div></div></div>`;
+    }
+    if(e.type==="tempnote"){
+      /* 이 시점엔 temporary만 남아 있다(finalized는 위에서 걸러짐) */
+      const dirInfo=TEMPNOTE_DIRS.find(d=>d.key===e.dir);
+      const dirLabel=dirInfo? `${dirInfo.ic} ${L(dirInfo.ko,dirInfo.en)}` : L("임시 기록","Note");
+      return `<div class="li"><div class="grow"><div class="name">🕐 ${dirLabel}</div><div class="meta">${hm(e.ts)}</div></div></div>`;
+    }
+    if(e.type==="stableRange"){
+      const anchorTxt = e.hasAnchor && e.anchorScore!=null ? ` · ${L("기준","baseline")} ${e.anchorScore}` : "";
+      return `<div class="li"><div class="grow"><div class="name">${L("큰 변화 없이 비슷함","No major change")}${anchorTxt}</div><div class="meta">${hm(e.startAt)}~${hm(e.endAt)}</div></div></div>`;
     }
     const lf=LIFE[e.kind]; return `<div class="li"><div class="grow"><div class="name">${lf.icon} ${e.kind==="meal"?(e.mealType?tagLabel(e.mealType):L("식사","Meal")):L(lf.ko,lf.en)}</div><div class="meta">${hm(e.ts)}</div></div></div>`;
   }).join("");
