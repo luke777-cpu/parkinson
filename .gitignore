@@ -1,0 +1,24 @@
+# 의존성 — 이 저장소는 lockfile 없이 package.json(semver 범위)만으로 관리해왔다
+# (git 이력에 package-lock.json/yarn.lock/pnpm-lock.yaml 커밋 이력 없음, CI 없음,
+#  DEPLOYMENT_CHECKLIST.md도 "npm install && npm test"만 안내 — npm ci 아님).
+# 그 관행을 그대로 따라 node_modules/와 lockfile을 커밋하지 않는다.
+node_modules/
+package-lock.json
+npm-shrinkwrap.yaml
+yarn.lock
+pnpm-lock.yaml
+
+# 테스트 산출물·캐시
+test-results/
+playwright-report/
+.playwright-cache/
+coverage/
+*.tmp
+.cache/
+
+# 로그
+*.log
+npm-debug.log*
+
+# OS/에디터
+.DS_Store

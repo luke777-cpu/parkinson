@@ -338,6 +338,10 @@ body{font-size:calc(15px*var(--app-font-scale))}
       <div id="outputGraphWrap"></div>
     </div>
 
+    <!-- 승인 3단계(2026-08-26): 3시간(180분) 초과 공백 복구 카드. 2시간 사전 안내
+         (curveGapNoticeHtml, 그래프 탭 하단)와는 별개 — 여기서는 강제 없이 매번 다시 뜬다. -->
+    <div class="daysum-card no-print" id="gapRecoveryCard" style="display:none"></div>
+
     <div class="ribbon-card">
       <div class="card-title"><span data-i18n="todayFlow">오늘 흐름</span><span id="ribbonRange"></span></div>
       <div class="ribbon" id="ribbon"><div class="ribbon-empty" id="ribbonEmpty" data-i18n="noTodayRecord">아직 오늘 기록이 없어요</div></div>
@@ -885,6 +889,10 @@ function isLegacyState(e){ return e.type==="state" && !Number.isFinite(e.output)
 /* 미기록 판단 기준: phs-engine.js의 PHS.config.maxGapMin이 유일한 정의 지점.
    (엔진 파일이 로드되지 않는 예외 상황에서만 동일 값 180을 대체 사용) */
 const MAX_INTERPOLATION_GAP_MINUTES = (typeof PHS!=="undefined"&&PHS.config&&PHS.config.maxGapMin) ? PHS.config.maxGapMin : 180;
+/* 승인 3단계(2026-08-26): "사전 안내"(2시간) 임계값. PHS.config.maxGapMin(180=공백 판정)과
+   통일하지 않고 별개로 관리한다 — 둘 다 이 파일의 이 지점과 phs-engine.js의 PHS.config
+   한 곳에서만 정의되며, 서로 다른 역할(안내 vs 판정)을 명확히 분리해 둔다. */
+const PRE_NOTICE_GAP_MINUTES = (typeof PHS!=="undefined"&&PHS.config&&PHS.config.preNoticeMinutes) ? PHS.config.preNoticeMinutes : 120;
 /* 출력 구간 (진단이 아니라 시각적 참고 영역) */
 const OUTPUT_ZONES = [
   {key:"z80", min:80, max:100, ko:"출력 80~100", en:"Output 80–100", color:"var(--on)"},
@@ -1192,8 +1200,9 @@ function load(){
   try{ const d = JSON.parse(localStorage.getItem(KEY)); if(d&&d.events){ d.meds=(d.meds||[]).map(m=>({sched:[],...m})); d.settings=d.settings||{theme:"light"}; d.outputChecks=d.outputChecks||[]; d.dayMemos=d.dayMemos||{};
     if(typeof PHS!=="undefined") PHS.migrate(d); /* v0.9.19: db.phs 네임스페이스 추가 (기존 키 무변경·가역적) */
     d.primarySymptoms = d.primarySymptoms||[]; /* v0.9.20: 주증상 폴더 구조 준비 (기존 키 무변경) */
+    d.gapResolutions = d.gapResolutions||[]; /* 승인 3단계(2026-08-26): 3시간 공백 복구 상태 저장 (가산적·반복 실행해도 중복 생성 없음) */
     return d; } }catch(e){}
-  return { events:[], meds:[], questions:defaultQuestions(), settings:{theme:"light",notify:false}, outputChecks:[], dayMemos:{}, phs:{v:(typeof PHS!=="undefined"?PHS.SCHEMA_VERSION:1), profile:null, observations:[], range:null, survey:null}, primarySymptoms:[] };
+  return { events:[], meds:[], questions:defaultQuestions(), settings:{theme:"light",notify:false}, outputChecks:[], dayMemos:{}, phs:{v:(typeof PHS!=="undefined"?PHS.SCHEMA_VERSION:1), profile:null, observations:[], range:null, survey:null}, primarySymptoms:[], gapResolutions:[] };
 }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){ toast(L("저장 공간이 부족합니다","Storage space is full")); }
   syncSharedProfile(); }
@@ -1273,8 +1282,12 @@ const TEMPNOTE_DIRS = [
   {key:"signal", ko:"첫 신호",  en:"First signal", ic:"⚡", trend:"rising"},
   {key:"up",     ko:"상승",     en:"Rising",       ic:"↗", trend:"rising"},
   {key:"peak",   ko:"피크",     en:"Peak",         ic:"△", trend:"stable"},
-  {key:"down",   ko:"하강",     en:"Falling",      ic:"↘", trend:"falling"},
+  {key:"down",   ko:"하락",     en:"Falling",      ic:"↘", trend:"falling"}, /* 총괄 검수 반영: 화면 표시만 '하강'→'하락' 통일(내부 key/trend는 falling 그대로 호환 유지) */
   {key:"same",   ko:"유지",     en:"Same",         ic:"→", trend:"stable"},
+  /* 승인 1단계(2026-08-26): 약효 저점("바닥")을 남길 방법이 없었다 — peak(피크)와 대칭되는
+     극값이므로 trend는 peak와 동일하게 "stable"로 두고, 점수를 나중에 매길 때 실제 출력값이
+     off/on 여부를 결정하게 한다(피크와 동일한 설계 원칙, stateFromTrend() 참고). */
+  {key:"bottom", ko:"바닥",     en:"Bottom",       ic:"▼", trend:"stable"},
 ];
 /* 설계도 7번: 상세 증상은 메인 화면에 항상 노출하지 않고, 이벤트 기록 후 필요할 때만
    펼쳐서 선택한다. 기존 증상 사전(SYMPTOM_QUICK)의 라벨을 그대로 재사용해 새 목록을
@@ -1289,8 +1302,20 @@ const TEMPNOTE_TAGS = [
   {key:"pain",   ko:"통증",       en:"Pain"},
 ];
 function tempNoteDirTrend(dirKey){ const d=TEMPNOTE_DIRS.find(x=>x.key===dirKey); return d? d.trend : "stable"; }
-function addTempNote(dir, memo, ts, tags){
-  const ev={ id:uid(), type:"tempnote", ts:ts||Date.now(), dir:dir||null, memo:memo||"", tags:tags||[] };
+/* 승인 2단계(2026-08-26)·시간필드 정리(총괄 검수 반영): 임시 신호는 출력점수와 분리된
+   별도 이벤트로 계속 저장한다. 시간 필드 3종의 의미를 명확히 구분한다 —
+   - ts:          실제 변화가 발생했다고 사용자가 지목한 시각("30분 전" 등 프리셋 포함, 뒤로
+                  갈 수 있음). 정식 기록으로 전환돼도 이 값은 그대로 물려받는다.
+   - createdAt:   이 임시 신호를 최초로 생성(탭)한 실제 시각. ts와 다를 수 있다(예: "30분 전"
+                  프리셋을 눌러 ts는 과거, createdAt은 지금).
+   - finalizedAt: 점수를 매겨 정식 기록(type:"state")으로 전환한 시각. 전환 전에는 null.
+   source: 어디서 눌렀는지("app"=앱 안, "widget"=홈 화면 위젯 — 위젯은 이번 단계에 없으므로
+   현재는 항상 "app"). status: "temporary"(점수 미확정) | "finalized"(점수 매겨 정식 전환됨,
+   삭제하지 않고 보존). score: 전환 전에는 항상 null. */
+function addTempNote(dir, memo, ts, tags, source){
+  const now=Date.now();
+  const ev={ id:uid(), type:"tempnote", ts:ts||now, dir:dir||null, memo:memo||"", tags:tags||[],
+    source: source||"app", status:"temporary", score:null, createdAt:now, finalizedAt:null };
   db.events.push(ev); db.events.sort((a,b)=>a.ts-b.ts); save(); renderAll();
   toast(`${L("임시 기록됨","noted")} · ${hm(ev.ts)}`);
   return ev;
@@ -1339,8 +1364,12 @@ function openTempNoteQuick(){
     b.onclick=()=>{ document.getElementById("tnTimeCustomBtn").classList.remove("sel");
       document.getElementById("tnTimeCustomField").style.display="none"; };
   });
+  /* 승인 2단계: 위젯과 같은 원터치 저장 화면이므로 2초 안에 같은(또는 다른) 방향 버튼을
+     연달아 눌러도 첫 탭만 저장한다(중복 탭 방지) — 시트가 닫히기 전 찰나의 더블탭 대비. */
+  let tnFired=false;
   document.querySelectorAll("[data-dir]").forEach(b=>{
     b.onclick=()=>{
+      if(tnFired) return; tnFired=true;
       const customOn=document.getElementById("tnTimeCustomBtn").classList.contains("sel");
       const ts = customOn
         ? tsFromTimeField("tnCustomTime", Date.now())
@@ -1364,13 +1393,16 @@ function openTempNoteQuick(){
      앵커 하나로 전체를 통째로 밀어 올리거나 내린다(shift). 처음에 각 이벤트를 앵커
      하나만으로 개별 역산했더니 "피크"가 "하강"보다 낮게 나오는 오류가 있었음(검산
      중 발견) — 사슬 누적 방식으로 교체해 상대적 순서가 항상 맞도록 고쳤다. */
-const CURVE_EVENT_BUMP = { signal:8, up:12, peak:22, down:-18, same:0 };   /* high 신뢰도: 두 앵커 사이 굴곡 폭 */
-const CURVE_EVENT_STEP = { signal:8, up:15, peak:15, down:-25, same:0 };  /* low 신뢰도: 직전 지점 대비 변화량(사슬용) */
+const CURVE_EVENT_BUMP = { signal:8, up:12, peak:22, down:-18, same:0, bottom:-22 };   /* high 신뢰도: 두 앵커 사이 굴곡 폭 (bottom은 peak의 대칭 저점) */
+const CURVE_EVENT_STEP = { signal:8, up:15, peak:15, down:-25, same:0, bottom:-28 };  /* low 신뢰도: 직전 지점 대비 변화량(사슬용) */
 function dayAnchorsAndEvents(dayKey){
   const dayEvs=db.events.filter(e=>dkey(new Date(e.ts))===dayKey);
   const anchors=dayEvs.filter(e=>e.type==="state" && e.output!=null)
     .map(e=>({ts:e.ts, value:e.output})).sort((a,b)=>a.ts-b.ts);
-  const events=dayEvs.filter(e=>e.type==="tempnote")
+  /* 승인 2단계: 정식 전환된(status:"finalized") 임시 신호는 같은 시각에 이미 실측 앵커
+     (state 기록)가 따로 생겼으므로, 여기서 또 굴곡을 얹으면 같은 사건이 이중으로 곡선에
+     반영된다 — finalized는 제외하고 temporary(또는 이 필드가 아직 없는 옛 기록)만 쓴다. */
+  const events=dayEvs.filter(e=>e.type==="tempnote" && (e.status||"temporary")!=="finalized")
     .map(e=>({ts:e.ts, dir:e.dir, tags:e.tags||[], memo:e.memo||""})).sort((a,b)=>a.ts-b.ts);
   return {anchors, events};
 }
@@ -1429,7 +1461,9 @@ function estimateDailyCurve(dayKey){
    "저장해도 반영이 안 된다"고 느끼신 신고의 정확한 원인. 날짜와 상관없이 "아직 점수
    안 매긴 것 전부"를 보여주도록 고친다(이름도 그에 맞게 pendingTempNotes로). */
 function pendingTempNotes(){
-  return db.events.filter(e=>e.type==="tempnote").sort((a,b)=>a.ts-b.ts);
+  /* 승인 2단계: finalized(이미 정식 전환됨)는 "미처리 임시기록" 개수·목록에서 제외한다.
+     status 필드가 없는 옛 기록(이 기능 도입 전 데이터)은 temporary로 간주해 그대로 보인다. */
+  return db.events.filter(e=>e.type==="tempnote" && (e.status||"temporary")==="temporary").sort((a,b)=>a.ts-b.ts);
 }
 function openTempNoteReview(){
   const notes=pendingTempNotes();
@@ -1466,15 +1500,24 @@ function openTempNoteReview(){
       if(!document.querySelectorAll("#tnReviewRows [data-tn]").length) closeSheet();
     };
   });
-  document.getElementById("tnSaveAll").onclick=()=>{
+  document.getElementById("tnSaveAll").onclick=(clickEvt)=>{
+    /* 승인 2단계: 2초 내 중복 탭·연속 클릭으로 같은 임시기록이 두 번 전환되는 것을 막는다 */
+    const btn=clickEvt.currentTarget;
+    if(btn.disabled) return;
+    btn.disabled=true;
     const rows=[...document.querySelectorAll("#tnReviewRows [data-tn]")];
     let saved=0;
+    const now=Date.now();
     const KNOWN_SYMPTOM_KEYS=["dysk","dyst","tremor","freeze","pain"]; /* 기존 SYMPTOMS 사전과 겹치는 것만 symptoms 배열로, 나머지(불완전ON·힘빠짐)는 메모에 덧붙인다 */
     rows.forEach(row=>{
       const val=row.querySelector(".tn-score").value;
       if(val==="") return;
       const id=row.dataset.tn;
-      const note=db.events.find(e=>e.id===id); if(!note) return;
+      const note=db.events.find(e=>e.id===id && e.type==="tempnote"); if(!note) return;
+      /* 승인 2단계: 이미 정식 전환된(status:"finalized") 임시기록은 다시 전환하지 않는다
+         (동일 임시기록 이중 전환 방지 — 화면 목록은 pendingTempNotes()로 미리 걸러지지만,
+         혹시 모를 경쟁 상태에 대비한 마지막 방어선). */
+      if(note.status==="finalized") return;
       /* 검토 발견: type:"state" 이벤트는 evRow가 SMAP[e.state]로 색을 찾으므로 state 필드가
          반드시 있어야 한다(없으면 실제로 화면이 깨짐) — 메모를 남길 때 고른 방향(dir)을
          기존 stateFromTrend()가 쓰는 trend 값으로 그대로 매핑해서 재사용한다. */
@@ -1484,10 +1527,19 @@ function openTempNoteReview(){
       const symptoms=tags.filter(t=>KNOWN_SYMPTOM_KEYS.includes(t));
       const extraTags=tags.filter(t=>!KNOWN_SYMPTOM_KEYS.includes(t)).map(tagLabel);
       const memo=[note.memo, ...extraTags].filter(Boolean).join(" · ");
+      /* 승인 2단계·시간필드 정리(총괄 검수 반영): 원본 임시기록은 삭제하지 않고 status만
+         finalized로 바꿔 보존하며, 전환 시각은 finalizedAt에 남긴다(updatedAt처럼 다른
+         이유로도 바뀔 수 있는 범용 필드가 아니라 "언제 전환됐는지"만 뜻하는 전용 필드).
+         정식 state 기록은 새로 만들되 원래 발생 시각(ts)은 그대로 물려받고, 기록 출처
+         (source)·원본 연결(promotedFrom)을 남긴다. "실제 입력 시각"이 필요하면
+         promotedFrom으로 원본 tempnote를 찾아 그 createdAt을 보면 되므로, state 쪽에
+         같은 값을 enteredAt이라는 별도 필드로 중복 저장하지 않는다(총괄 검수 지적 반영 —
+         이 필드는 아직 배포 전이라 마이그레이션 호환 부담 없이 바로 제거했다). */
+      note.status="finalized"; note.score=+val; note.finalizedAt=now;
       db.events.push({ id:uid(), type:"state", state, ts:note.ts, output:+val, trend,
         memo, symptoms, customSymptom:"", riseResult:null,
-        inputMethod:"tempnote_review", retrospective:false });
-      db.events=db.events.filter(e=>e.id!==id);
+        inputMethod:"tempnote_review", retrospective:false,
+        source:note.source||"app", promotedFrom:note.id });
       saved++;
     });
     db.events.sort((a,b)=>a.ts-b.ts); save(); closeSheet(); renderAll();
@@ -1723,7 +1775,20 @@ function addLife(kind, data={}){
     (data.phase==="nap"?L("낮잠","Nap"):(data.phase==="start"?(kind==="sleep"?L("취침","Bedtime"):L("운동","Exercise")):(kind==="sleep"?L("기상","Wake up"):L("운동 종료","Exercise ended"))));
   toast(`${lf.icon} ${lab} ${L("기록됨","recorded")} · ${hm(ts)}`);
 }
-function delEvent(id){ db.events = db.events.filter(e=>e.id!==id); save(); renderAll(); }
+function delEvent(id){
+  const ev=db.events.find(e=>e.id===id);
+  db.events = db.events.filter(e=>e.id!==id);
+  /* stableRange 안전성(총괄 검수 반영): '큰 변화 없이 비슷함'으로 확정했던 구간을 지우면,
+     그 결정의 근거였던 데이터가 사라지는 것이므로 연결된 gapResolutions 레코드를
+     unresolved로 되돌려 다시 판단할 수 있게 한다. 그대로 stable_confirmed/conflict_review로
+     남겨두면 실제로는 아무 근거 데이터도 없는데 "해결됨"으로 영구히 고아 상태가 된다. */
+  if(ev && ev.type==="stableRange"){
+    const gid=gapId(ev.startAt, ev.endAt);
+    const g=(db.gapResolutions||[]).find(r=>r.id===gid && (r.status==="stable_confirmed"||r.status==="conflict_review"));
+    if(g){ g.status="unresolved"; g.resolutionType=null; g.note=""; g.resolvedAt=null; g.updatedAt=Date.now(); }
+  }
+  save(); renderAll();
+}
 
 /* ---------- quick record (원터치 저장, 시트 안 열림) ---------- */
 function quickSave(q){
@@ -2453,6 +2518,7 @@ function renderToday(){
     const trendTxt = last.trend ? ` ${trendSymbol(last.trend)} (${trendLabel(last.trend)})` : "";
     stateLine.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${s.color};margin-right:5px;vertical-align:middle"></span>${L("출력","Output")} ${last.output}${trendTxt} · ${fmtDur((Date.now()-last.ts)/60000)} ${L("경과","elapsed")}`;
   } else { stateLine.textContent = tr("tapToStart"); }
+  renderGapRecoveryCard();
   renderRibbon(tEvents);
   renderDaySummary(tEvents);
   renderQuickOutput();
@@ -2472,7 +2538,7 @@ function renderToday(){
   if(tEvents.length){
     const title=document.createElement("div"); title.className="card-title"; title.style.marginTop="6px"; title.textContent=tr("todayRecords");
     list.appendChild(title);
-    [...tEvents].reverse().forEach(e=>list.appendChild(evRow(e)));
+    [...visibleEvents(tEvents)].reverse().forEach(e=>list.appendChild(evRow(e)));
   }
 }
 function editEventTime(id){
@@ -2515,6 +2581,14 @@ function lifeRowInfo(e){
   }
   return {s, extraTxt};
 }
+/* 총괄 검수 반영(UX 보완, 다음 병합 전): finalized 임시신호는 데이터로는 그대로
+   보존하지만(백업·삭제·promotedFrom 추적 모두 그대로), 일반 타임라인 목록에서는
+   숨긴다 — 같은 사건이 이미 promotedFrom으로 연결된 정식 state 기록 한 줄로 대표되므로
+   두 줄로 중복 표시하지 않는다. status가 아직 없는 옛 tempnote(이 기능 이전 데이터)는
+   temporary로 간주해 그대로 보인다(기존 pendingTempNotes()와 동일한 판단 기준). */
+function visibleEvents(list){
+  return (list||[]).filter(e=>!(e.type==="tempnote" && e.status==="finalized"));
+}
 function evRow(e){
   const row=document.createElement("div"); row.className="evrow";
   if(e.type==="state"){ const s=SMAP[e.state];
@@ -2524,10 +2598,27 @@ function evRow(e){
        구분되도록 "참고 상태: ON" 형태로 표시한다 (출력 곡선에는 영향을 주지 않는 별도 정보). */
     const hasOut = e.output!=null;
     const outTitle = hasOut ? `${L("출력","Output")} ${e.output}${trendSymbol(e.trend)}` : `${L("참고 상태","Reference state")}: ${stateName(e.state)}`;
-    const title = riseTxt? `${outTitle} · ${riseTxt}` : (e.state==="dysk" && e.dysk!=null ? `${outTitle} · ${L("강도","intensity")} ${e.dysk}` : outTitle);
+    /* 총괄 검수 반영(UX 보완): 임시 신호에서 전환된 정식 기록은 원래 신호 종류를 함께
+       표시한다(예: "출력 78 · 피크에서 전환"). 원본 임시기록(promotedFrom)이 삭제됐거나
+       옛 데이터라 못 찾아도(고아 promotedFrom) 조용히 생략할 뿐 오류를 내지 않는다 —
+       화면 표시만의 문제이므로 나머지 정보는 정상 표시돼야 한다. */
+    let originTxt = "";
+    if(e.promotedFrom){
+      const origin = db.events.find(x=>x.id===e.promotedFrom && x.type==="tempnote");
+      const dirInfo = origin && TEMPNOTE_DIRS.find(d=>d.key===origin.dir);
+      if(dirInfo) originTxt = ` · ${L(`${dirInfo.ko}에서 전환`,`Converted from ${dirInfo.en}`)}`;
+    }
+    const title = (riseTxt? `${outTitle} · ${riseTxt}` : (e.state==="dysk" && e.dysk!=null ? `${outTitle} · ${L("강도","intensity")} ${e.dysk}` : outTitle)) + originTxt;
     const trendTxt = hasOut && e.trend ? trendLabel(e.trend) : "";
     const extra=[trendTxt, e.gait!=null?`${L("보행","Gait")} ${e.gait}`:"", symTxt?`${L("동반증상","Symptoms")}: ${symTxt}`:"", e.memo].filter(Boolean).join(" · ");
-    row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">${title}</div>${extra?`<div class="m">${escapeHtml(extra)}</div>`:""}</div>
+    /* 360px 확인 중 발견(총괄 검수 반영): 이 배지를 시간 열(.t) 오른쪽의 다른 배지(.pill)와
+       나란한 flex 형제로 두면, flex-basis:0인 .b가 flex-basis:auto인 배지들에 밀려 폭이
+       0으로 짜부라지고 제목이 세로로 한 글자씩 쪼개져 보이는 버그가 있었다(flex-wrap만
+       추가해서는 해결 안 됨 — 배지들의 flex-basis가 우선 배치돼 .b가 항상 손해를 봄).
+       그래서 이 배지는 .b 안, 제목 바로 아래 자체 줄로 넣는다 — .b의 원래 폭 안에서만
+       줄바꿈되므로 옆 배지 폭과 절대 경쟁하지 않는다. */
+    const promotedBadgeLine = e.promotedFrom? `<div class="m" style="margin-top:2px"><span class="pill" style="background:var(--ink-2); display:inline-block">${L("임시신호에서 전환됨","From quick signal")}</span></div>` : "";
+    row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">${title}</div>${extra?`<div class="m">${escapeHtml(extra)}</div>`:""}${promotedBadgeLine}</div>
       <span class="pill" style="background:${s.color}">${hasOut?L("출력","Output"):L("상태","State")}</span>`;
   } else if(e.type==="med"){
     row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">💊 ${escapeHtml(e.drug)}${e.dose?` ${e.dose}mg`:""}</div>${e.memo?`<div class="m">${escapeHtml(e.memo)}</div>`:""}</div>
@@ -2551,8 +2642,19 @@ function evRow(e){
     const dirInfo=TEMPNOTE_DIRS.find(d=>d.key===e.dir);
     const dirLabel=dirInfo? `${dirInfo.ic} ${L(dirInfo.ko,dirInfo.en)}` : L("임시 기록","Note");
     const tagTxt=(e.tags&&e.tags.length)? e.tags.map(k=>{ const t=TEMPNOTE_TAGS.find(x=>x.key===k); return t?L(t.ko,t.en):k; }).join(", ") : "";
-    row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">🕐 ${dirLabel}</div>${(tagTxt||e.memo)?`<div class="m">${[tagTxt,e.memo].filter(Boolean).map(escapeHtml).join(" · ")}</div>`:""}</div>
-      <span class="pill" style="background:var(--ink-2)">${L("임시","Note")}</span>`;
+    /* 승인 2단계: finalized는 "이미 정식 출력기록으로 바뀐 원본"임을 표시해, 같은 시각에
+       뜨는 state 행과 별개의 새 데이터로 오해하지 않게 한다(이중 계산 아님을 화면에서도 명확히). */
+    const isFinalized = e.status==="finalized";
+    const scoreTxt = isFinalized && e.score!=null ? ` · ${L("전환됨→출력","Converted→output")} ${e.score}` : "";
+    row.innerHTML=`<div class="t">${hm(e.ts)}</div><div class="b"><div class="s">🕐 ${dirLabel}${scoreTxt}</div>${(tagTxt||e.memo)?`<div class="m">${[tagTxt,e.memo].filter(Boolean).map(escapeHtml).join(" · ")}</div>`:""}</div>
+      <span class="pill" style="background:var(--ink-2)">${isFinalized? L("전환됨","Converted") : L("임시","Note")}</span>`;
+  } else if(e.type==="stableRange"){
+    /* 승인 4단계: '큰 변화 없이 비슷함' 확인 구간. 기존 if-chain 어디에도 안 걸리면
+       tempnote 때와 같은 부류의 오류(LIFE[e.kind] undefined)가 나므로 전용 분기를 둔다. */
+    const rangeTxt = `${hm(e.startAt)}~${hm(e.endAt)}`;
+    const anchorTxt = e.hasAnchor && e.anchorScore!=null ? ` · ${L("기준","baseline")} ${e.anchorScore}` : ` · ${L("기준점 없음","no baseline")}`;
+    row.innerHTML=`<div class="t">${hm(e.startAt)}</div><div class="b"><div class="s">${L("큰 변화 없이 비슷함","No major change")} · ${rangeTxt}${anchorTxt}</div>${e.note?`<div class="m">⚠ ${escapeHtml(e.note)}</div>`:""}</div>
+      <span class="pill" style="background:var(--ink-2)">${L("안정구간","Stable")}</span>`;
   } else {
     const {s, extraTxt} = lifeRowInfo(e);
     const memoLine=[extraTxt, e.memo].filter(Boolean).join(" · ");
@@ -2565,8 +2667,12 @@ function evRow(e){
     insight.onclick=(ev)=>{ ev.stopPropagation(); openFactorInsight(e); };
     row.appendChild(insight);
   }
-  {
-    /* v0.9.18: 증상 기록도 ✎ 수정 가능 (시각·증상 종류·시작/종료 변경, 다른 종류로 전환 포함) */
+  if(e.type!=="stableRange"){
+    /* v0.9.18: 증상 기록도 ✎ 수정 가능 (시각·증상 종류·시작/종료 변경, 다른 종류로 전환 포함)
+       승인 4단계: stableRange는 editEvent()가 처리하는 종류(state/med/challenge/life/symptom)
+       에 없어 openAddPast()로 떨어지면 "종류: 출력"으로 잘못 열려 저장 시 안정구간이 조용히
+       state 기록으로 뒤바뀔 위험이 있다 — 이번 단계 승인 범위(전용 편집 화면 신설은 없음)에서는
+       수정 버튼을 아예 노출하지 않는 것으로 막는다(삭제는 기존과 동일하게 가능). */
     const edit=document.createElement("button"); edit.className="edit"; edit.innerHTML="✎";
     edit.title=L("수정","Edit"); edit.onclick=()=>editEvent(e);
     row.appendChild(edit);
@@ -2850,8 +2956,11 @@ function renderLog(){
   keys.forEach(k=>{
     const card=document.createElement("div"); card.className="daycard"; card.dataset.day=k;
     const h=document.createElement("h3"); h.textContent=fmtDateK(k); card.appendChild(h);
-    const sub=document.createElement("div"); sub.className="sub"; sub.textContent=L(`${days[k].length}건`,`${days[k].length} records`); card.appendChild(sub);
-    [...days[k]].reverse().forEach(e=>card.appendChild(evRow(e)));
+    /* finalized 임시신호는 화면에서 숨기므로, 건수도 실제로 보이는 줄 수에 맞춘다
+       (숨긴 행까지 세면 "3건"인데 2줄만 보이는 불일치가 생긴다). */
+    const shown=visibleEvents(days[k]);
+    const sub=document.createElement("div"); sub.className="sub"; sub.textContent=L(`${shown.length}건`,`${shown.length} records`); card.appendChild(sub);
+    [...shown].reverse().forEach(e=>card.appendChild(evRow(e)));
     body.appendChild(card);
   });
 }
@@ -3201,7 +3310,9 @@ function svgCurve(dayKey){
   }).join("")}</svg>`;
 }
 function curveEventListHtml(dayKey){
-  const days=byDay(); const evs=(days[dayKey]||[]).slice().sort((a,b)=>a.ts-b.ts);
+  const days=byDay();
+  /* finalized 임시신호는 여기서도 숨긴다(evRow와 동일 정책) — 정식 전환 기록 한 줄로 대표됨 */
+  const evs=visibleEvents(days[dayKey]||[]).slice().sort((a,b)=>a.ts-b.ts);
   if(!evs.length) return "";
   const rows = evs.map(e=>{
     if(e.type==="challenge") return `<div class="li"><div class="grow"><div class="name">🧪 ${escapeHtml(e.title||"Medication Challenge")}</div><div class="meta">${hm(e.ts)}${(e.lines&&e.lines[0])?" · "+escapeHtml(e.lines[0]):""}</div></div></div>`;
@@ -3209,12 +3320,30 @@ function curveEventListHtml(dayKey){
     if(e.type==="state"){ const s=SMAP[e.state];
       const riseTxt = e.riseResult? riseLabel(e.riseResult) : "";
       const symTxt = [...(e.symptoms||[]).map(k=>symLabel(k)), e.customSymptom].filter(Boolean).join(", ");
+      /* evRow()와 동일하게, 임시신호에서 전환된 기록이면 원래 신호 종류를 함께 표시한다.
+         원본을 못 찾아도(고아 promotedFrom) 조용히 생략한다. */
+      let originTxt = "";
+      if(e.promotedFrom){
+        const origin = db.events.find(x=>x.id===e.promotedFrom && x.type==="tempnote");
+        const dirInfo = origin && TEMPNOTE_DIRS.find(d=>d.key===origin.dir);
+        if(dirInfo) originTxt = ` · ${L(`${dirInfo.ko}에서 전환`,`Converted from ${dirInfo.en}`)}`;
+      }
       const extra=[e.output!=null?`${L("출력","Output")} ${e.output}`:"",e.gait!=null?`${L("보행","Gait")} ${e.gait}`:"",e.dysk!=null?`${L("이상운동 강도","Dyskinesia intensity")} ${e.dysk}`:"",symTxt?`${L("동반증상","Symptoms")} ${symTxt}`:""].filter(Boolean).join(" · ");
-      return `<div class="li"><div class="grow"><div class="name" style="color:${s.color}">${stateName(e.state)}${riseTxt?` · ${riseTxt}`:""}</div><div class="meta">${hm(e.ts)}${extra?" · "+extra:""}</div></div></div>`; }
+      return `<div class="li"><div class="grow"><div class="name" style="color:${s.color}">${stateName(e.state)}${riseTxt?` · ${riseTxt}`:""}${originTxt}</div><div class="meta">${hm(e.ts)}${extra?" · "+extra:""}</div></div></div>`; }
     if(e.type==="symptom"){
       const label = symQuickLabel(e.key) + (e.key==="other" && e.customText ? ` (${escapeHtml(e.customText)})` : "");
       const phaseLabel = e.phase==="start" ? L("시작","started") : L("종료","ended");
       return `<div class="li"><div class="grow"><div class="name">${label} ${phaseLabel}</div><div class="meta">${hm(e.ts)}</div></div></div>`;
+    }
+    if(e.type==="tempnote"){
+      /* 이 시점엔 temporary만 남아 있다(finalized는 위에서 걸러짐) */
+      const dirInfo=TEMPNOTE_DIRS.find(d=>d.key===e.dir);
+      const dirLabel=dirInfo? `${dirInfo.ic} ${L(dirInfo.ko,dirInfo.en)}` : L("임시 기록","Note");
+      return `<div class="li"><div class="grow"><div class="name">🕐 ${dirLabel}</div><div class="meta">${hm(e.ts)}</div></div></div>`;
+    }
+    if(e.type==="stableRange"){
+      const anchorTxt = e.hasAnchor && e.anchorScore!=null ? ` · ${L("기준","baseline")} ${e.anchorScore}` : "";
+      return `<div class="li"><div class="grow"><div class="name">${L("큰 변화 없이 비슷함","No major change")}${anchorTxt}</div><div class="meta">${hm(e.startAt)}~${hm(e.endAt)}</div></div></div>`;
     }
     const lf=LIFE[e.kind]; return `<div class="li"><div class="grow"><div class="name">${lf.icon} ${e.kind==="meal"?(e.mealType?tagLabel(e.mealType):L("식사","Meal")):L(lf.ko,lf.en)}</div><div class="meta">${hm(e.ts)}</div></div></div>`;
   }).join("");
@@ -3256,11 +3385,199 @@ function curveGapNoticeHtml(k){
   if(!evs.length) return "";
   const last=evs[evs.length-1].ts;
   const gapH=(Date.now()-last)/3600000;
-  if(gapH<2) return "";
+  if(gapH < PRE_NOTICE_GAP_MINUTES/60) return "";
   return `<div class="hint no-print" style="margin-top:8px; padding:10px 12px; background:var(--surface-2); border-radius:10px">
     ${L(`${hm(last)} 이후 ${Math.floor(gapH)}시간 동안 기록이 없습니다.`,`No records for ${Math.floor(gapH)} hours since ${hm(last)}.`)}
     <button class="btn ghost small" style="width:auto; margin-left:8px" onclick="openAddPast()">${L("지난 출력 추가","Add past output")}</button>
     <span style="color:var(--ink-2)"> · ${L("기억나지 않으면 그대로 두어도 됩니다","Leave it unrecorded if you don't remember")}</span></div>`;
+}
+
+/* ============================================================
+   3시간 공백 탐지·복구 (v2.16 신설 — 총괄 승인 2026-08-26, 12장 3~4단계)
+   ------------------------------------------------------------
+   원칙:
+   - 임계값은 PHS.config.maxGapMin(180)·preNoticeMinutes(120) 두 곳만 참조한다(단일 정의
+     지점). 이 파일에서는 그 값을 그대로 물려받은 MAX_INTERPOLATION_GAP_MINUTES만 쓴다.
+   - 정확히 180분은 공백이 아니다(기존 dayOutputStats()·gapCapMs와 동일 규칙: g>gapMs).
+   - 공백을 감지해도 즉시 분석에서 빼지 않는다 — 사용자가 세 가지 중 하나를 명시적으로
+     선택해야 상태가 바뀐다. "기억나지 않음"도 자동 확정하지 않는다.
+   - 원본 출력 기록(type:"state")은 이 로직으로 절대 삭제·수정하지 않는다.
+   ============================================================ */
+function gapId(startAt, endAt){ return `gap_${startAt}_${endAt}`; }
+/* 그 날 실측 출력 기록(anchor) 사이의 180분 초과 간격만 찾는다. 그 날 실측이 하나도
+   없으면(하루 전체가 미기록) 이번 승인 범위 밖이므로 다루지 않는다 — 두 실측 사이/앞뒤
+   경계 공백만 대상. '오늘'은 아직 오지 않은 자정까지를 공백으로 오판하지 않도록 현재
+   시각까지만 본다(dayOutputStats()와 동일한 처리). */
+function detectDayGaps(dayKey){
+  if(typeof PHS==="undefined" || !PHS.config || !PHS.config.dayWindow) return [];
+  const outs = outputStates(byDay()[dayKey]||[]);
+  if(!outs.length) return [];
+  const gapMs = MAX_INTERPOLATION_GAP_MINUTES*60000;
+  const [Y,Mo,Da]=dayKey.split("-").map(Number);
+  const winStart=new Date(Y,Mo-1,Da,PHS.config.dayWindow.startH,0,0).getTime();
+  const hardEnd=new Date(Y,Mo-1,Da,PHS.config.dayWindow.endH,0,0).getTime();
+  const winEnd = dayKey===todayKey()? Math.min(Date.now(), hardEnd) : hardEnd;
+  const pts=[winStart, ...outs.map(e=>e.ts), winEnd].sort((a,b)=>a-b);
+  const gaps=[];
+  for(let i=0;i<pts.length-1;i++){
+    const g=pts[i+1]-pts[i];
+    if(g>gapMs){
+      const startAt=pts[i], endAt=pts[i+1];
+      const anchorEv=outs.filter(e=>e.ts<=startAt).pop();
+      gaps.push({ startAt, endAt, durationMinutes:Math.round(g/60000), anchorScore: anchorEv? anchorEv.output : null });
+    }
+  }
+  return gaps;
+}
+/* 감지된 공백을 db.gapResolutions에 반영한다(재계산 안정성 — 총괄 검수 반영).
+   1) 새로 감지된 공백만 추가한다. 이미 같은 id(같은 시작~끝)가 있으면 절대 덮어쓰지
+      않는다 — 사용자가 이미 손댄 상태(backfilled 등)를 재실행이 되돌리면 안 된다.
+   2) 아직 사용자가 판단하지 않은(status:"unresolved") 레코드 중, 이 dayKey에 속하지만
+      "지금 다시 계산해 보니 더 이상 존재하지 않는" 것은 정리(제거)한다. 공백 중간에
+      실제 출력 기록이 새로 생기면(예: 정식 기록으로 직접 입력) 그 공백은 사라지거나
+      두 개의 더 작은 공백으로 쪼개질 수 있는데, 그때 옛 unresolved 레코드를 그대로 두면
+      이미 존재하지 않는 공백이 카드에 계속 뜨는 문제(중복·유령 공백)가 생긴다.
+      이미 사용자가 확정한 상태(backfilled/stable_confirmed/unknown_excluded/conflict_review)는
+      절대 건드리지 않는다 — 그 뒤에 데이터가 바뀌어도 사용자의 그 시점 판단은 영구 기록으로
+      남긴다("결측 구간은 결측으로 남긴다" 원칙과 동일하게, 확정된 결정도 뒤집지 않는다). */
+function syncGapResolutions(dayKey){
+  db.gapResolutions = db.gapResolutions||[];
+  const now=Date.now();
+  const detected = detectDayGaps(dayKey);
+  const detectedIds = new Set(detected.map(g=>gapId(g.startAt, g.endAt)));
+  let changed=false;
+
+  detected.forEach(g=>{
+    const id=gapId(g.startAt, g.endAt);
+    if(db.gapResolutions.some(r=>r.id===id)) return;
+    db.gapResolutions.push({ id, startAt:g.startAt, endAt:g.endAt, durationMinutes:g.durationMinutes,
+      status:"unresolved", resolutionType:null, anchorScore:g.anchorScore, confidence:"unknown",
+      note:"", resolvedAt:null, createdAt:now, updatedAt:now });
+    changed=true;
+  });
+
+  const beforeLen=db.gapResolutions.length;
+  db.gapResolutions = db.gapResolutions.filter(r=>{
+    if(r.status!=="unresolved") return true; /* 확정된 결정은 절대 유지 */
+    /* startAt 기준으로 이 dayKey 소속 여부를 판단한다(끝시각은 자정 정각일 때 다음 날
+       00:00으로 정규화되는 Date 특성 때문에 날짜 경계 판단에 부적합 — 시작시각은 항상
+       그 날의 dayWindow.startH 이후이므로 안전하다). */
+    if(dkey(new Date(r.startAt))!==dayKey) return true; /* 다른 날짜 레코드는 이 호출과 무관 */
+    return detectedIds.has(r.id); /* 오늘 재계산 결과에 더 이상 없으면 제거(유령 공백 정리) */
+  });
+  if(db.gapResolutions.length!==beforeLen) changed=true;
+
+  /* 새로 감지되거나 정리된 것이 있을 때만 저장한다 — 매 렌더링마다(recentDayKeysForGapScan)
+     불필요하게 쓰지 않기 위함. 이 저장이 빠지면 새로 감지된 unresolved 공백이 다음 저장
+     전까지는 메모리에만 있다가 앱 재시작 시 사라지는 문제가 있었다(테스트로 발견). */
+  if(changed) save();
+}
+function recentDayKeysForGapScan(n){
+  const days=[]; for(let i=0;i<n;i++){ const d=new Date(); d.setDate(d.getDate()-i); days.push(dkey(d)); }
+  return days;
+}
+function resolveGap(id, status, extra){
+  const g=(db.gapResolutions||[]).find(r=>r.id===id); if(!g) return;
+  Object.assign(g, extra||{}, { status, resolvedAt:Date.now(), updatedAt:Date.now() });
+  save(); renderAll();
+}
+/* 하루 마무리 카드 — 가장 이른 미해결(unresolved) 공백 1개만 보여주고, 나머지는 개수로만
+   안내한다(여러 개를 한꺼번에 복잡하게 보여주지 않는다). "나중에 확인"을 위한 별도 닫기
+   버튼은 두지 않는다 — 이 카드 자체가 매번 다시 뜨는 비강제 안내이므로, 그냥 넘어가면
+   자연히 "나중에"가 되고 명시적으로 세 선택지 중 하나를 고르기 전엔 상태가 바뀌지 않는다. */
+function renderGapRecoveryCard(){
+  const card=document.getElementById("gapRecoveryCard"); if(!card) return;
+  recentDayKeysForGapScan(7).forEach(syncGapResolutions);
+  const unresolved=(db.gapResolutions||[]).filter(r=>r.status==="unresolved").sort((a,b)=>a.startAt-b.startAt);
+  if(!unresolved.length){ card.style.display="none"; card.innerHTML=""; return; }
+  const g=unresolved[0];
+  card.style.display="";
+  card.innerHTML=`
+    <div class="card-title">${L("확인이 필요한 기록 공백이 있습니다","A record gap needs your review")}</div>
+    <div style="font-size:13px; color:var(--ink-2); margin-bottom:10px">
+      ${hm(g.startAt)}~${hm(g.endAt)} · ${fmtDur(g.durationMinutes)}${unresolved.length>1? ` · ${L(`오늘 공백 ${unresolved.length}개 중 1개`,`1 of ${unresolved.length} gaps today`)}` : ""}
+    </div>
+    <div style="display:flex; flex-direction:column; gap:8px">
+      <button class="btn primary" id="gapBackfillBtn" type="button">${L("중간 변화 추가","Add change in between")}</button>
+      <button class="btn ghost" id="gapStableBtn" type="button">${L("큰 변화 없이 비슷함","No major change")}</button>
+      <button class="btn ghost" id="gapUnknownBtn" type="button">${L("기억나지 않음","I don't remember")}</button>
+    </div>`;
+  document.getElementById("gapBackfillBtn").onclick=()=>openGapBackfillFlow(g);
+  document.getElementById("gapStableBtn").onclick=()=>openGapStableConfirm(g);
+  document.getElementById("gapUnknownBtn").onclick=()=>resolveGapUnknown(g);
+}
+/* 선택 1: 중간 변화 추가 — 임시 신호(방향)를 공백 범위 안의 한 시각에 남긴다.
+   기존 임시기록 체계(addTempNote)를 그대로 재사용해 새 입력 방식을 만들지 않는다. */
+function openGapBackfillFlow(g){
+  openSheet(`
+    <h2>${L("중간 변화 추가","Add change in between")}</h2>
+    <div class="hint" style="margin-bottom:10px">${L(`${hm(g.startAt)}~${hm(g.endAt)} 사이에 있었던 변화를 골라주세요.`,`Pick what happened between ${hm(g.startAt)} and ${hm(g.endAt)}.`)}</div>
+    <div class="chips" style="display:flex; gap:6px; flex-wrap:wrap">
+      ${TEMPNOTE_DIRS.filter(d=>["up","peak","down","bottom"].includes(d.key)).map(d=>`<button type="button" class="btn ghost" data-gdir="${d.key}" style="flex:1; min-width:60px"><span style="font-size:20px">${d.ic}</span><br>${L(d.ko,d.en)}</button>`).join("")}
+    </div>
+    <div class="field" style="margin-top:10px" id="gapCustomTimeField"></div>
+    <button class="btn ghost" style="margin-top:8px" onclick="closeSheet()">${L("취소","Cancel")}</button>
+  `);
+  const mid=Math.round((g.startAt+g.endAt)/2);
+  document.getElementById("gapCustomTimeField").innerHTML=timeFieldHtml("gapBackfillTime", mid);
+  bindTimeField("gapBackfillTime");
+  let gapDirFired=false; /* 중복 탭 방지 — 방향 버튼은 한 번만 유효 */
+  document.querySelectorAll("[data-gdir]").forEach(b=>{
+    b.onclick=()=>{
+      if(gapDirFired) return; gapDirFired=true;
+      let ts=tsFromTimeField("gapBackfillTime", mid);
+      ts=Math.min(Math.max(ts,g.startAt), g.endAt); /* 공백 범위를 벗어나지 않게 보정 */
+      addTempNote(b.dataset.gdir, "", ts, [], "app");
+      resolveGap(g.id, "backfilled", {resolutionType:"retrospective_event"});
+      closeSheet();
+      toast(L("중간 변화를 추가했어요","Added the change"));
+    };
+  });
+}
+/* 선택 2: 큰 변화 없이 비슷함 — 가짜 점수를 여러 개 만들지 않고 하나의 구간(stableRange)
+   객체로만 저장한다. 앞뒤 점수가 20점 이상 차이 나면 경고를 보여주되 자동으로 막지는
+   않는다(승인 ③ — 경고 기준일 뿐 무효화 기준 아님). */
+function openGapStableConfirm(g){
+  const before = outputStates(db.events).filter(e=>e.ts<=g.startAt);
+  const after  = outputStates(db.events).filter(e=>e.ts>=g.endAt);
+  const anchor = before.length? before[before.length-1].output : null;
+  const closing = after.length? after[0].output : null;
+  const diff = (anchor!=null && closing!=null)? Math.abs(anchor-closing) : null;
+  const proceed=(conflict)=>{
+    createStableRange(g, anchor, {conflict:!!conflict});
+    resolveGap(g.id, conflict? "conflict_review" : "stable_confirmed",
+      {resolutionType:"stable_range", anchorScore:anchor, confidence: anchor!=null? "recalled":"unknown",
+       note: conflict? "점수와 회상 내용 불일치" : ""});
+    closeSheet();
+    toast(conflict? L("불일치 표시와 함께 저장했어요","Saved with a mismatch note") : L("변화 없음 구간으로 저장했어요","Saved as a stable period"));
+  };
+  if(diff!=null && diff>=20){
+    openSheet(`
+      <h2>${L("확인해 주세요","Please check")}</h2>
+      <div class="hint" style="margin-bottom:10px">${L(`시작과 끝의 점수 차이가 큽니다(${anchor}→${closing}). 언제부터 달라졌는지 기억나시나요?`,`The scores differ a lot (${anchor}→${closing}). Do you remember when it changed?`)}</div>
+      <div style="display:flex; flex-direction:column; gap:8px">
+        <button class="btn ghost" id="gapConflictBackBtn" type="button">${L("중간 변화 추가","Add change in between")}</button>
+        <button class="btn primary" id="gapConflictStillBtn" type="button">${L("그래도 비슷했다고 저장","Save as similar anyway")}</button>
+        <button class="btn ghost" type="button" onclick="closeSheet()">${L("취소","Cancel")}</button>
+      </div>`);
+    document.getElementById("gapConflictBackBtn").onclick=()=>openGapBackfillFlow(g);
+    document.getElementById("gapConflictStillBtn").onclick=()=>proceed(true);
+  } else {
+    proceed(false);
+  }
+}
+function createStableRange(g, anchor, opts){
+  opts=opts||{};
+  db.events.push({ id:uid(), type:"stableRange", ts:g.startAt, startAt:g.startAt, endAt:g.endAt,
+    anchorScore: anchor??null, hasAnchor: anchor!=null, confidence:"recalled", source:"retrospective",
+    note: opts.conflict? "점수와 회상 내용 불일치" : "" });
+  db.events.sort((a,b)=>a.ts-b.ts); save();
+}
+/* 선택 3: 기억나지 않음 — 명시적 확인(confirm)을 거쳐야만 확정한다. 자동 확정 없음. */
+function resolveGapUnknown(g){
+  if(!confirm(L("이 구간의 중간 상태를 기억할 수 없다고 확정할까요?","Mark this gap as unrecoverable?"))) return;
+  resolveGap(g.id, "unknown_excluded", {resolutionType:"give_up"});
+  toast(L("공백을 미확인으로 남겼어요","Marked as unrecorded"));
 }
 
 /* ============================================================
