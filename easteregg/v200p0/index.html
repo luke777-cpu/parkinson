@@ -1273,8 +1273,12 @@ const TEMPNOTE_DIRS = [
   {key:"signal", ko:"첫 신호",  en:"First signal", ic:"⚡", trend:"rising"},
   {key:"up",     ko:"상승",     en:"Rising",       ic:"↗", trend:"rising"},
   {key:"peak",   ko:"피크",     en:"Peak",         ic:"△", trend:"stable"},
-  {key:"down",   ko:"하강",     en:"Falling",      ic:"↘", trend:"falling"},
+  {key:"down",   ko:"하락",     en:"Falling",      ic:"↘", trend:"falling"}, /* 총괄 검수 반영: 화면 표시만 '하강'→'하락' 통일(내부 key/trend는 falling 그대로 호환 유지) */
   {key:"same",   ko:"유지",     en:"Same",         ic:"→", trend:"stable"},
+  /* 승인 1단계(2026-08-26): 약효 저점("바닥")을 남길 방법이 없었다 — peak(피크)와 대칭되는
+     극값이므로 trend는 peak와 동일하게 "stable"로 두고, 점수를 나중에 매길 때 실제 출력값이
+     off/on 여부를 결정하게 한다(피크와 동일한 설계 원칙, stateFromTrend() 참고). */
+  {key:"bottom", ko:"바닥",     en:"Bottom",       ic:"▼", trend:"stable"},
 ];
 /* 설계도 7번: 상세 증상은 메인 화면에 항상 노출하지 않고, 이벤트 기록 후 필요할 때만
    펼쳐서 선택한다. 기존 증상 사전(SYMPTOM_QUICK)의 라벨을 그대로 재사용해 새 목록을
@@ -1289,8 +1293,20 @@ const TEMPNOTE_TAGS = [
   {key:"pain",   ko:"통증",       en:"Pain"},
 ];
 function tempNoteDirTrend(dirKey){ const d=TEMPNOTE_DIRS.find(x=>x.key===dirKey); return d? d.trend : "stable"; }
-function addTempNote(dir, memo, ts, tags){
-  const ev={ id:uid(), type:"tempnote", ts:ts||Date.now(), dir:dir||null, memo:memo||"", tags:tags||[] };
+/* 승인 2단계(2026-08-26)·시간필드 정리(총괄 검수 반영): 임시 신호는 출력점수와 분리된
+   별도 이벤트로 계속 저장한다. 시간 필드 3종의 의미를 명확히 구분한다 —
+   - ts:          실제 변화가 발생했다고 사용자가 지목한 시각("30분 전" 등 프리셋 포함, 뒤로
+                  갈 수 있음). 정식 기록으로 전환돼도 이 값은 그대로 물려받는다.
+   - createdAt:   이 임시 신호를 최초로 생성(탭)한 실제 시각. ts와 다를 수 있다(예: "30분 전"
+                  프리셋을 눌러 ts는 과거, createdAt은 지금).
+   - finalizedAt: 점수를 매겨 정식 기록(type:"state")으로 전환한 시각. 전환 전에는 null.
+   source: 어디서 눌렀는지("app"=앱 안, "widget"=홈 화면 위젯 — 위젯은 이번 단계에 없으므로
+   현재는 항상 "app"). status: "temporary"(점수 미확정) | "finalized"(점수 매겨 정식 전환됨,
+   삭제하지 않고 보존). score: 전환 전에는 항상 null. */
+function addTempNote(dir, memo, ts, tags, source){
+  const now=Date.now();
+  const ev={ id:uid(), type:"tempnote", ts:ts||now, dir:dir||null, memo:memo||"", tags:tags||[],
+    source: source||"app", status:"temporary", score:null, createdAt:now, finalizedAt:null };
   db.events.push(ev); db.events.sort((a,b)=>a.ts-b.ts); save(); renderAll();
   toast(`${L("임시 기록됨","noted")} · ${hm(ev.ts)}`);
   return ev;
@@ -1339,8 +1355,12 @@ function openTempNoteQuick(){
     b.onclick=()=>{ document.getElementById("tnTimeCustomBtn").classList.remove("sel");
       document.getElementById("tnTimeCustomField").style.display="none"; };
   });
+  /* 승인 2단계: 위젯과 같은 원터치 저장 화면이므로 2초 안에 같은(또는 다른) 방향 버튼을
+     연달아 눌러도 첫 탭만 저장한다(중복 탭 방지) — 시트가 닫히기 전 찰나의 더블탭 대비. */
+  let tnFired=false;
   document.querySelectorAll("[data-dir]").forEach(b=>{
     b.onclick=()=>{
+      if(tnFired) return; tnFired=true;
       const customOn=document.getElementById("tnTimeCustomBtn").classList.contains("sel");
       const ts = customOn
         ? tsFromTimeField("tnCustomTime", Date.now())
@@ -1364,13 +1384,16 @@ function openTempNoteQuick(){
      앵커 하나로 전체를 통째로 밀어 올리거나 내린다(shift). 처음에 각 이벤트를 앵커
      하나만으로 개별 역산했더니 "피크"가 "하강"보다 낮게 나오는 오류가 있었음(검산
      중 발견) — 사슬 누적 방식으로 교체해 상대적 순서가 항상 맞도록 고쳤다. */
-const CURVE_EVENT_BUMP = { signal:8, up:12, peak:22, down:-18, same:0 };   /* high 신뢰도: 두 앵커 사이 굴곡 폭 */
-const CURVE_EVENT_STEP = { signal:8, up:15, peak:15, down:-25, same:0 };  /* low 신뢰도: 직전 지점 대비 변화량(사슬용) */
+const CURVE_EVENT_BUMP = { signal:8, up:12, peak:22, down:-18, same:0, bottom:-22 };   /* high 신뢰도: 두 앵커 사이 굴곡 폭 (bottom은 peak의 대칭 저점) */
+const CURVE_EVENT_STEP = { signal:8, up:15, peak:15, down:-25, same:0, bottom:-28 };  /* low 신뢰도: 직전 지점 대비 변화량(사슬용) */
 function dayAnchorsAndEvents(dayKey){
   const dayEvs=db.events.filter(e=>dkey(new Date(e.ts))===dayKey);
   const anchors=dayEvs.filter(e=>e.type==="state" && e.output!=null)
     .map(e=>({ts:e.ts, value:e.output})).sort((a,b)=>a.ts-b.ts);
-  const events=dayEvs.filter(e=>e.type==="tempnote")
+  /* 승인 2단계: 정식 전환된(status:"finalized") 임시 신호는 같은 시각에 이미 실측 앵커
+     (state 기록)가 따로 생겼으므로, 여기서 또 굴곡을 얹으면 같은 사건이 이중으로 곡선에
+     반영된다 — finalized는 제외하고 temporary(또는 이 필드가 아직 없는 옛 기록)만 쓴다. */
+  const events=dayEvs.filter(e=>e.type==="tempnote" && (e.status||"temporary")!=="finalized")
     .map(e=>({ts:e.ts, dir:e.dir, tags:e.tags||[], memo:e.memo||""})).sort((a,b)=>a.ts-b.ts);
   return {anchors, events};
 }
@@ -1429,7 +1452,9 @@ function estimateDailyCurve(dayKey){
    "저장해도 반영이 안 된다"고 느끼신 신고의 정확한 원인. 날짜와 상관없이 "아직 점수
    안 매긴 것 전부"를 보여주도록 고친다(이름도 그에 맞게 pendingTempNotes로). */
 function pendingTempNotes(){
-  return db.events.filter(e=>e.type==="tempnote").sort((a,b)=>a.ts-b.ts);
+  /* 승인 2단계: finalized(이미 정식 전환됨)는 "미처리 임시기록" 개수·목록에서 제외한다.
+     status 필드가 없는 옛 기록(이 기능 도입 전 데이터)은 temporary로 간주해 그대로 보인다. */
+  return db.events.filter(e=>e.type==="tempnote" && (e.status||"temporary")==="temporary").sort((a,b)=>a.ts-b.ts);
 }
 function openTempNoteReview(){
   const notes=pendingTempNotes();
@@ -1466,15 +1491,24 @@ function openTempNoteReview(){
       if(!document.querySelectorAll("#tnReviewRows [data-tn]").length) closeSheet();
     };
   });
-  document.getElementById("tnSaveAll").onclick=()=>{
+  document.getElementById("tnSaveAll").onclick=(clickEvt)=>{
+    /* 승인 2단계: 2초 내 중복 탭·연속 클릭으로 같은 임시기록이 두 번 전환되는 것을 막는다 */
+    const btn=clickEvt.currentTarget;
+    if(btn.disabled) return;
+    btn.disabled=true;
     const rows=[...document.querySelectorAll("#tnReviewRows [data-tn]")];
     let saved=0;
+    const now=Date.now();
     const KNOWN_SYMPTOM_KEYS=["dysk","dyst","tremor","freeze","pain"]; /* 기존 SYMPTOMS 사전과 겹치는 것만 symptoms 배열로, 나머지(불완전ON·힘빠짐)는 메모에 덧붙인다 */
     rows.forEach(row=>{
       const val=row.querySelector(".tn-score").value;
       if(val==="") return;
       const id=row.dataset.tn;
-      const note=db.events.find(e=>e.id===id); if(!note) return;
+      const note=db.events.find(e=>e.id===id && e.type==="tempnote"); if(!note) return;
+      /* 승인 2단계: 이미 정식 전환된(status:"finalized") 임시기록은 다시 전환하지 않는다
+         (동일 임시기록 이중 전환 방지 — 화면 목록은 pendingTempNotes()로 미리 걸러지지만,
+         혹시 모를 경쟁 상태에 대비한 마지막 방어선). */
+      if(note.status==="finalized") return;
       /* 검토 발견: type:"state" 이벤트는 evRow가 SMAP[e.state]로 색을 찾으므로 state 필드가
          반드시 있어야 한다(없으면 실제로 화면이 깨짐) — 메모를 남길 때 고른 방향(dir)을
          기존 stateFromTrend()가 쓰는 trend 값으로 그대로 매핑해서 재사용한다. */
@@ -1484,10 +1518,19 @@ function openTempNoteReview(){
       const symptoms=tags.filter(t=>KNOWN_SYMPTOM_KEYS.includes(t));
       const extraTags=tags.filter(t=>!KNOWN_SYMPTOM_KEYS.includes(t)).map(tagLabel);
       const memo=[note.memo, ...extraTags].filter(Boolean).join(" · ");
+      /* 승인 2단계·시간필드 정리(총괄 검수 반영): 원본 임시기록은 삭제하지 않고 status만
+         finalized로 바꿔 보존하며, 전환 시각은 finalizedAt에 남긴다(updatedAt처럼 다른
+         이유로도 바뀔 수 있는 범용 필드가 아니라 "언제 전환됐는지"만 뜻하는 전용 필드).
+         정식 state 기록은 새로 만들되 원래 발생 시각(ts)은 그대로 물려받고, 기록 출처
+         (source)·원본 연결(promotedFrom)을 남긴다. "실제 입력 시각"이 필요하면
+         promotedFrom으로 원본 tempnote를 찾아 그 createdAt을 보면 되므로, state 쪽에
+         같은 값을 enteredAt이라는 별도 필드로 중복 저장하지 않는다(총괄 검수 지적 반영 —
+         이 필드는 아직 배포 전이라 마이그레이션 호환 부담 없이 바로 제거했다). */
+      note.status="finalized"; note.score=+val; note.finalizedAt=now;
       db.events.push({ id:uid(), type:"state", state, ts:note.ts, output:+val, trend,
         memo, symptoms, customSymptom:"", riseResult:null,
-        inputMethod:"tempnote_review", retrospective:false });
-      db.events=db.events.filter(e=>e.id!==id);
+        inputMethod:"tempnote_review", retrospective:false,
+        source:note.source||"app", promotedFrom:note.id });
       saved++;
     });
     db.events.sort((a,b)=>a.ts-b.ts); save(); closeSheet(); renderAll();
