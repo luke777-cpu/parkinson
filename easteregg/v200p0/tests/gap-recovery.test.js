@@ -50,14 +50,31 @@ function mkState(w, ts, output, trend){
 
 console.log("== A. 기존 yakhyo_log_v1 데이터 호환 (신규 필드 없는 레거시) ==");
 {
+  /* 5단계 조사에서 발견된 시각 의존 결함(2026-08-26): 이 두 이벤트를 "지금부터 -1시간/-30분"
+     (Date.now() 상대값)으로 두면, 실행 시각이 그날 하루시작(06:00, PHS.config.dayWindow.
+     startH)로부터 충분히 늦은 시각이면 renderAll()의 공백 스캔(syncGapResolutions)이
+     "06:00~첫 기록"의 실제 180분 초과 공백을 정직하게 찾아내 gapResolutions를 채운다 —
+     이는 기능 결함이 아니라 정상 동작이며, 실행 시각에 따라 결과가 달라지는 쪽은 이
+     테스트였다. 아래 두 이벤트를 "오늘"이 아닌, 최근 7일 스캔 범위(recentDayKeysForGapScan)
+     밖의 고정된 과거 하루로 옮겨(자정 경계·dayWindow 계산 자체는 그대로 실사용) 어느
+     시간대·실행 시각에도 이 하루가 스캔 대상이 되지 않도록 한다. gapResolutions의
+     "빈 배열 초기화" 자체는 renderAll()(공백 스캔)이 아니라 load()의 마이그레이션
+     기본값 채우기(index.html의 `d.gapResolutions = d.gapResolutions||[]`) 몫이므로,
+     그 검증은 renderAll() 이전에 확인해 스캔 실행 여부와 무관하게 만든다. */
+  const w=newWindow();
+  const day=pastDay(w, 10); // 최근 7일 스캔 범위 밖의 고정된 과거 하루(자정 기준 dkey)
   const legacy={ events:[
-      {id:"L1", type:"state", state:"on", ts:Date.now()-3600000, output:60, trend:"stable", symptoms:[], customSymptom:""},
-      {id:"L2", type:"tempnote", ts:Date.now()-1800000, dir:"up", memo:"", tags:[]}, // status/score/source 필드가 아예 없는 옛 tempnote
+      {id:"L1", type:"state", state:"on", ts:tsAt(day,9,0), output:60, trend:"stable", symptoms:[], customSymptom:""},
+      {id:"L2", type:"tempnote", ts:tsAt(day,9,30), dir:"up", memo:"", tags:[]}, // status/score/source 필드가 아예 없는 옛 tempnote
     ], meds:[{id:"m1",name:"퍼킨",dose:100,note:"",sched:[]}], settings:{theme:"light"}, outputChecks:[], dayMemos:{}, questions:[] };
-  const w=loadFresh(legacy);
+  const KEY=w.eval("KEY");
+  w.localStorage.setItem(KEY, JSON.stringify(legacy));
+  w.eval("db=load();"); // renderAll() 이전 — 아직 공백 스캔이 실행되지 않은 순수 마이그레이션 직후 상태
+  const dbAfterLoad=w.eval("db");
+  ok(dbAfterLoad.events.length===2, "레거시 이벤트 2건 그대로 로드됨");
+  ok(Array.isArray(dbAfterLoad.gapResolutions) && dbAfterLoad.gapResolutions.length===0, "gapResolutions 필드 없어도 빈 배열로 정상 초기화(load() 직후 — 공백 스캔 전이라 실행 시각·시간대와 무관하게 항상 성립)");
+  w.eval("renderAll();");
   const db=w.eval("db");
-  ok(db.events.length===2, "레거시 이벤트 2건 그대로 로드됨");
-  ok(Array.isArray(db.gapResolutions) && db.gapResolutions.length===0, "gapResolutions 필드 없어도 빈 배열로 정상 초기화");
   const pending=w.eval("pendingTempNotes()");
   ok(pending.length===1 && pending[0].id==="L2", "status 필드 없는 옛 tempnote도 미처리 목록에 정상 표시(temporary 취급)");
   ok(w._errs.length===0, "레거시 데이터 로드 중 런타임 오류 없음: "+w._errs.join("; "));
