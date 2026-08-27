@@ -1447,15 +1447,18 @@ async function ingestWidgetEvents(){
    않았을 가능성에 대비해 짧게 재시도하도록 다시 짰다. 한 번에 실패로 단정하지 않는다. */
 function tryOpenWidgetAction(action, attempt){
   wlog(`tryOpenWidgetAction(${action}) attempt=${attempt} 시작`);
+  const trace = window.widgetDebugTrace; /* v2.16.12: 존재할 때만 진단 필드를 채운다(released에서는 항상 undefined) */
   try{
     const tabOk = (typeof switchTab === "function");
     wlog(`tryOpenWidgetAction: typeof switchTab === "function" =`, tabOk);
+    if(trace) trace.switchTabExists = tabOk;
     if(tabOk) switchTab("today");
     wlog(`tryOpenWidgetAction: switchTab("today") 호출 완료`);
 
     if(action==="note"){
       const fnOk = (typeof openTempNoteQuick === "function");
       wlog(`tryOpenWidgetAction(note): typeof openTempNoteQuick === "function" =`, fnOk);
+      if(trace) trace.targetButtonExists = fnOk;
       if(!fnOk) return false;
       openTempNoteQuick();
       wlog(`tryOpenWidgetAction(note): openTempNoteQuick() 호출 완료 — 성공으로 간주`);
@@ -1464,6 +1467,7 @@ function tryOpenWidgetAction(action, attempt){
     if(action==="score"){
       const fnOk = (typeof openTempNoteReview === "function");
       wlog(`tryOpenWidgetAction(score): typeof openTempNoteReview === "function" =`, fnOk);
+      if(trace) trace.targetButtonExists = fnOk;
       if(!fnOk) return false;
       openTempNoteReview();
       wlog(`tryOpenWidgetAction(score): openTempNoteReview() 호출 완료 — 성공으로 간주`);
@@ -1476,6 +1480,7 @@ function tryOpenWidgetAction(action, attempt){
       wlog(`tryOpenWidgetAction(${action}): #quickRecordTabs 발견 =`, !!tabsWrap);
       const btn=tabsWrap && tabsWrap.querySelector(`[data-panel="${action}"]`);
       wlog(`tryOpenWidgetAction(${action}): [data-panel="${action}"] 버튼 발견 =`, !!btn);
+      if(trace){ trace.quickRecordCardExists = !!card; trace.quickRecordTabsExists = !!tabsWrap; trace.targetButtonExists = !!btn; }
       if(!card || !tabsWrap || !btn) return false;
       btn.click();
       wlog(`tryOpenWidgetAction(${action}): 버튼 click() 완료`);
@@ -1486,19 +1491,141 @@ function tryOpenWidgetAction(action, attempt){
     return false;
   }catch(e){
     werr(`tryOpenWidgetAction(${action}) attempt=${attempt} EXCEPTION`, e);
+    if(trace) trace.error = String((e && e.message) || e);
     return false;
   }
+}
+/* v2.16.12: 화면 이동이 "성공으로 간주"된 뒤 실제로 눈에 보이는 상태인지까지 한 번 더
+   확인한다(증상/생활은 패널 display, 느낌메모/점수매기기는 sheet의 scrim.open 클래스) —
+   진단창 없이는 Logcat으로만 확인 가능했던 마지막 단계. */
+function widgetActionVisibleCheck(action){
+  try{
+    if(action==="symptom" || action==="life"){
+      const panel = document.getElementById("qrPanel-"+action);
+      return !!panel && panel.style.display !== "none";
+    }
+    if(action==="note" || action==="score"){
+      return !!(typeof scrim!=="undefined" && scrim && scrim.classList.contains("open"));
+    }
+  }catch(e){ werr("widgetActionVisibleCheck EXCEPTION", e); }
+  return null;
+}
+function widgetDiagIcon(v){ return v===true ? "✅" : (v===false ? "❌" : "➖"); }
+/* v2.16.12(진단창 작업지시서): DEBUG 빌드에서만 호출된다 — 호출 지점(consumeWidgetAction)이
+   WidgetBridge.peekWidgetDiagnostics()의 debug:true를 확인한 뒤에만 이 함수를 부른다.
+   scrim/sheet(#sheet)는 느낌메모/점수매기기가 이미 쓰고 있어서 그 위에 겹치면 정작 확인하려는
+   화면을 가려버리므로, 완전히 별도의 오버레이 엘리먼트를 새로 만들어 쓴다. */
+function showWidgetDiagnosticModal(trace){
+  try{
+    let modal = document.getElementById("widgetDiagModal");
+    if(!modal){
+      modal = document.createElement("div");
+      modal.id = "widgetDiagModal";
+      modal.style.cssText = "position:fixed; inset:0; z-index:99999; display:flex; align-items:flex-end; justify-content:center; background:rgba(0,0,0,.45);";
+      document.body.appendChild(modal);
+    }
+    const actionLabel = {symptom:"증상", life:"생활", note:"느낌메모", score:"점수매기기"}[trace.action] || (trace.action || "(action 없음)");
+    const rows = [
+      ["Intent 수신", trace.intentReceived],
+      ["pending_action 저장", trace.pendingSaved],
+      ["JS 브리지 수신", trace.bridgeReceived],
+      ["switchTab 존재", trace.switchTabExists],
+      ["quickRecordCard 존재", trace.quickRecordCardExists],
+      ["quickRecordTabs 존재", trace.quickRecordTabsExists],
+      ["대상 버튼/함수 존재", trace.targetButtonExists],
+      ["화면 이동 함수 호출", trace.opened],
+      ["실제 화면 표시 확인", trace.openedVisible],
+    ];
+    const rowsHtml = rows.map(([label,v])=>
+      `<div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid rgba(128,128,128,.2)">`
+      + `<span>${label}</span><span>${widgetDiagIcon(v)}</span></div>`).join("");
+    const copyLines = [
+      `ACTION=${trace.action}`, `COLD_START=${trace.coldStart}`, `INTENT_ACTION=${trace.intentAction}`,
+      `INTENT_RECEIVED=${trace.intentReceived}`, `RAW_EXTRA=${trace.rawExtra}`, `EXTRAS_EMPTY=${trace.extrasEmpty}`,
+      `PENDING_SAVED=${trace.pendingSaved}`, `PENDING_READBACK=${trace.pendingReadback}`,
+      `BRIDGE_RECEIVED=${trace.bridgeReceived}`, `BRIDGE_ACTION=${trace.bridgeAction}`,
+      `SWITCH_TAB=${trace.switchTabExists}`, `QUICK_CARD=${trace.quickRecordCardExists}`,
+      `QUICK_TABS=${trace.quickRecordTabsExists}`, `TARGET_BUTTON=${trace.targetButtonExists}`,
+      `OPENED=${trace.opened}`, `OPENED_VISIBLE=${trace.openedVisible}`, `ERROR=${trace.error}`,
+    ];
+    const escHtml = s => String(s).replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+    modal.innerHTML = `
+      <div style="background:var(--card-bg,#fff); color:var(--text,#15212E); width:100%; max-width:420px; border-radius:16px 16px 0 0; padding:16px 16px calc(16px + env(safe-area-inset-bottom)); max-height:80vh; overflow:auto; font-size:14px; box-shadow:0 -4px 24px rgba(0,0,0,.25)">
+        <div style="font-weight:700; font-size:16px; margin-bottom:8px">🔧 위젯 연결 진단 — ${escHtml(actionLabel)}</div>
+        ${rowsHtml}
+        <details style="margin-top:10px"><summary style="cursor:pointer">상세 값 보기</summary>
+          <pre style="white-space:pre-wrap; font-size:12px; margin-top:6px">${escHtml(copyLines.join("\n"))}</pre>
+        </details>
+        <div style="display:flex; gap:8px; margin-top:14px">
+          <button type="button" id="widgetDiagCopyBtn" class="btn ghost" style="flex:1">진단내용 복사</button>
+          <button type="button" id="widgetDiagCloseBtn" class="btn" style="flex:1">닫기</button>
+        </div>
+      </div>`;
+    modal.style.display = "flex";
+    document.getElementById("widgetDiagCloseBtn").onclick = ()=>{ modal.style.display = "none"; };
+    document.getElementById("widgetDiagCopyBtn").onclick = async ()=>{
+      const text = copyLines.join("\n");
+      try{
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          await navigator.clipboard.writeText(text);
+        } else {
+          const ta=document.createElement("textarea"); ta.value=text; ta.style.position="fixed"; ta.style.opacity="0";
+          document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove();
+        }
+        toast(L("진단내용을 복사했어요","Diagnostic copied"));
+      }catch(e){ werr("widgetDiag 복사 실패", e); }
+    };
+  }catch(e){ werr("showWidgetDiagnosticModal EXCEPTION", e); }
 }
 async function consumeWidgetAction(){
   wlog("consumeWidgetAction: 진입, WidgetBridge available =", !!WidgetBridge);
   if(!WidgetBridge){ wlog("consumeWidgetAction: WidgetBridge 없음, 스킵"); return; }
+  /* v2.16.12: 실기기 진단창 작업지시서 — Logcat 없이 폰 화면만으로 "어디서 끊겼는지" 보여주기
+     위한 추적 객체. pending_action 등 실제 사용자 데이터와는 완전히 분리된 진단 전용
+     상태이고, DEBUG 빌드가 아니면(peekWidgetDiagnostics()의 debug:false) 절대 표시하지 않는다. */
+  const trace = {
+    action:null, intentReceived:false, coldStart:null, intentAction:null,
+    rawExtra:null, extrasEmpty:null, pendingSaved:false, pendingReadback:null,
+    bridgeReceived:false, bridgeAction:null, switchTabExists:false,
+    quickRecordCardExists:false, quickRecordTabsExists:false, targetButtonExists:false,
+    opened:false, openedVisible:null, error:null
+  };
+  window.widgetDebugTrace = trace;
+  let debugBuild = false;
   try{
     wlog("consumeWidgetAction: peekPendingAction 호출 직전");
     const res = await WidgetBridge.peekPendingAction();
     wlog("consumeWidgetAction: peekPendingAction 응답 =", JSON.stringify(res));
     const action = res && res.action;
+    trace.bridgeReceived = !!action;
+    trace.bridgeAction = action || null;
     wlog("consumeWidgetAction: action =", action);
-    if(!action) return;
+
+    /* pending_action이 아예 저장되지 않는(=action이 null인) 버그 상황도 "위젯 버튼을
+       눌렀었다"는 사실은 알아야 진단창이 그 실패 지점을 정확히 보여줄 수 있다. 구버전
+       네이티브(이 메서드가 아직 없는 빌드)에서도 기존 흐름이 깨지지 않도록 별도로 감싼다. */
+    let diag = null;
+    try{
+      diag = await WidgetBridge.peekWidgetDiagnostics();
+      wlog("consumeWidgetAction: peekWidgetDiagnostics 응답 =", JSON.stringify(diag));
+    }catch(e){ werr("consumeWidgetAction: peekWidgetDiagnostics 실패(구버전 네이티브일 수 있음)", e); }
+    debugBuild = !!(diag && diag.debug);
+    if(diag){
+      trace.coldStart = (diag.coldStart===undefined) ? null : diag.coldStart;
+      trace.intentAction = diag.intentAction || null;
+      trace.rawExtra = diag.rawExtra || null;
+      trace.extrasEmpty = (diag.extrasEmpty===undefined) ? null : diag.extrasEmpty;
+      trace.pendingSaved = !!diag.pendingSaved;
+      trace.pendingReadback = diag.pendingReadback || null;
+      trace.intentReceived = !!diag.intentAction;
+    }
+    trace.action = action || (diag && diag.intentActionResolvedAction) || null;
+
+    if(!action){
+      wlog("consumeWidgetAction: pending_action 없음 — 열기 시도 생략");
+      if(debugBuild && trace.intentReceived) showWidgetDiagnosticModal(trace);
+      return;
+    }
     /* v2.16.10: pending_action은 실제로 화면을 여는 데 성공했을 때만 clearPendingAction()
        으로 지운다 — 실패하면 힌트를 지우지 않고 남겨서 다음 resume/재실행에서 다시
        시도된다. v2.16.11: 첫 시도가 DOM/함수 준비 전이라 실패했을 가능성에 대비해
@@ -1510,13 +1637,20 @@ async function consumeWidgetAction(){
       opened = tryOpenWidgetAction(action, attempt);
     }
     wlog("consumeWidgetAction: 최종 opened =", opened);
+    trace.opened = opened;
+    trace.openedVisible = widgetActionVisibleCheck(action);
     if(opened){
       await WidgetBridge.clearPendingAction();
       wlog("consumeWidgetAction: clearPendingAction 완료");
     } else {
       wlog("consumeWidgetAction: 5회 재시도 모두 실패 — pending_action 보존(다음 기회에 재시도)");
     }
-  }catch(e){ werr("consumeWidgetAction EXCEPTION — pending_action은 보존됨", e); }
+    if(debugBuild) showWidgetDiagnosticModal(trace);
+  }catch(e){
+    werr("consumeWidgetAction EXCEPTION — pending_action은 보존됨", e);
+    trace.error = String((e && e.message) || e);
+    if(debugBuild) showWidgetDiagnosticModal(trace);
+  }
 }
 /* v2.16.6: section 3 — 앱 초기 로드 시 강제 1회 호출을 보장한다. 기존 코드 흐름(파일 맨
    아래쪽의 syncSharedProfile(); ingestChallengeEvents(); ingestWidgetEvents();) 앞에서

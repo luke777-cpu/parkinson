@@ -9,7 +9,9 @@ import java.util.Set;
 import com.getcapacitor.BridgeActivity;
 
 import kr.parkinson.medicationdiary.filesaver.FileSaverPlugin;
+import kr.parkinson.medicationdiary.widget.MedicationWidgetProvider;
 import kr.parkinson.medicationdiary.widget.WidgetBridgePlugin;
+import kr.parkinson.medicationdiary.widget.WidgetDiagnostics;
 import kr.parkinson.medicationdiary.widget.WidgetStore;
 
 public class MainActivity extends BridgeActivity {
@@ -28,7 +30,7 @@ public class MainActivity extends BridgeActivity {
             dumpExtras("onCreate", i);
         }
         super.onCreate(savedInstanceState);
-        handleWidgetActionIntent(getIntent());
+        handleWidgetActionIntent(getIntent(), true);
     }
 
     /* 위젯의 "증상"/"생활"/"지금 느낌 메모"/"점수 매기기" 버튼이 MainActivity를 여는
@@ -44,13 +46,42 @@ public class MainActivity extends BridgeActivity {
             dumpExtras("onNewIntent", intent);
         }
         setIntent(intent);
-        handleWidgetActionIntent(intent);
+        handleWidgetActionIntent(intent, false);
     }
 
-    private void handleWidgetActionIntent(Intent intent) {
-        if (intent == null) { if (BuildConfig.DEBUG) Log.d(TAG, "handleWidgetActionIntent: intent null"); return; }
+    /** widget_action extra 값과는 별개로, Intent의 action 문자열(딥링크 4개가 각자 고유하게
+        갖고 있음)만으로도 "위젯 버튼이 눌렸었다"는 사실을 알 수 있다 — extra가 유실되는
+        버그 상황에서도 진단창이 "무슨 일이 있었는지"를 보여줄 수 있으려면 이 값이 필요하다.
+        실제 화면 이동 로직(WidgetStore.setPendingAction 호출 여부)에는 전혀 관여하지 않는,
+        순수 진단 전용 값이다. */
+    private static String resolveActionFromIntentAction(String intentAction) {
+        if (intentAction == null) return null;
+        if (intentAction.equals(MedicationWidgetProvider.ACTION_DEEPLINK_SYMPTOM)) return WidgetStore.ACTION_SYMPTOM;
+        if (intentAction.equals(MedicationWidgetProvider.ACTION_DEEPLINK_LIFE)) return WidgetStore.ACTION_LIFE;
+        if (intentAction.equals(MedicationWidgetProvider.ACTION_DEEPLINK_NOTE)) return WidgetStore.ACTION_NOTE;
+        if (intentAction.equals(MedicationWidgetProvider.ACTION_DEEPLINK_SCORE)) return WidgetStore.ACTION_SCORE;
+        return null;
+    }
+
+    private void handleWidgetActionIntent(Intent intent, boolean coldStart) {
+        if (intent == null) {
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "handleWidgetActionIntent: intent null");
+                WidgetDiagnostics.record(coldStart, null, null, true, null, false, null);
+            }
+            return;
+        }
+        String intentAction = intent.getAction();
+        String resolvedFromAction = resolveActionFromIntentAction(intentAction);
+        boolean extrasEmpty = (intent.getExtras() == null || intent.getExtras().isEmpty());
         String action = intent.getStringExtra(WidgetStore.EXTRA_WIDGET_ACTION);
-        if (action == null) { if (BuildConfig.DEBUG) Log.d(TAG, "handleWidgetActionIntent: extra 없음(일반 실행/앱 열기)"); return; }
+        if (action == null) {
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "handleWidgetActionIntent: extra 없음(일반 실행/앱 열기)");
+                WidgetDiagnostics.record(coldStart, intentAction, resolvedFromAction, extrasEmpty, null, false, null);
+            }
+            return;
+        }
         if (BuildConfig.DEBUG) Log.d(TAG, "handleWidgetActionIntent action=" + action + " -> setPendingAction()");
         WidgetStore.setPendingAction(this, action);
         if (BuildConfig.DEBUG) {
@@ -60,6 +91,7 @@ public class MainActivity extends BridgeActivity {
             String readback = WidgetStore.peekPendingAction(this);
             Log.d(TAG, "handleWidgetActionIntent readback after setPendingAction=" + readback
                     + (action.equals(readback) ? " (일치, 정상)" : " (!! action과 불일치 !!)"));
+            WidgetDiagnostics.record(coldStart, intentAction, resolvedFromAction, extrasEmpty, action, action.equals(readback), readback);
         }
         // 같은 인텐트가 재전달(예: 화면 회전)될 때 중복 처리되지 않도록 소비 표시를 지운다.
         intent.removeExtra(WidgetStore.EXTRA_WIDGET_ACTION);

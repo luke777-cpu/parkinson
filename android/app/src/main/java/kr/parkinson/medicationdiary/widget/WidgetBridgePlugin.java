@@ -139,6 +139,20 @@ public class WidgetBridgePlugin extends Plugin {
         }
     }
 
+    /** 실기기 딥링크 진단창(DEBUG 전용) 데이터 소스. release에서는 debug:false만 유의미하고
+        나머지 필드는 JS가 절대 사용하지 않는다 — 콜 자체는 release에서도 항상 성공해야
+        JS의 consumeWidgetAction() 흐름이 깨지지 않는다. */
+    @PluginMethod
+    public void peekWidgetDiagnostics(PluginCall call) {
+        if (BuildConfig.DEBUG) Log.d(TAG, "[plugin] peekWidgetDiagnostics() entered");
+        try {
+            call.resolve(WidgetDiagnostics.toJson());
+        } catch (Exception e) {
+            Log.e(TAG, "[plugin] peekWidgetDiagnostics FAILED", e);
+            call.reject("peekWidgetDiagnostics failed: " + e.getMessage(), e);
+        }
+    }
+
     /** 화면을 실제로 여는 데 성공했다고 JS가 확인한 뒤에만 호출된다. */
     @PluginMethod
     public void clearPendingAction(PluginCall call) {
