@@ -63,6 +63,10 @@ public class WidgetBridgePlugin extends Plugin {
                     JSObject rec = new JSObject();
                     rec.put("output", o.getInt("output"));
                     rec.put("ts", o.getLong("ts"));
+                    // 구버전 pending record에는 trend 키가 없을 수 있다 — 없으면 그냥 생략한다(JS가 null로 처리)
+                    if (o.has("trend") && !o.isNull("trend")) {
+                        rec.put("trend", o.getString("trend"));
+                    }
                     records.put(rec);
                 } catch (Exception e) {
                     Log.e(TAG, "[plugin] peekPendingRecords item " + i + " parse FAILED (raw=" + raw + ")", e);

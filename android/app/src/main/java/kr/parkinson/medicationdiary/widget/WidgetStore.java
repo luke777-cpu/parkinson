@@ -24,9 +24,17 @@ public final class WidgetStore {
     private static final String KEY_PENDING_OUTPUT = "pending_output";
     private static final String KEY_LAST_TS = "last_ts";
     private static final String KEY_PENDING_RECORDS = "pending_records";
+    private static final String KEY_TREND = "trend";
     private static final int NO_VALUE = -1;
     private static final int DEFAULT_OUTPUT = 50;
     private static final int MAX_PENDING_RECORDS = 50;
+    /** 앱 본체가 이미 쓰는 trend 값과 완전히 동일하다(stateFromTrend()/trendLabel() 등,
+        www/index.html) — 위젯에서 "상승 중"으로 기록하면 앱에서 직접 상승 중을 골라 기록한
+        것과 데이터상 구별이 안 되어야 하므로 새 값을 만들지 않고 그대로 재사용한다. */
+    private static final String TREND_RISING = "rising";
+    private static final String TREND_STABLE = "stable";
+    private static final String TREND_FALLING = "falling";
+    private static final String DEFAULT_TREND = TREND_STABLE;
 
     private WidgetStore() {}
 
@@ -53,6 +61,26 @@ public final class WidgetStore {
         return prefs(context).getLong(KEY_LAST_TS, 0L);
     }
 
+    /** 위젯의 "지금 느낌" 선택. +10/-10과 독립적으로 유지되며, 기본값은 stable —
+        상승으로 잘못 기본값이 잡히면 앱의 "상승 종료 결과 확인" 흐름이 위젯만으로도
+        의도치 않게 트리거될 수 있어 가장 안전한 쪽(유지)을 기본으로 둔다. */
+    public static String getTrend(Context context) {
+        String v = prefs(context).getString(KEY_TREND, DEFAULT_TREND);
+        if (!TREND_RISING.equals(v) && !TREND_STABLE.equals(v) && !TREND_FALLING.equals(v)) {
+            return DEFAULT_TREND;
+        }
+        return v;
+    }
+
+    public static void setTrend(Context context, String trend) {
+        if (!TREND_RISING.equals(trend) && !TREND_STABLE.equals(trend) && !TREND_FALLING.equals(trend)) {
+            if (BuildConfig.DEBUG) Log.e(TAG, "setTrend() ignored invalid value=" + trend);
+            return;
+        }
+        if (BuildConfig.DEBUG) Log.d(TAG, "setTrend() -> " + trend);
+        prefs(context).edit().putString(KEY_TREND, trend).apply();
+    }
+
     /** 위젯 +10 / -10: 화면에 보이는 예상값만 바꾼다. 실제 기록은 아직 생성하지 않는다. */
     public static void adjustPending(Context context, int delta) {
         int base = getDisplayOutput(context);
@@ -63,21 +91,23 @@ public final class WidgetStore {
     /** 위젯 "기록": 현재 표시값을 확정하고, 앱이 열릴 때 편입할 대기열에 넣는다. */
     public static void commitRecord(Context context, long ts) {
         int value = getDisplayOutput(context);
-        if (BuildConfig.DEBUG) Log.d(TAG, "commitRecord() value=" + value + " ts=" + ts);
+        String trend = getTrend(context);
+        if (BuildConfig.DEBUG) Log.d(TAG, "commitRecord() value=" + value + " trend=" + trend + " ts=" + ts);
         SharedPreferences.Editor editor = prefs(context).edit();
         editor.putInt(KEY_CURRENT_OUTPUT, value);
         editor.putLong(KEY_LAST_TS, ts);
         editor.remove(KEY_PENDING_OUTPUT);
         editor.apply();
-        appendPendingRecord(context, value, ts);
+        appendPendingRecord(context, value, ts, trend);
     }
 
-    private static synchronized void appendPendingRecord(Context context, int output, long ts) {
+    private static synchronized void appendPendingRecord(Context context, int output, long ts, String trend) {
         try {
             JSONArray arr = readPendingRecordsLocked(context);
             JSONObject rec = new JSONObject();
             rec.put("output", output);
             rec.put("ts", ts);
+            rec.put("trend", trend); // 기존(구버전) pending record에는 이 키가 없을 수 있다 — 읽는 쪽(WidgetBridgePlugin/JS)이 부재를 정상 처리한다
             arr.put(rec);
             while (arr.length() > MAX_PENDING_RECORDS) {
                 arr.remove(0);
@@ -85,7 +115,7 @@ public final class WidgetStore {
             String serialized = arr.toString();
             prefs(context).edit().putString(KEY_PENDING_RECORDS, serialized).apply();
             if (BuildConfig.DEBUG) {
-                Log.d(TAG, "appendPendingRecord output=" + output + " ts=" + ts + " newCount=" + arr.length());
+                Log.d(TAG, "appendPendingRecord output=" + output + " trend=" + trend + " ts=" + ts + " newCount=" + arr.length());
                 // 실제로 디스크/메모리에 반영됐는지 같은 프로세스에서 바로 재확인
                 int recheck = readPendingRecordsLocked(context).length();
                 Log.d(TAG, "appendPendingRecord recheck count=" + recheck);

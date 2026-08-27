@@ -22,6 +22,9 @@ public class MedicationWidgetProvider extends AppWidgetProvider {
     public static final String ACTION_PLUS = "kr.parkinson.medicationdiary.widget.ACTION_PLUS";
     public static final String ACTION_MINUS = "kr.parkinson.medicationdiary.widget.ACTION_MINUS";
     public static final String ACTION_RECORD = "kr.parkinson.medicationdiary.widget.ACTION_RECORD";
+    public static final String ACTION_TREND_RISING = "kr.parkinson.medicationdiary.widget.ACTION_TREND_RISING";
+    public static final String ACTION_TREND_STABLE = "kr.parkinson.medicationdiary.widget.ACTION_TREND_STABLE";
+    public static final String ACTION_TREND_FALLING = "kr.parkinson.medicationdiary.widget.ACTION_TREND_FALLING";
 
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
@@ -49,12 +52,21 @@ public class MedicationWidgetProvider extends AppWidgetProvider {
         } else if (ACTION_RECORD.equals(action)) {
             int value = WidgetStore.getDisplayOutput(context);
             long ts = System.currentTimeMillis();
-            if (BuildConfig.DEBUG) Log.d(TAG, "record clicked value=" + value + " ts=" + ts);
+            if (BuildConfig.DEBUG) Log.d(TAG, "record clicked value=" + value + " trend=" + WidgetStore.getTrend(context) + " ts=" + ts);
             WidgetStore.commitRecord(context, ts);
             if (BuildConfig.DEBUG) {
                 int pendingCount = WidgetStore.peekPendingRecords(context).length();
                 Log.d(TAG, "pending saved count=" + pendingCount);
             }
+            WidgetStore.requestWidgetRefresh(context);
+        } else if (ACTION_TREND_RISING.equals(action)) {
+            WidgetStore.setTrend(context, "rising");
+            WidgetStore.requestWidgetRefresh(context);
+        } else if (ACTION_TREND_STABLE.equals(action)) {
+            WidgetStore.setTrend(context, "stable");
+            WidgetStore.requestWidgetRefresh(context);
+        } else if (ACTION_TREND_FALLING.equals(action)) {
+            WidgetStore.setTrend(context, "falling");
             WidgetStore.requestWidgetRefresh(context);
         }
     }
@@ -86,6 +98,17 @@ public class MedicationWidgetProvider extends AppWidgetProvider {
         views.setOnClickPendingIntent(R.id.widget_btn_minus, actionPendingIntent(context, ACTION_MINUS, 2));
         views.setOnClickPendingIntent(R.id.widget_btn_record, actionPendingIntent(context, ACTION_RECORD, 3));
         views.setOnClickPendingIntent(R.id.widget_btn_open, openAppPendingIntent(context));
+
+        String trend = WidgetStore.getTrend(context);
+        views.setInt(R.id.widget_btn_trend_rising, "setBackgroundResource",
+                "rising".equals(trend) ? R.drawable.widget_trend_rising_selected : R.drawable.widget_button_secondary);
+        views.setInt(R.id.widget_btn_trend_stable, "setBackgroundResource",
+                "stable".equals(trend) ? R.drawable.widget_trend_stable_selected : R.drawable.widget_button_secondary);
+        views.setInt(R.id.widget_btn_trend_falling, "setBackgroundResource",
+                "falling".equals(trend) ? R.drawable.widget_trend_falling_selected : R.drawable.widget_button_secondary);
+        views.setOnClickPendingIntent(R.id.widget_btn_trend_rising, actionPendingIntent(context, ACTION_TREND_RISING, 5));
+        views.setOnClickPendingIntent(R.id.widget_btn_trend_stable, actionPendingIntent(context, ACTION_TREND_STABLE, 6));
+        views.setOnClickPendingIntent(R.id.widget_btn_trend_falling, actionPendingIntent(context, ACTION_TREND_FALLING, 7));
 
         return views;
     }

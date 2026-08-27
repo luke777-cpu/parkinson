@@ -14,4 +14,8 @@
     <string name="widget_no_record">기록 없음</string>
     <string name="widget_last_record_prefix">마지막 기록</string>
     <string name="widget_description">현재 출력값을 홈 화면에서 바로 기록합니다</string>
+    <string name="widget_trend_title">지금 느낌</string>
+    <string name="widget_trend_rising">↑상승중</string>
+    <string name="widget_trend_stable">=유지중</string>
+    <string name="widget_trend_falling">↓하락중</string>
 </resources>

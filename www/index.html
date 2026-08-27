@@ -1381,9 +1381,14 @@ async function ingestWidgetEvents(){
     if(!records.length) return 0;
     wlog("db.events push 직전, 현재 개수=", db.events.length);
     records.forEach(r=>{
-      const prevOut = lastOutputInfo()?.output ?? null;
-      const state = inferStateFromOutput(r.output, prevOut);
-      db.events.push({ id:uid(), type:"state", state, ts:r.ts, output:r.output, trend:null,
+      /* v2.16.8: 위젯 "지금 느낌" 패널 — 앱이 이미 쓰는 trend 값(rising/stable/falling,
+         stateFromTrend() 참고)과 완전히 동일하게 맞춘다. 값이 셋 중 하나가 아니면(구버전
+         pending record라 trend 자체가 없는 경우 포함) trend 없는 것으로 취급 — 그러면
+         stateFromTrend()가 기존과 동일하게 inferStateFromOutput()로 자동 폴백하므로
+         이번 기능 이전에 쌓인 기록의 동작은 전혀 달라지지 않는다. */
+      const trend = (r.trend==="rising"||r.trend==="stable"||r.trend==="falling") ? r.trend : null;
+      const state = stateFromTrend(trend, r.output);
+      db.events.push({ id:uid(), type:"state", state, ts:r.ts, output:r.output, trend,
         gait:null, dysk:null, dyst:null, memo:"", symptoms:[], customSymptom:"", riseResult:null,
         inputMethod:"widget", retrospective:false });
     });
