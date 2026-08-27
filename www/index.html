@@ -5487,11 +5487,13 @@ async function runPdfExport(btn, pageEls, filename){
     await loadPdfLibs();
     const blob=await exportAsPdf(pageEls, filename);
     const result=await saveFileSafely(blob, filename, {title:filename, mimeType:"application/pdf"});
-    /* v2.16.3: Web Share API의 navigator.share() 완료(status:"shared")는 사용자가 공유
+    /* v2.16.4: status:"saved"는 네이티브가 실제 저장(바이트 검증)까지 확인했을 때만 온다.
+       v2.16.3: Web Share API의 navigator.share() 완료(status:"shared")는 사용자가 공유
        시트에서 실제로 "무엇을" 했는지(파일로 저장/다른 앱으로 전달/취소하지 않고 그냥 닫기 등)
        보장하지 않는다 — 시스템에 "공유를 요청해 처리됨" 이상은 확정할 수 없으므로, 파일이
        "저장"됐다고 단정하는 문구 대신 "공유를 완료했다"는 문구로 구분한다(PR #2 검수 반영). */
-    if(result.status==="shared") toast(L("PDF 파일 공유를 완료했어요","PDF file shared"));
+    if(result.status==="saved") toast(L(`PDF 저장 완료 · 파일명: ${result.fileName}${result.location?` (${result.location})`:""}`,`PDF saved · File: ${result.fileName}${result.location?` (${result.location})`:""}`));
+    else if(result.status==="shared") toast(L("PDF 파일 공유를 완료했어요","PDF file shared"));
     else if(result.status==="downloaded") toast(L(`${filename} 파일 저장을 요청했어요`,`Requested to save ${filename}`));
     else if(result.status==="error") toast(L("PDF 저장에 실패했어요","Failed to save PDF"));
     /* status:"cancelled" — 공유 시트를 사용자가 직접 취소한 것이므로 조용히 처리 */
@@ -5680,9 +5682,35 @@ document.getElementById("langToggle").onclick=()=>{
      않고 "저장을 요청했다"는 표현을 쓴다.
    - Blob URL은 클릭 직후 바로 해제하지 않는다 — TWA/WebView에서 다운로드가 클릭과
      동시에 시작되지 않을 수 있어, 충분한 지연 후에 해제한다. */
+/* v2.16.4: Blob을 base64로 바꿔 네이티브 플러그인에 넘기기 위한 변환 (FileSaver 전용) */
+function blobToBase64(blob){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onloadend=()=>{
+      const result=String(reader.result||"");
+      const idx=result.indexOf(",");
+      resolve(idx>=0? result.slice(idx+1) : result);
+    };
+    reader.onerror=()=>reject(reader.error||new Error("blob read failed"));
+    reader.readAsDataURL(blob);
+  });
+}
 async function saveFileSafely(blob, filename, options){
   options=options||{};
   const mimeType=options.mimeType||blob.type||"application/octet-stream";
+  /* v2.16.4: Android(Capacitor) 네이티브 앱에서는 MediaStore 기반 FileSaver 플러그인으로
+     Downloads에 직접 저장하고 실제 성공 여부(바이트 수 검증)까지 확인한다 — 예전 TWA 시절
+     Web Share/<a download> 우회는 저장 성공을 코드가 검증할 방법이 없어 "요청했다"고만
+     말할 수 있었다. 네이티브 저장이 실패하면(구형 OS 등) 아래 기존 웹 경로로 대체한다.
+     일반 브라우저(PWA)는 이 분기를 타지 않고 기존 방식 그대로 동작한다. */
+  if(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform() && Capacitor.Plugins && Capacitor.Plugins.FileSaver){
+    try{
+      const base64=await blobToBase64(blob);
+      const res=await Capacitor.Plugins.FileSaver.saveToDownloads({ filename, mimeType, data:base64 });
+      if(res && res.status==="success") return {status:"saved", fileName:res.fileName||filename, location:res.location||""};
+      /* status:"error"(구형 OS 등) — 아래 기존 공유/다운로드 경로로 대체 시도 */
+    }catch(e){ /* 아래 기존 경로로 대체 시도 */ }
+  }
   if(typeof File!=="undefined" && navigator.share && navigator.canShare){
     try{
       const file=new File([blob], filename, {type:mimeType});
@@ -5712,9 +5740,11 @@ document.getElementById("exportBtn").onclick=async ()=>{
   const filename=L(`약효일지_백업_${todayKey()}.json`,`medlog_backup_${todayKey()}.json`);
   const blob=new Blob([JSON.stringify(db,null,2)],{type:"application/json"});
   const result=await saveFileSafely(blob, filename, {title:filename, mimeType:"application/json"});
-  /* v2.16.3: navigator.share() 완료는 파일이 실제로 저장됐음을 보장하지 않으므로
-     "공유를 완료했다"는 문구로 구분한다(PR #2 검수 반영). */
-  if(result.status==="shared") toast(L("백업 파일 공유를 완료했어요","Backup file shared"));
+  /* v2.16.4: status:"saved"는 네이티브가 실제 저장(바이트 검증)까지 확인했을 때만 온다 —
+     이때만 "완료되었습니다"라고 단정한다. v2.16.3: navigator.share() 완료는 파일이 실제로
+     저장됐음을 보장하지 않으므로 "공유를 완료했다"는 문구로 구분한다(PR #2 검수 반영). */
+  if(result.status==="saved") toast(L(`백업이 완료되었습니다 · 파일명: ${result.fileName}${result.location?` (${result.location})`:""}`,`Backup complete · File: ${result.fileName}${result.location?` (${result.location})`:""}`));
+  else if(result.status==="shared") toast(L("백업 파일 공유를 완료했어요","Backup file shared"));
   else if(result.status==="downloaded") toast(L(`${filename} 파일 저장을 요청했어요`,`Requested to save ${filename}`));
   else if(result.status==="error") toast(L("백업 저장에 실패했어요","Failed to save backup"));
   /* status:"cancelled" — 사용자가 공유창을 직접 취소한 것이므로 조용히 아무 토스트도 띄우지 않는다 */
