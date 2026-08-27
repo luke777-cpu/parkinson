@@ -1271,7 +1271,7 @@ function load(){
   return { events:[], meds:[], questions:defaultQuestions(), settings:{theme:"light",notify:false,lang:detectInitialLang()}, outputChecks:[], dayMemos:{}, phs:{v:(typeof PHS!=="undefined"?PHS.SCHEMA_VERSION:1), profile:null, observations:[], range:null, survey:null}, primarySymptoms:[] };
 }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){ toast(L("저장 공간이 부족합니다","Storage space is full")); }
-  syncSharedProfile(); }
+  syncSharedProfile(); syncOutputToWidget(); }
 /* v0.9.21: 본체 → Shared Profile (언어·글씨·주증상·복용약 사본). 본체 DB는 절대 이 경로로 수정되지 않음 */
 function syncSharedProfile(){
   try{ if(typeof SHARED==="undefined") return;
@@ -1305,6 +1305,35 @@ function ingestChallengeEvents(){
     renderAll();
     toast(L("약효 비교 테스트 결과를 기록에 추가했어요","Medication Challenge summary added to your log"));
     return q.length;
+  }catch(e){ return 0; }
+}
+/* Android 홈 화면 위젯 연동 (v1): 위젯은 자체 SharedPreferences 캐시만 쓰고, 실제 db.events는
+   앱이 열릴 때만 이 함수가 편입한다 — ingestChallengeEvents()와 동일한 큐 편입 구조. */
+function syncOutputToWidget(){
+  try{
+    if(!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform() && Capacitor.Plugins && Capacitor.Plugins.WidgetBridge)) return;
+    const info = lastOutputInfo();
+    Capacitor.Plugins.WidgetBridge.syncFromApp({ output: info? info.output : null, lastTs: info? info.ts : null });
+  }catch(e){}
+}
+async function ingestWidgetEvents(){
+  try{
+    if(!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform() && Capacitor.Plugins && Capacitor.Plugins.WidgetBridge)) return 0;
+    const res = await Capacitor.Plugins.WidgetBridge.drainPendingRecords();
+    const records = (res && res.records) || [];
+    if(!records.length) return 0;
+    records.sort((a,b)=>a.ts-b.ts).forEach(r=>{
+      const prevOut = lastOutputInfo()?.output ?? null;
+      const state = inferStateFromOutput(r.output, prevOut);
+      db.events.push({ id:uid(), type:"state", state, ts:r.ts, output:r.output, trend:null,
+        gait:null, dysk:null, dyst:null, memo:"", symptoms:[], customSymptom:"", riseResult:null,
+        inputMethod:"widget", retrospective:false });
+    });
+    db.events.sort((a,b)=>a.ts-b.ts);
+    save();
+    renderAll();
+    toast(L(`위젯에서 기록한 ${records.length}건을 반영했어요`,`${records.length} widget record(s) added`));
+    return records.length;
   }catch(e){ return 0; }
 }
 function defaultQuestions(){ return (currentLang()==="en" ? [
@@ -5733,8 +5762,8 @@ if(capNotif()){
   }catch(e){}
 }
 /* v0.9.21: Medication Challenge 통합 (본체와 챌린지는 독립 도구 — 시뮬레이터에서 강제 연결하지 않음) */
-syncSharedProfile(); ingestChallengeEvents();
-document.addEventListener("visibilitychange",()=>{ if(!document.hidden) ingestChallengeEvents(); }); /* 챌린지에서 돌아오면 편입 */
+syncSharedProfile(); ingestChallengeEvents(); ingestWidgetEvents();
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ ingestChallengeEvents(); ingestWidgetEvents(); } }); /* 챌린지·위젯에서 돌아오면 편입 */
 document.getElementById("topMedBtn").onclick=()=>openMedSheet();
 document.getElementById("topPastBtn").onclick=()=>openAddPast();
 

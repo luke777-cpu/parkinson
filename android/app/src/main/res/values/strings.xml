@@ -4,4 +4,14 @@
     <string name="title_activity_main">약효일지</string>
     <string name="package_name">kr.parkinson.medicationdiary</string>
     <string name="custom_url_scheme">kr.parkinson.medicationdiary</string>
+
+    <!-- 홈 화면 위젯 -->
+    <string name="widget_app_title">파킨슨 약효 기록</string>
+    <string name="widget_plus">+10</string>
+    <string name="widget_minus">-10</string>
+    <string name="widget_record">기록</string>
+    <string name="widget_open_app">앱 열기</string>
+    <string name="widget_no_record">기록 없음</string>
+    <string name="widget_last_record_prefix">마지막 기록</string>
+    <string name="widget_description">현재 출력값을 홈 화면에서 바로 기록합니다</string>
 </resources>
