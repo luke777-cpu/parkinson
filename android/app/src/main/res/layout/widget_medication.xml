@@ -151,29 +151,29 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:layout_marginTop="14dp"
+        android:layout_marginTop="10dp"
         android:background="#DCE3EB" />
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="6dp"
         android:gravity="center"
         android:text="@string/widget_quick_title"
         android:textColor="#516072"
-        android:textSize="12sp"
+        android:textSize="11sp"
         android:textStyle="bold" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="6dp"
         android:orientation="horizontal">
 
         <Button
             android:id="@+id/widget_btn_quick_tempnote"
             android:layout_width="0dp"
-            android:layout_height="52dp"
+            android:layout_height="48dp"
             android:layout_weight="1"
             android:layout_marginEnd="6dp"
             android:background="@drawable/widget_trend_rising_selected"
@@ -185,7 +185,7 @@
         <Button
             android:id="@+id/widget_btn_quick_symptom"
             android:layout_width="0dp"
-            android:layout_height="52dp"
+            android:layout_height="48dp"
             android:layout_weight="1"
             android:layout_marginEnd="6dp"
             android:background="@drawable/widget_button_secondary"
@@ -197,7 +197,7 @@
         <Button
             android:id="@+id/widget_btn_quick_life"
             android:layout_width="0dp"
-            android:layout_height="52dp"
+            android:layout_height="48dp"
             android:layout_weight="1"
             android:background="@drawable/widget_button_secondary"
             android:text="@string/widget_quick_life"
@@ -209,39 +209,39 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="8dp"
         android:gravity="center"
         android:text="@string/widget_quick_note_title"
         android:textColor="#516072"
-        android:textSize="12sp" />
+        android:textSize="10sp" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="6dp"
         android:orientation="horizontal">
 
         <Button
             android:id="@+id/widget_btn_quick_note"
             android:layout_width="0dp"
-            android:layout_height="52dp"
+            android:layout_height="48dp"
             android:layout_weight="1"
             android:layout_marginEnd="6dp"
             android:background="@drawable/widget_button_secondary"
             android:text="@string/widget_quick_note"
             android:textColor="#15212E"
-            android:textSize="13sp"
+            android:textSize="12sp"
             android:textStyle="bold" />
 
         <Button
             android:id="@+id/widget_btn_quick_score"
             android:layout_width="0dp"
-            android:layout_height="52dp"
+            android:layout_height="48dp"
             android:layout_weight="1"
             android:background="@drawable/widget_button_secondary"
             android:text="@string/widget_quick_score"
             android:textColor="#15212E"
-            android:textSize="13sp"
+            android:textSize="12sp"
             android:textStyle="bold" />
     </LinearLayout>
 </LinearLayout>

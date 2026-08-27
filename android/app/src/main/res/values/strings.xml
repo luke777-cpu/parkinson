@@ -18,11 +18,11 @@
     <string name="widget_trend_rising">↑상승중</string>
     <string name="widget_trend_stable">=유지중</string>
     <string name="widget_trend_falling">↓하락중</string>
-    <string name="widget_quick_title">⚡ 빠른 기록 — 누르면 바로</string>
+    <string name="widget_quick_title">⚡ 빠른 기록</string>
     <string name="widget_quick_tempnote">🕐임시기록</string>
     <string name="widget_quick_symptom">⚡증상</string>
     <string name="widget_quick_life">🍴생활</string>
-    <string name="widget_quick_note_title">🕐 지금은 방향만, 점수는 나중에</string>
+    <string name="widget_quick_note_title">임시 기록</string>
     <string name="widget_quick_note">🕐느낌메모</string>
     <string name="widget_quick_score">📋점수매기기</string>
 </resources>
