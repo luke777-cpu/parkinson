@@ -152,6 +152,12 @@ public class MedicationWidgetProvider extends AppWidgetProvider {
         extra가 나중 것으로 덮여써져서(예: "앱 열기"용 4번을 같이 쓰면) 서로 다른
         딥링크 버튼이 전부 마지막에 만든 것과 같은 동작을 하게 되는 사고로 이어진다. */
     private static PendingIntent deepLinkPendingIntent(Context context, String widgetAction, int requestCode) {
+        /* 주의: 이 로그는 위젯이 "그려질 때"(buildViews) 한 번 찍히는 것이지, 버튼을
+           "누를 때" 찍히는 게 아니다 — PendingIntent.getActivity()로 만든 딥링크는
+           탭하면 Android가 직접 MainActivity를 여는 것이라 이 앱의 코드(onReceive 등)를
+           거치지 않는다. 그래서 "버튼을 눌렀을 때"의 로그는 여기가 아니라 항상
+           MainActivity.onCreate()/onNewIntent()에서부터 시작된다. */
+        if (BuildConfig.DEBUG) Log.d(TAG, "deepLinkPendingIntent built action=" + widgetAction + " requestCode=" + requestCode);
         Intent intent = new Intent(context, MainActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         intent.putExtra(WidgetStore.EXTRA_WIDGET_ACTION, widgetAction);

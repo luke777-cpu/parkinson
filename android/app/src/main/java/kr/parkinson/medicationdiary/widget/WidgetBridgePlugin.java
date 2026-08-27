@@ -121,18 +121,34 @@ public class WidgetBridgePlugin extends Plugin {
     }
 
     /** 위젯의 "증상"/"생활"/"지금 느낌 메모"/"점수 매기기" 버튼이 남긴 화면 이동
-        힌트를 읽고 지운다(한 번 소비). 값이 없으면 action:null을 돌려준다. */
+        힌트를 지우지 않고 그대로 읽는다. 값이 없으면 action:null을 돌려준다. 실제로
+        해당 화면을 여는 데 성공했을 때만 clearPendingAction()을 호출해서 지워야 한다 —
+        열기에 실패하면 힌트가 남아 다음 기회에 다시 시도된다. */
     @PluginMethod
-    public void consumePendingAction(PluginCall call) {
-        if (BuildConfig.DEBUG) Log.d(TAG, "[plugin] consumePendingAction() entered");
+    public void peekPendingAction(PluginCall call) {
+        if (BuildConfig.DEBUG) Log.d(TAG, "[plugin] peekPendingAction() entered");
         try {
-            String action = WidgetStore.consumePendingAction(getContext());
+            String action = WidgetStore.peekPendingAction(getContext());
             JSObject result = new JSObject();
             result.put("action", action);
+            if (BuildConfig.DEBUG) Log.d(TAG, "[plugin] peekPendingAction returning to JS action=" + action);
             call.resolve(result);
         } catch (Exception e) {
-            Log.e(TAG, "[plugin] consumePendingAction FAILED", e);
-            call.reject("consumePendingAction failed: " + e.getMessage(), e);
+            Log.e(TAG, "[plugin] peekPendingAction FAILED", e);
+            call.reject("peekPendingAction failed: " + e.getMessage(), e);
+        }
+    }
+
+    /** 화면을 실제로 여는 데 성공했다고 JS가 확인한 뒤에만 호출된다. */
+    @PluginMethod
+    public void clearPendingAction(PluginCall call) {
+        if (BuildConfig.DEBUG) Log.d(TAG, "[plugin] clearPendingAction() entered");
+        try {
+            WidgetStore.clearPendingAction(getContext());
+            call.resolve();
+        } catch (Exception e) {
+            Log.e(TAG, "[plugin] clearPendingAction FAILED", e);
+            call.reject("clearPendingAction failed: " + e.getMessage(), e);
         }
     }
 }

@@ -19,6 +19,11 @@ public class MainActivity extends BridgeActivity {
         if (BuildConfig.DEBUG) Log.d(TAG, "registerPlugin(WidgetBridgePlugin) done");
         registerPlugin(FileSaverPlugin.class);
         if (BuildConfig.DEBUG) Log.d(TAG, "registerPlugin(FileSaverPlugin) done");
+        if (BuildConfig.DEBUG) {
+            Intent i = getIntent();
+            Log.d(TAG, "onCreate (cold start) intent action extra raw="
+                    + (i == null ? "null-intent" : i.getStringExtra(WidgetStore.EXTRA_WIDGET_ACTION)));
+        }
         super.onCreate(savedInstanceState);
         handleWidgetActionIntent(getIntent());
     }
@@ -30,15 +35,19 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "onNewIntent (already running) intent action extra raw="
+                    + (intent == null ? "null-intent" : intent.getStringExtra(WidgetStore.EXTRA_WIDGET_ACTION)));
+        }
         setIntent(intent);
         handleWidgetActionIntent(intent);
     }
 
     private void handleWidgetActionIntent(Intent intent) {
-        if (intent == null) return;
+        if (intent == null) { if (BuildConfig.DEBUG) Log.d(TAG, "handleWidgetActionIntent: intent null"); return; }
         String action = intent.getStringExtra(WidgetStore.EXTRA_WIDGET_ACTION);
-        if (action == null) return;
-        if (BuildConfig.DEBUG) Log.d(TAG, "handleWidgetActionIntent action=" + action);
+        if (action == null) { if (BuildConfig.DEBUG) Log.d(TAG, "handleWidgetActionIntent: extra 없음(일반 실행/앱 열기)"); return; }
+        if (BuildConfig.DEBUG) Log.d(TAG, "handleWidgetActionIntent action=" + action + " -> setPendingAction()");
         WidgetStore.setPendingAction(this, action);
         // 같은 인텐트가 재전달(예: 화면 회전)될 때 중복 처리되지 않도록 소비 표시를 지운다.
         intent.removeExtra(WidgetStore.EXTRA_WIDGET_ACTION);

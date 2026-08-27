@@ -210,22 +210,27 @@ public final class WidgetStore {
     }
 
     /** "증상"/"생활"/"지금 느낌 메모"/"점수 매기기" 위젯 버튼 — 데이터를 만들지 않고
-        앱을 열면서 어느 화면으로 이동해야 하는지만 남긴다(네비게이션 힌트일 뿐이라
-        pending_records처럼 유실 방지용 peek/ack가 필요 없다 — 소비 실패의 최악의
-        결과는 그냥 홈 화면이 열리는 것뿐, 기록이 사라지지 않는다). */
+        앱을 열면서 어느 화면으로 이동해야 하는지만 남긴다.
+        v2.16.10: 처음엔 "읽으면서 즉시 삭제"였는데, 그러면 JS 쪽에서 화면을 여는 단계가
+        어떤 이유로든 실패(예외/DOM 준비 전)해도 이미 지워진 뒤라 재시도할 방법이 없어
+        조용히 사라진 것처럼 보인다 — pending_records의 peek()/ack() 안전장치와 똑같은
+        이유로, 여기도 "읽기"와 "성공 확인 후 삭제"를 분리한다. */
     public static void setPendingAction(Context context, String action) {
         if (BuildConfig.DEBUG) Log.d(TAG, "setPendingAction() -> " + action);
         prefs(context).edit().putString(KEY_PENDING_ACTION, action).apply();
     }
 
-    /** 값을 읽고 즉시 지운다(한 번 소비하면 끝 — 같은 인텐트로 다시 실행되지 않게). */
-    public static synchronized String consumePendingAction(Context context) {
+    /** 지우지 않고 그대로 읽기만 한다. */
+    public static String peekPendingAction(Context context) {
         String action = prefs(context).getString(KEY_PENDING_ACTION, null);
-        if (action != null) {
-            prefs(context).edit().remove(KEY_PENDING_ACTION).apply();
-        }
-        if (BuildConfig.DEBUG) Log.d(TAG, "consumePendingAction() -> " + action);
+        if (BuildConfig.DEBUG) Log.d(TAG, "peekPendingAction() -> " + action);
         return action;
+    }
+
+    /** 해당 화면을 실제로 여는 데 성공했을 때만 호출해서 지운다. */
+    public static void clearPendingAction(Context context) {
+        if (BuildConfig.DEBUG) Log.d(TAG, "clearPendingAction() called");
+        prefs(context).edit().remove(KEY_PENDING_ACTION).apply();
     }
 
     /** 앱(WebView)이 실제로 저장한 값으로 위젯 캐시를 맞춘다. 미기록 조정값(pending)은 폐기한다. */
