@@ -49,6 +49,14 @@ public class MainActivity extends BridgeActivity {
         if (action == null) { if (BuildConfig.DEBUG) Log.d(TAG, "handleWidgetActionIntent: extra 없음(일반 실행/앱 열기)"); return; }
         if (BuildConfig.DEBUG) Log.d(TAG, "handleWidgetActionIntent action=" + action + " -> setPendingAction()");
         WidgetStore.setPendingAction(this, action);
+        if (BuildConfig.DEBUG) {
+            // SharedPreferences.apply()는 비동기 디스크 반영이지만, 같은 프로세스 내에서는
+            // 메모리 캐시가 즉시 갱신되므로 바로 재확인해도 유효하다 — 여기서 다르게 나오면
+            // setPendingAction() 자체가 실패했다는 뜻이니 원인이 여기로 확정된다.
+            String readback = WidgetStore.peekPendingAction(this);
+            Log.d(TAG, "handleWidgetActionIntent readback after setPendingAction=" + readback
+                    + (action.equals(readback) ? " (일치, 정상)" : " (!! action과 불일치 !!)"));
+        }
         // 같은 인텐트가 재전달(예: 화면 회전)될 때 중복 처리되지 않도록 소비 표시를 지운다.
         intent.removeExtra(WidgetStore.EXTRA_WIDGET_ACTION);
     }

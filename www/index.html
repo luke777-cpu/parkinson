@@ -1442,51 +1442,81 @@ async function ingestWidgetEvents(){
    않고 이미 있는 화면으로만 이동시킨다(openTempNoteQuick()/openTempNoteReview()는
    앱의 기존 함수 그대로 호출, 증상/생활은 quickRecordCard의 기존 탭 전환 그대로 재사용
    — 위젯 전용 로직을 새로 만들지 않는다). */
+/* v2.16.11: 실기기에서 크기 문제 해결 후에도 증상/생활/느낌메모/점수매기기가 계속
+   첫 화면만 보여서, 매 단계를 개별적으로 로그로 확인하고 DOM/함수가 아직 준비되지
+   않았을 가능성에 대비해 짧게 재시도하도록 다시 짰다. 한 번에 실패로 단정하지 않는다. */
+function tryOpenWidgetAction(action, attempt){
+  wlog(`tryOpenWidgetAction(${action}) attempt=${attempt} 시작`);
+  try{
+    const tabOk = (typeof switchTab === "function");
+    wlog(`tryOpenWidgetAction: typeof switchTab === "function" =`, tabOk);
+    if(tabOk) switchTab("today");
+    wlog(`tryOpenWidgetAction: switchTab("today") 호출 완료`);
+
+    if(action==="note"){
+      const fnOk = (typeof openTempNoteQuick === "function");
+      wlog(`tryOpenWidgetAction(note): typeof openTempNoteQuick === "function" =`, fnOk);
+      if(!fnOk) return false;
+      openTempNoteQuick();
+      wlog(`tryOpenWidgetAction(note): openTempNoteQuick() 호출 완료 — 성공으로 간주`);
+      return true;
+    }
+    if(action==="score"){
+      const fnOk = (typeof openTempNoteReview === "function");
+      wlog(`tryOpenWidgetAction(score): typeof openTempNoteReview === "function" =`, fnOk);
+      if(!fnOk) return false;
+      openTempNoteReview();
+      wlog(`tryOpenWidgetAction(score): openTempNoteReview() 호출 완료 — 성공으로 간주`);
+      return true;
+    }
+    if(action==="symptom" || action==="life"){
+      const card=document.getElementById("quickRecordCard");
+      wlog(`tryOpenWidgetAction(${action}): #quickRecordCard 발견 =`, !!card);
+      const tabsWrap=document.getElementById("quickRecordTabs");
+      wlog(`tryOpenWidgetAction(${action}): #quickRecordTabs 발견 =`, !!tabsWrap);
+      const btn=tabsWrap && tabsWrap.querySelector(`[data-panel="${action}"]`);
+      wlog(`tryOpenWidgetAction(${action}): [data-panel="${action}"] 버튼 발견 =`, !!btn);
+      if(!card || !tabsWrap || !btn) return false;
+      btn.click();
+      wlog(`tryOpenWidgetAction(${action}): 버튼 click() 완료`);
+      card.scrollIntoView({behavior:"smooth", block:"start"});
+      return true;
+    }
+    wlog(`tryOpenWidgetAction: 알 수 없는 action ->`, action);
+    return false;
+  }catch(e){
+    werr(`tryOpenWidgetAction(${action}) attempt=${attempt} EXCEPTION`, e);
+    return false;
+  }
+}
 async function consumeWidgetAction(){
   wlog("consumeWidgetAction: 진입, WidgetBridge available =", !!WidgetBridge);
   if(!WidgetBridge){ wlog("consumeWidgetAction: WidgetBridge 없음, 스킵"); return; }
   try{
     wlog("consumeWidgetAction: peekPendingAction 호출 직전");
     const res = await WidgetBridge.peekPendingAction();
-    wlog("consumeWidgetAction: peekPendingAction 응답 =", res);
+    wlog("consumeWidgetAction: peekPendingAction 응답 =", JSON.stringify(res));
     const action = res && res.action;
     wlog("consumeWidgetAction: action =", action);
     if(!action) return;
-    switchTab("today");
     /* v2.16.10: pending_action은 실제로 화면을 여는 데 성공했을 때만 clearPendingAction()
-       으로 지운다 — 아래에서 예외가 나거나(activateQuickPanel이 버튼을 못 찾는 등)
-       실패하면 힌트를 지우지 않고 남겨서, 다음 resume/재실행에서 다시 시도된다. 이전에는
-       peek 대신 곧바로 지우는 consumePendingAction() 하나였는데, 그러면 이 아래에서
-       무슨 이유로든 실패할 경우 원인 파악도 재시도도 불가능하게 조용히 사라졌다. */
-    let opened = false;
-    if(action==="note"){ wlog("consumeWidgetAction: openTempNoteQuick() 호출"); openTempNoteQuick(); opened=true; }
-    else if(action==="score"){ wlog("consumeWidgetAction: openTempNoteReview() 호출"); openTempNoteReview(); opened=true; }
-    else if(action==="symptom"){ wlog("consumeWidgetAction: activateQuickPanel(symptom) 호출"); opened=activateQuickPanel("symptom"); }
-    else if(action==="life"){ wlog("consumeWidgetAction: activateQuickPanel(life) 호출"); opened=activateQuickPanel("life"); }
-    else { wlog("consumeWidgetAction: 알 수 없는 action, 무시 ->", action); }
-    wlog("consumeWidgetAction: opened =", opened);
+       으로 지운다 — 실패하면 힌트를 지우지 않고 남겨서 다음 resume/재실행에서 다시
+       시도된다. v2.16.11: 첫 시도가 DOM/함수 준비 전이라 실패했을 가능성에 대비해
+       (요청사항 5번) 최대 5회, 150ms 간격으로 짧게 재시도한다 — 매번 새로 시도이지
+         setTimeout 한 번 걸어놓고 방치하는 방식이 아니다. */
+    let opened = tryOpenWidgetAction(action, 1);
+    for(let attempt=2; attempt<=5 && !opened; attempt++){
+      await new Promise(resolve=>setTimeout(resolve, 150*attempt));
+      opened = tryOpenWidgetAction(action, attempt);
+    }
+    wlog("consumeWidgetAction: 최종 opened =", opened);
     if(opened){
       await WidgetBridge.clearPendingAction();
       wlog("consumeWidgetAction: clearPendingAction 완료");
     } else {
-      wlog("consumeWidgetAction: 화면 열기 실패 — pending_action 보존(다음 기회에 재시도)");
+      wlog("consumeWidgetAction: 5회 재시도 모두 실패 — pending_action 보존(다음 기회에 재시도)");
     }
   }catch(e){ werr("consumeWidgetAction EXCEPTION — pending_action은 보존됨", e); }
-}
-/* quickRecordCard의 기존 탭(data-panel) 클릭 핸들러를 그대로 재사용한다 — 패널 표시
-   로직을 여기 따로 만들지 않는다. 버튼을 실제로 찾아 클릭했을 때만 true를 돌려줘서,
-   호출한 쪽이 pending_action을 지워도 되는지 판단할 수 있게 한다. */
-function activateQuickPanel(panelName){
-  try{
-    const btn=document.querySelector(`#quickRecordTabs [data-panel="${panelName}"]`);
-    wlog("activateQuickPanel:", panelName, "버튼 발견 =", !!btn);
-    if(!btn) return false;
-    btn.click();
-    const card=document.getElementById("quickRecordCard");
-    wlog("activateQuickPanel: quickRecordCard 발견 =", !!card);
-    card?.scrollIntoView({behavior:"smooth", block:"start"});
-    return true;
-  }catch(e){ werr("activateQuickPanel EXCEPTION", e); return false; }
 }
 /* v2.16.6: section 3 — 앱 초기 로드 시 강제 1회 호출을 보장한다. 기존 코드 흐름(파일 맨
    아래쪽의 syncSharedProfile(); ingestChallengeEvents(); ingestWidgetEvents();) 앞에서
