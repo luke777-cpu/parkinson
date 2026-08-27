@@ -1309,7 +1309,7 @@ function ingestChallengeEvents(){
 }
 /* v2.16.6: 실기기 디버깅용 — 이 값을 false로 바꾸면 [WIDGET_JS]/[FILESAVER_JS] 로그가
    전부 꺼진다. 원인이 확정되면 release 전에 false로 되돌릴 것. */
-const WIDGET_JS_DEBUG = true;
+const WIDGET_JS_DEBUG = false;
 function wlog(...args){ if(WIDGET_JS_DEBUG) try{ console.log("[WIDGET_JS]", ...args); }catch(e){} }
 function werr(...args){ try{ console.error("[WIDGET_JS]", ...args); }catch(e){} }
 
