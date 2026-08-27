@@ -253,5 +253,12 @@ public final class WidgetStore {
         if (ids.length > 0) {
             MedicationWidgetProvider.updateWidgets(context, mgr, ids);
         }
+        // 빠른 기록 위젯도 함께 갱신 — 지금은 정적 버튼뿐이라 시각적 변화는 없지만,
+        // 앞으로 표시 요소가 생겨도 갱신 경로를 따로 만들 필요가 없도록 같은 관문을 쓴다.
+        ComponentName quick = new ComponentName(context, QuickRecordWidgetProvider.class);
+        int[] quickIds = mgr.getAppWidgetIds(quick);
+        if (quickIds.length > 0) {
+            QuickRecordWidgetProvider.updateWidgets(context, mgr, quickIds);
+        }
     }
 }
