@@ -25,6 +25,10 @@ public class MedicationWidgetProvider extends AppWidgetProvider {
     public static final String ACTION_TREND_RISING = "kr.parkinson.medicationdiary.widget.ACTION_TREND_RISING";
     public static final String ACTION_TREND_STABLE = "kr.parkinson.medicationdiary.widget.ACTION_TREND_STABLE";
     public static final String ACTION_TREND_FALLING = "kr.parkinson.medicationdiary.widget.ACTION_TREND_FALLING";
+    /** "임시기록"만 출력값 없이 방향만 즉시 저장하므로 +10/-10/기록과 같은 네이티브
+        브로드캐스트 방식. 증상/생활/느낌메모/점수매기기는 세부 선택이 여럿이라
+        RemoteViews로 대신 골라줄 수 없어 앱을 열어 기존 화면으로 보낸다(딥링크). */
+    public static final String ACTION_QUICK_TEMPNOTE = "kr.parkinson.medicationdiary.widget.ACTION_QUICK_TEMPNOTE";
 
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
@@ -68,6 +72,15 @@ public class MedicationWidgetProvider extends AppWidgetProvider {
         } else if (ACTION_TREND_FALLING.equals(action)) {
             WidgetStore.setTrend(context, "falling");
             WidgetStore.requestWidgetRefresh(context);
+        } else if (ACTION_QUICK_TEMPNOTE.equals(action)) {
+            long ts = System.currentTimeMillis();
+            if (BuildConfig.DEBUG) Log.d(TAG, "quick action clicked type=tempnote trend=" + WidgetStore.getTrend(context) + " ts=" + ts);
+            WidgetStore.commitTempNote(context, ts);
+            if (BuildConfig.DEBUG) {
+                int pendingCount = WidgetStore.peekPendingRecords(context).length();
+                Log.d(TAG, "pending saved count=" + pendingCount);
+            }
+            WidgetStore.requestWidgetRefresh(context);
         }
     }
 
@@ -110,6 +123,12 @@ public class MedicationWidgetProvider extends AppWidgetProvider {
         views.setOnClickPendingIntent(R.id.widget_btn_trend_stable, actionPendingIntent(context, ACTION_TREND_STABLE, 6));
         views.setOnClickPendingIntent(R.id.widget_btn_trend_falling, actionPendingIntent(context, ACTION_TREND_FALLING, 7));
 
+        views.setOnClickPendingIntent(R.id.widget_btn_quick_tempnote, actionPendingIntent(context, ACTION_QUICK_TEMPNOTE, 8));
+        views.setOnClickPendingIntent(R.id.widget_btn_quick_symptom, deepLinkPendingIntent(context, WidgetStore.ACTION_SYMPTOM, 9));
+        views.setOnClickPendingIntent(R.id.widget_btn_quick_life, deepLinkPendingIntent(context, WidgetStore.ACTION_LIFE, 10));
+        views.setOnClickPendingIntent(R.id.widget_btn_quick_note, deepLinkPendingIntent(context, WidgetStore.ACTION_NOTE, 11));
+        views.setOnClickPendingIntent(R.id.widget_btn_quick_score, deepLinkPendingIntent(context, WidgetStore.ACTION_SCORE, 12));
+
         return views;
     }
 
@@ -124,6 +143,19 @@ public class MedicationWidgetProvider extends AppWidgetProvider {
         Intent intent = new Intent(context, MainActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         return PendingIntent.getActivity(context, 4, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    /** "증상"/"생활"/"지금 느낌 메모"/"점수 매기기" — 앱을 열되 어느 화면으로 가야
+        하는지 extra로 실어 보낸다. requestCode를 버튼마다 다르게 줘야 한다 —
+        FLAG_UPDATE_CURRENT로 같은 requestCode를 재사용하면 먼저 만든 PendingIntent의
+        extra가 나중 것으로 덮여써져서(예: "앱 열기"용 4번을 같이 쓰면) 서로 다른
+        딥링크 버튼이 전부 마지막에 만든 것과 같은 동작을 하게 되는 사고로 이어진다. */
+    private static PendingIntent deepLinkPendingIntent(Context context, String widgetAction, int requestCode) {
+        Intent intent = new Intent(context, MainActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        intent.putExtra(WidgetStore.EXTRA_WIDGET_ACTION, widgetAction);
+        return PendingIntent.getActivity(context, requestCode, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 }

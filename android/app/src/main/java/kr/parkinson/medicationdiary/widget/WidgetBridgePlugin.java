@@ -61,11 +61,24 @@ public class WidgetBridgePlugin extends Plugin {
                 try {
                     JSONObject o = raw.getJSONObject(i);
                     JSObject rec = new JSObject();
-                    rec.put("output", o.getInt("output"));
                     rec.put("ts", o.getLong("ts"));
-                    // 구버전 pending record에는 trend 키가 없을 수 있다 — 없으면 그냥 생략한다(JS가 null로 처리)
+                    /* kind가 없는 레코드는 이번 기능 이전(v2.16.7 이전)에 쌓인 구버전
+                       출력 기록이다 — JS 쪽이 kind 부재를 "state"와 동일하게 처리하므로
+                       여기서는 그냥 생략한다. output/trend/dir도 각각 있을 때만 채운다:
+                       output은 state(기록) 레코드에만, dir은 tempnote(임시기록) 레코드에만
+                       있다 — 없는 필드를 강제로 읽으면 이 레코드 전체가 파싱 실패로
+                       빠지므로(catch에 걸려 통째로 드롭됨) 절대 무조건 읽지 않는다. */
+                    if (o.has("kind") && !o.isNull("kind")) {
+                        rec.put("kind", o.getString("kind"));
+                    }
+                    if (o.has("output") && !o.isNull("output")) {
+                        rec.put("output", o.getInt("output"));
+                    }
                     if (o.has("trend") && !o.isNull("trend")) {
                         rec.put("trend", o.getString("trend"));
+                    }
+                    if (o.has("dir") && !o.isNull("dir")) {
+                        rec.put("dir", o.getString("dir"));
                     }
                     records.put(rec);
                 } catch (Exception e) {
@@ -104,6 +117,22 @@ public class WidgetBridgePlugin extends Plugin {
         } catch (Exception e) {
             Log.e(TAG, "[plugin] ackPendingRecords FAILED", e);
             call.reject("ackPendingRecords failed: " + e.getMessage(), e);
+        }
+    }
+
+    /** 위젯의 "증상"/"생활"/"지금 느낌 메모"/"점수 매기기" 버튼이 남긴 화면 이동
+        힌트를 읽고 지운다(한 번 소비). 값이 없으면 action:null을 돌려준다. */
+    @PluginMethod
+    public void consumePendingAction(PluginCall call) {
+        if (BuildConfig.DEBUG) Log.d(TAG, "[plugin] consumePendingAction() entered");
+        try {
+            String action = WidgetStore.consumePendingAction(getContext());
+            JSObject result = new JSObject();
+            result.put("action", action);
+            call.resolve(result);
+        } catch (Exception e) {
+            Log.e(TAG, "[plugin] consumePendingAction FAILED", e);
+            call.reject("consumePendingAction failed: " + e.getMessage(), e);
         }
     }
 }

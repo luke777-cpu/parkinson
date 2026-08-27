@@ -1381,16 +1381,26 @@ async function ingestWidgetEvents(){
     if(!records.length) return 0;
     wlog("db.events push 직전, 현재 개수=", db.events.length);
     records.forEach(r=>{
-      /* v2.16.8: 위젯 "지금 느낌" 패널 — 앱이 이미 쓰는 trend 값(rising/stable/falling,
-         stateFromTrend() 참고)과 완전히 동일하게 맞춘다. 값이 셋 중 하나가 아니면(구버전
-         pending record라 trend 자체가 없는 경우 포함) trend 없는 것으로 취급 — 그러면
-         stateFromTrend()가 기존과 동일하게 inferStateFromOutput()로 자동 폴백하므로
-         이번 기능 이전에 쌓인 기록의 동작은 전혀 달라지지 않는다. */
-      const trend = (r.trend==="rising"||r.trend==="stable"||r.trend==="falling") ? r.trend : null;
-      const state = stateFromTrend(trend, r.output);
-      db.events.push({ id:uid(), type:"state", state, ts:r.ts, output:r.output, trend,
-        gait:null, dysk:null, dyst:null, memo:"", symptoms:[], customSymptom:"", riseResult:null,
-        inputMethod:"widget", retrospective:false });
+      const kind = r.kind || "state"; /* kind가 없으면 이번 기능(v2.16.9) 이전의 구버전 출력 기록 — "state"와 동일하게 처리 */
+      wlog("processing record kind=", kind, "raw=", r);
+      if(kind==="tempnote"){
+        /* v2.16.9: 위젯 "임시기록" — 앱의 addTempNote()와 완전히 동일한 이벤트 모양
+           (type:"tempnote", dir). dir이 앱의 TEMPNOTE_DIRS 다섯 값 중 하나가 아니면
+           (알 수 없는 값) "same"으로 안전하게 처리한다. */
+        const dir = (r.dir==="signal"||r.dir==="up"||r.dir==="peak"||r.dir==="down"||r.dir==="same") ? r.dir : "same";
+        db.events.push({ id:uid(), type:"tempnote", ts:r.ts, dir, memo:"", tags:[] });
+      } else {
+        /* v2.16.8: 위젯 "지금 느낌" 패널 — 앱이 이미 쓰는 trend 값(rising/stable/falling,
+           stateFromTrend() 참고)과 완전히 동일하게 맞춘다. 값이 셋 중 하나가 아니면(구버전
+           pending record라 trend 자체가 없는 경우 포함) trend 없는 것으로 취급 — 그러면
+           stateFromTrend()가 기존과 동일하게 inferStateFromOutput()로 자동 폴백하므로
+           이번 기능 이전에 쌓인 기록의 동작은 전혀 달라지지 않는다. */
+        const trend = (r.trend==="rising"||r.trend==="stable"||r.trend==="falling") ? r.trend : null;
+        const state = stateFromTrend(trend, r.output);
+        db.events.push({ id:uid(), type:"state", state, ts:r.ts, output:r.output, trend,
+          gait:null, dysk:null, dyst:null, memo:"", symptoms:[], customSymptom:"", riseResult:null,
+          inputMethod:"widget", retrospective:false });
+      }
     });
     db.events.sort((a,b)=>a.ts-b.ts);
     wlog("saved to db.events, 개수=", db.events.length, "save() 호출 직전");
@@ -1398,12 +1408,19 @@ async function ingestWidgetEvents(){
     wlog("save() 완료");
     /* v2.16.5: 저장이 실제로 반영됐는지 확인한 뒤에만 위젯 쪽 큐에서 지운다
        (ingestChallengeEvents()와 동일한 안전장치) — 편입에 실패한 레코드는 큐에 그대로
-       남아 다음 기회(앱 재진입)에 다시 시도된다. */
+       남아 다음 기회(앱 재진입)에 다시 시도된다. v2.16.9: tempnote 레코드는 output이
+       없으므로 dir로 대신 확인한다. */
     let persisted=false;
     try{
       const chk=JSON.parse(localStorage.getItem(KEY));
-      persisted = !!(chk && chk.events && records.every(r=>
-        chk.events.some(e=>e.type==="state" && e.inputMethod==="widget" && e.ts===r.ts && e.output===r.output)));
+      persisted = !!(chk && chk.events && records.every(r=>{
+        const kind = r.kind || "state";
+        if(kind==="tempnote"){
+          const dir = (r.dir==="signal"||r.dir==="up"||r.dir==="peak"||r.dir==="down"||r.dir==="same") ? r.dir : "same";
+          return chk.events.some(e=>e.type==="tempnote" && e.ts===r.ts && e.dir===dir);
+        }
+        return chk.events.some(e=>e.type==="state" && e.inputMethod==="widget" && e.ts===r.ts && e.output===r.output);
+      }));
     }catch(e){ werr("localStorage 재확인 중 예외", e); }
     wlog("localStorage 재확인 결과 persisted =", persisted);
     if(!persisted){ wlog("저장 미확인 — ack 하지 않고 큐 보존, 이번엔 반영 안 함"); return 0; }
@@ -1421,6 +1438,35 @@ async function ingestWidgetEvents(){
     _ingestingWidget=false;
   }
 }
+/* v2.16.9: 위젯 "증상"/"생활"/"지금 느낌 메모"/"점수 매기기" 버튼 — 데이터를 만들지
+   않고 이미 있는 화면으로만 이동시킨다(openTempNoteQuick()/openTempNoteReview()는
+   앱의 기존 함수 그대로 호출, 증상/생활은 quickRecordCard의 기존 탭 전환 그대로 재사용
+   — 위젯 전용 로직을 새로 만들지 않는다). */
+async function consumeWidgetAction(){
+  try{
+    if(!WidgetBridge){ wlog("consumeWidgetAction: WidgetBridge 없음, 스킵"); return; }
+    wlog("consumeWidgetAction: consumePendingAction 호출 직전");
+    const res = await WidgetBridge.consumePendingAction();
+    const action = res && res.action;
+    wlog("consumeWidgetAction: action =", action);
+    if(!action) return;
+    switchTab("today");
+    if(action==="note"){ wlog("consumeWidgetAction: openTempNoteQuick() 호출"); openTempNoteQuick(); }
+    else if(action==="score"){ wlog("consumeWidgetAction: openTempNoteReview() 호출"); openTempNoteReview(); }
+    else if(action==="symptom"){ wlog("consumeWidgetAction: symptom 패널 활성화"); activateQuickPanel("symptom"); }
+    else if(action==="life"){ wlog("consumeWidgetAction: life 패널 활성화"); activateQuickPanel("life"); }
+    else { wlog("consumeWidgetAction: 알 수 없는 action, 무시 ->", action); }
+  }catch(e){ werr("consumeWidgetAction EXCEPTION", e); }
+}
+/* quickRecordCard의 기존 탭(data-panel) 클릭 핸들러를 그대로 재사용한다 — 패널 표시
+   로직을 여기 따로 만들지 않는다. */
+function activateQuickPanel(panelName){
+  try{
+    const btn=document.querySelector(`#quickRecordTabs [data-panel="${panelName}"]`);
+    if(btn) btn.click();
+    document.getElementById("quickRecordCard")?.scrollIntoView({behavior:"smooth", block:"start"});
+  }catch(e){ werr("activateQuickPanel EXCEPTION", e); }
+}
 /* v2.16.6: section 3 — 앱 초기 로드 시 강제 1회 호출을 보장한다. 기존 코드 흐름(파일 맨
    아래쪽의 syncSharedProfile(); ingestChallengeEvents(); ingestWidgetEvents();) 앞에서
    어떤 이유로든 예외가 던져지면 그 아래 문장은 전혀 실행되지 않는데, 이 파일은 번들 없이
@@ -1428,8 +1474,8 @@ async function ingestWidgetEvents(){
    완전히 독립적인 콜백이라 그 실패와 무관하게 실행된다. ingestWidgetEvents()는
    _ingestingWidget 가드로 중복 호출에 안전하다. */
 window.addEventListener("load", ()=>{
-  wlog("window 'load' 이벤트 — 초기 강제 ingestWidgetEvents() 호출");
-  ingestWidgetEvents();
+  wlog("window 'load' 이벤트 — 초기 강제 ingestWidgetEvents()/consumeWidgetAction() 호출");
+  ingestWidgetEvents().then(()=>consumeWidgetAction());
 });
 function defaultQuestions(){ return (currentLang()==="en" ? [
   "How can I reduce the delay before morning ON?",
@@ -5908,8 +5954,8 @@ if(capNotif()){
   }catch(e){}
 }
 /* v0.9.21: Medication Challenge 통합 (본체와 챌린지는 독립 도구 — 시뮬레이터에서 강제 연결하지 않음) */
-syncSharedProfile(); ingestChallengeEvents(); ingestWidgetEvents();
-document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ ingestChallengeEvents(); ingestWidgetEvents(); } }); /* 챌린지·위젯에서 돌아오면 편입 */
+syncSharedProfile(); ingestChallengeEvents(); ingestWidgetEvents().then(()=>consumeWidgetAction());
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ ingestChallengeEvents(); ingestWidgetEvents().then(()=>consumeWidgetAction()); } }); /* 챌린지·위젯에서 돌아오면 편입, 위젯 딥링크 소비 */
 document.getElementById("topMedBtn").onclick=()=>openMedSheet();
 document.getElementById("topPastBtn").onclick=()=>openAddPast();
 

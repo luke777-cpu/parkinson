@@ -25,6 +25,7 @@ public final class WidgetStore {
     private static final String KEY_LAST_TS = "last_ts";
     private static final String KEY_PENDING_RECORDS = "pending_records";
     private static final String KEY_TREND = "trend";
+    private static final String KEY_PENDING_ACTION = "pending_action";
     private static final int NO_VALUE = -1;
     private static final int DEFAULT_OUTPUT = 50;
     private static final int MAX_PENDING_RECORDS = 50;
@@ -35,6 +36,23 @@ public final class WidgetStore {
     private static final String TREND_STABLE = "stable";
     private static final String TREND_FALLING = "falling";
     private static final String DEFAULT_TREND = TREND_STABLE;
+
+    /** 앱의 TEMPNOTE_DIRS(www/index.html)와 동일한 값 — 위젯의 단순 3분류(trend)를
+        그중 가장 가까운 것으로만 매핑한다. signal/peak처럼 더 세밀한 의미는 위젯
+        버튼 3개로는 구분할 수 없어 만들지 않는다. */
+    private static final String DIR_UP = "up";
+    private static final String DIR_SAME = "same";
+    private static final String DIR_DOWN = "down";
+
+    /** MainActivity 인텐트로 "빠른 기록" 딥링크를 전달할 때 쓰는 extra 키. */
+    public static final String EXTRA_WIDGET_ACTION = "widget_action";
+    /** consumePendingAction()이 돌려주는 값 — www/index.html의 기존 진입점과 1:1 대응.
+        note=openTempNoteQuick(), score=openTempNoteReview(),
+        symptom/life=quickRecordCard의 해당 data-panel 탭 활성화. */
+    public static final String ACTION_NOTE = "note";
+    public static final String ACTION_SCORE = "score";
+    public static final String ACTION_SYMPTOM = "symptom";
+    public static final String ACTION_LIFE = "life";
 
     private WidgetStore() {}
 
@@ -88,7 +106,9 @@ public final class WidgetStore {
         prefs(context).edit().putInt(KEY_PENDING_OUTPUT, next).apply();
     }
 
-    /** 위젯 "기록": 현재 표시값을 확정하고, 앱이 열릴 때 편입할 대기열에 넣는다. */
+    /** 위젯 "기록": 현재 표시값을 확정하고, 앱이 열릴 때 편입할 대기열에 넣는다.
+        kind:"state"로 표시하지만, 이 키가 아예 없는 구버전 pending record도 앱(JS) 쪽에서
+        "state"와 동일하게 처리하도록 만들어뒀다(하위 호환). */
     public static void commitRecord(Context context, long ts) {
         int value = getDisplayOutput(context);
         String trend = getTrend(context);
@@ -98,16 +118,39 @@ public final class WidgetStore {
         editor.putLong(KEY_LAST_TS, ts);
         editor.remove(KEY_PENDING_OUTPUT);
         editor.apply();
-        appendPendingRecord(context, value, ts, trend);
+        try {
+            JSONObject rec = new JSONObject();
+            rec.put("kind", "state");
+            rec.put("output", value);
+            rec.put("ts", ts);
+            rec.put("trend", trend);
+            appendPendingRecord(context, rec);
+        } catch (Exception e) {
+            if (BuildConfig.DEBUG) Log.e(TAG, "commitRecord build FAILED", e);
+        }
     }
 
-    private static synchronized void appendPendingRecord(Context context, int output, long ts, String trend) {
+    /** 위젯 "임시기록": 출력값 없이 현재 방향만 즉시 기록한다 — 앱의 addTempNote()와
+        동일한 의미(type:"tempnote", dir). trend(rising/stable/falling)를 앱의 dir
+        어휘(TEMPNOTE_DIRS) 중 가장 가까운 것으로 매핑한다. */
+    public static void commitTempNote(Context context, long ts) {
+        String trend = getTrend(context);
+        String dir = TREND_RISING.equals(trend) ? DIR_UP : TREND_FALLING.equals(trend) ? DIR_DOWN : DIR_SAME;
+        if (BuildConfig.DEBUG) Log.d(TAG, "commitTempNote() trend=" + trend + " dir=" + dir + " ts=" + ts);
+        try {
+            JSONObject rec = new JSONObject();
+            rec.put("kind", "tempnote");
+            rec.put("dir", dir);
+            rec.put("ts", ts);
+            appendPendingRecord(context, rec);
+        } catch (Exception e) {
+            if (BuildConfig.DEBUG) Log.e(TAG, "commitTempNote build FAILED", e);
+        }
+    }
+
+    private static synchronized void appendPendingRecord(Context context, JSONObject rec) {
         try {
             JSONArray arr = readPendingRecordsLocked(context);
-            JSONObject rec = new JSONObject();
-            rec.put("output", output);
-            rec.put("ts", ts);
-            rec.put("trend", trend); // 기존(구버전) pending record에는 이 키가 없을 수 있다 — 읽는 쪽(WidgetBridgePlugin/JS)이 부재를 정상 처리한다
             arr.put(rec);
             while (arr.length() > MAX_PENDING_RECORDS) {
                 arr.remove(0);
@@ -115,7 +158,7 @@ public final class WidgetStore {
             String serialized = arr.toString();
             prefs(context).edit().putString(KEY_PENDING_RECORDS, serialized).apply();
             if (BuildConfig.DEBUG) {
-                Log.d(TAG, "appendPendingRecord output=" + output + " trend=" + trend + " ts=" + ts + " newCount=" + arr.length());
+                Log.d(TAG, "appendPendingRecord rec=" + rec + " newCount=" + arr.length());
                 // 실제로 디스크/메모리에 반영됐는지 같은 프로세스에서 바로 재확인
                 int recheck = readPendingRecordsLocked(context).length();
                 Log.d(TAG, "appendPendingRecord recheck count=" + recheck);
@@ -164,6 +207,25 @@ public final class WidgetStore {
         }
         prefs(context).edit().putString(KEY_PENDING_RECORDS, remaining.toString()).apply();
         if (BuildConfig.DEBUG) Log.d(TAG, "ackPendingRecords removed=" + removed + " remaining=" + remaining.length());
+    }
+
+    /** "증상"/"생활"/"지금 느낌 메모"/"점수 매기기" 위젯 버튼 — 데이터를 만들지 않고
+        앱을 열면서 어느 화면으로 이동해야 하는지만 남긴다(네비게이션 힌트일 뿐이라
+        pending_records처럼 유실 방지용 peek/ack가 필요 없다 — 소비 실패의 최악의
+        결과는 그냥 홈 화면이 열리는 것뿐, 기록이 사라지지 않는다). */
+    public static void setPendingAction(Context context, String action) {
+        if (BuildConfig.DEBUG) Log.d(TAG, "setPendingAction() -> " + action);
+        prefs(context).edit().putString(KEY_PENDING_ACTION, action).apply();
+    }
+
+    /** 값을 읽고 즉시 지운다(한 번 소비하면 끝 — 같은 인텐트로 다시 실행되지 않게). */
+    public static synchronized String consumePendingAction(Context context) {
+        String action = prefs(context).getString(KEY_PENDING_ACTION, null);
+        if (action != null) {
+            prefs(context).edit().remove(KEY_PENDING_ACTION).apply();
+        }
+        if (BuildConfig.DEBUG) Log.d(TAG, "consumePendingAction() -> " + action);
+        return action;
     }
 
     /** 앱(WebView)이 실제로 저장한 값으로 위젯 캐시를 맞춘다. 미기록 조정값(pending)은 폐기한다. */
