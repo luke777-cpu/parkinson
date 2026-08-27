@@ -90,10 +90,27 @@ public final class WidgetStore {
         }
     }
 
-    public static synchronized JSONArray drainPendingRecords(Context context) {
+    /** 큐를 지우지 않고 그대로 읽기만 한다 — 실제 편입(db.events 저장) 확인 전에는
+        절대 지우지 않기 위해, "읽기"와 "확인 후 제거"를 별도 메서드로 분리했다. */
+    public static synchronized JSONArray peekPendingRecords(Context context) {
+        return readPendingRecordsLocked(context);
+    }
+
+    /** ts가 일치하는 항목만 큐에서 제거한다. 편입에 실패한 레코드나, peek 이후 위젯에서
+        새로 추가된 레코드는 절대 건드리지 않고 큐에 그대로 남긴다. */
+    public static synchronized void ackPendingRecords(Context context, java.util.Set<Long> timestamps) {
+        if (timestamps == null || timestamps.isEmpty()) return;
         JSONArray arr = readPendingRecordsLocked(context);
-        prefs(context).edit().putString(KEY_PENDING_RECORDS, "[]").apply();
-        return arr;
+        JSONArray remaining = new JSONArray();
+        for (int i = 0; i < arr.length(); i++) {
+            try {
+                JSONObject rec = arr.getJSONObject(i);
+                if (!timestamps.contains(rec.getLong("ts"))) {
+                    remaining.put(rec);
+                }
+            } catch (Exception ignored) {}
+        }
+        prefs(context).edit().putString(KEY_PENDING_RECORDS, remaining.toString()).apply();
     }
 
     /** 앱(WebView)이 실제로 저장한 값으로 위젯 캐시를 맞춘다. 미기록 조정값(pending)은 폐기한다. */

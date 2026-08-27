@@ -1307,22 +1307,30 @@ function ingestChallengeEvents(){
     return q.length;
   }catch(e){ return 0; }
 }
+/* v2.16.5: 네이티브에 플러그인을 등록(MainActivity.registerPlugin)해도 JS 쪽
+   Capacitor.Plugins.<이름>은 자동으로 채워지지 않는다 — 이 앱은 번들러 없이 순수
+   <script>로 돌아가므로 @capacitor/core의 registerPlugin을 import할 수 없고, 대신
+   네이티브가 주입하는 전역 Capacitor.registerPlugin(name)을 직접 호출해서 프록시를
+   만들어야 한다. 이걸 빠뜨려서 위젯 편입·FileSaver 네이티브 저장이 조용히 항상
+   폴백 경로로만 빠지고 있었다(실기기 테스트에서 확인됨). */
+const WidgetBridge = (window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform() && Capacitor.registerPlugin)
+  ? Capacitor.registerPlugin("WidgetBridge") : null;
 /* Android 홈 화면 위젯 연동 (v1): 위젯은 자체 SharedPreferences 캐시만 쓰고, 실제 db.events는
    앱이 열릴 때만 이 함수가 편입한다 — ingestChallengeEvents()와 동일한 큐 편입 구조. */
 function syncOutputToWidget(){
   try{
-    if(!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform() && Capacitor.Plugins && Capacitor.Plugins.WidgetBridge)) return;
+    if(!WidgetBridge) return;
     const info = lastOutputInfo();
-    Capacitor.Plugins.WidgetBridge.syncFromApp({ output: info? info.output : null, lastTs: info? info.ts : null });
+    WidgetBridge.syncFromApp({ output: info? info.output : null, lastTs: info? info.ts : null });
   }catch(e){}
 }
 async function ingestWidgetEvents(){
   try{
-    if(!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform() && Capacitor.Plugins && Capacitor.Plugins.WidgetBridge)) return 0;
-    const res = await Capacitor.Plugins.WidgetBridge.drainPendingRecords();
-    const records = (res && res.records) || [];
+    if(!WidgetBridge) return 0;
+    const res = await WidgetBridge.peekPendingRecords();
+    const records = ((res && res.records) || []).slice().sort((a,b)=>a.ts-b.ts);
     if(!records.length) return 0;
-    records.sort((a,b)=>a.ts-b.ts).forEach(r=>{
+    records.forEach(r=>{
       const prevOut = lastOutputInfo()?.output ?? null;
       const state = inferStateFromOutput(r.output, prevOut);
       db.events.push({ id:uid(), type:"state", state, ts:r.ts, output:r.output, trend:null,
@@ -1331,6 +1339,17 @@ async function ingestWidgetEvents(){
     });
     db.events.sort((a,b)=>a.ts-b.ts);
     save();
+    /* v2.16.5: 저장이 실제로 반영됐는지 확인한 뒤에만 위젯 쪽 큐에서 지운다
+       (ingestChallengeEvents()와 동일한 안전장치) — 편입에 실패한 레코드는 큐에 그대로
+       남아 다음 기회(앱 재진입)에 다시 시도된다. */
+    let persisted=false;
+    try{
+      const chk=JSON.parse(localStorage.getItem(KEY));
+      persisted = !!(chk && chk.events && records.every(r=>
+        chk.events.some(e=>e.type==="state" && e.inputMethod==="widget" && e.ts===r.ts && e.output===r.output)));
+    }catch(e){}
+    if(!persisted) return 0;
+    await WidgetBridge.ackPendingRecords({ ts: records.map(r=>r.ts) });
     renderAll();
     toast(L(`위젯에서 기록한 ${records.length}건을 반영했어요`,`${records.length} widget record(s) added`));
     return records.length;
@@ -5682,6 +5701,11 @@ document.getElementById("langToggle").onclick=()=>{
      않고 "저장을 요청했다"는 표현을 쓴다.
    - Blob URL은 클릭 직후 바로 해제하지 않는다 — TWA/WebView에서 다운로드가 클릭과
      동시에 시작되지 않을 수 있어, 충분한 지연 후에 해제한다. */
+/* v2.16.5: WidgetBridge와 같은 이유로 FileSaver도 Capacitor.registerPlugin()을 직접
+   호출해야 프록시가 생긴다 — Capacitor.Plugins.FileSaver를 그냥 참조하면 항상
+   undefined라서 네이티브 저장이 한 번도 실행되지 않고 매번 아래 웹 폴백으로만 빠졌다. */
+const FileSaver = (window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform() && Capacitor.registerPlugin)
+  ? Capacitor.registerPlugin("FileSaver") : null;
 /* v2.16.4: Blob을 base64로 바꿔 네이티브 플러그인에 넘기기 위한 변환 (FileSaver 전용) */
 function blobToBase64(blob){
   return new Promise((resolve,reject)=>{
@@ -5703,10 +5727,10 @@ async function saveFileSafely(blob, filename, options){
      Web Share/<a download> 우회는 저장 성공을 코드가 검증할 방법이 없어 "요청했다"고만
      말할 수 있었다. 네이티브 저장이 실패하면(구형 OS 등) 아래 기존 웹 경로로 대체한다.
      일반 브라우저(PWA)는 이 분기를 타지 않고 기존 방식 그대로 동작한다. */
-  if(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform() && Capacitor.Plugins && Capacitor.Plugins.FileSaver){
+  if(FileSaver){
     try{
       const base64=await blobToBase64(blob);
-      const res=await Capacitor.Plugins.FileSaver.saveToDownloads({ filename, mimeType, data:base64 });
+      const res=await FileSaver.saveToDownloads({ filename, mimeType, data:base64 });
       if(res && res.status==="success") return {status:"saved", fileName:res.fileName||filename, location:res.location||""};
       /* status:"error"(구형 OS 등) — 아래 기존 공유/다운로드 경로로 대체 시도 */
     }catch(e){ /* 아래 기존 경로로 대체 시도 */ }
