@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=0.5, maximum-scale=5.0, user-scalable=yes">
+<title>약효 비교 테스트</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="challenge.css">
+<meta name="theme-color" content="#2563eb">
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="toast" id="toast"></div>
+<script src="../shared-profile.js" onerror="/* 단독 배포 시 없음 — 무시 */"></script>
+<script src="challenge-engine.js"></script>
+<script src="challenge-sim.js"></script>
+<script src="challenge-timer.js"></script>
+<script src="challenge-report.js"></script>
+<script>
+"use strict";
+/* ============================================================
+   약효 비교 테스트 v2 — 독립 화면 (본체 무수정·저장소 분리)
+   ============================================================ */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function toast(m){ const t=$("toast"); t.textContent=m; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),2600); }
+function fmtDate(iso){ const d=new Date(iso); return isNaN(d)?"":`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+
+/* ---------- 저장 + v1 마이그레이션 ---------- */
+let db, medList, migNote=null;
+function loadAll(){
+  try{ const raw=localStorage.getItem(CHG.STORAGE_KEY);
+    if(raw){ const d=JSON.parse(raw); if(d&&d.version===2&&Array.isArray(d.tests)){ db=d; } } }catch(e){}
+  if(!db){
+    /* v1 감지 → 백업 후 변환 (원본 V1 키는 그대로 둔다) */
+    try{ const raw1=localStorage.getItem(CHG.V1_KEY);
+      if(raw1){
+        localStorage.setItem(CHG.V1_BACKUP_KEY, raw1);
+        const res=CHG.migrateV1(JSON.parse(raw1));
+        if(res.ok){ db=res.db2; migNote=`이전 v1 테스트 ${db.tests.length}건을 가져왔어요 (원본은 그대로 보존됩니다)`; }
+      } }catch(e){}
+  }
+  if(!db) db=CHG.emptyDb();
+  try{ const rawM=localStorage.getItem(CHG.MEDLIST_KEY);
+    if(rawM){ const m=JSON.parse(rawM); if(m&&Array.isArray(m.meds)) medList=m; } }catch(e){}
+  if(!medList) medList=CHG.emptyMedList();
+}
+function save(){ try{ localStorage.setItem(CHG.STORAGE_KEY, JSON.stringify(db)); }catch(e){ toast("저장 공간이 부족합니다"); } }
+function saveMeds(){ try{ localStorage.setItem(CHG.MEDLIST_KEY, JSON.stringify(medList)); }catch(e){ toast("저장 공간이 부족합니다"); } }
+loadAll(); if(migNote) save();
+
+/* v0.9.21: 본체 Shared Profile 적용 (글씨 크기·주증상·복용약 — 전부 사본, 본체 DB 무수정) */
+let sharedProfile=null, sharedPrimary=[];
+(function applyShared(){
+  try{
+    if(typeof SHARED==="undefined") return;
+    sharedProfile=SHARED.read();
+    if(sharedProfile.fontScale) document.documentElement.style.setProperty("--fs", String(sharedProfile.fontScale));
+    if(sharedProfile.language) db.settings.language=sharedProfile.language;
+    sharedPrimary=(sharedProfile.primarySymptoms||[]).map(x=>x.type);
+    /* 본체 복용약 → 내 약 목록: 이름이 같은 약이 없을 때만 사본 추가 */
+    let added=0;
+    (sharedProfile.medications||[]).forEach(m=>{
+      if(!m||!m.name) return;
+      if(medList.meds.some(x=>x.name===m.name)) return;
+      medList.meds.push(CHG.newMed({name:m.name,
+        unitDose:m.dose? m.dose+"mg":"", usualDose:m.dose? m.dose+"mg":"",
+        usualTimes:(m.sched||[]).slice(), memo:m.note? m.note+" (약효일지에서 가져옴)":"약효일지에서 가져옴"}));
+      added++;
+    });
+    if(added){ saveMeds(); migNote=(migNote? migNote+" · ":"")+`약효일지 복용약 ${added}개를 가져왔어요`; }
+  }catch(e){}
+})();
+/* 본체 주증상 코드 → 챌린지 증상 코드 매핑 (마법사에서 미리 선택) */
+const PRIMARY_TO_CHG={tremor:"tremor", rigidity:"rigidity", dystonia:"dystonia", foot_dragging:"foot_dragging",
+  freezing_of_gait:"freezing_of_gait", slow_hand:"hand_movement", gait_start_delay:"gait_start", voice:"speech"};
+
+const inProgress=()=>db.tests.find(t=>t.status==="in_progress")||null;
+const completedTests=()=>db.tests.filter(t=>t.status==="completed");
+const doneStages=t=>(t.assessments||[]).map(a=>a.stage);
+
+const SAFETY_HTML=`<div class="disc">
+  · 이 기능은 약의 증량·감량·추가를 권하는 기능이 아닙니다.<br>
+  · 처방 변경은 반드시 의료진과 상의하여 진행하십시오. ${CHG.CHANGE_NOTE}<br>
+  · 결과는 진단이나 치료 결정을 대신하지 않습니다.<br>
+  · 어지럼, 실신, 심한 이상운동증, 혼란, 환시 등 심한 이상이 발생하면 테스트를 중단하고 의료진과 상의하십시오.</div>`;
+const SIM_DISC=`<div class="hint">${CHGSIM.DISCLAIMER_USE}<br>${CHGSIM.DISCLAIMER_MODEL}</div>`;
+
+function render(html){ $("app").innerHTML=html; window.scrollTo(0,0); }
+
+/* ========== 1. 첫 화면 ========== */
+function viewHome(){
+  const act=inProgress();
+  let actHtml="";
+  if(act){
+    let due="";
+    if(act.doseTakenAt){
+      const info=CHGTIMER.dueInfo(act.doseTakenAt, doneStages(act));
+      if(info.next) due=`<div class="nextdue">다음 기록: 복용 ${info.next.minutes}분 후 <small>약 ${info.next.inMin}분 남음 (경과 ${info.elapsed}분)</small></div>`;
+      if(info.missed.length) due+=`<div class="disc warn">놓친 기록: ${info.missed.map(m=>m.minutes+"분").join(", ")} — 지금이라도 기록하면 실제 시각과 함께 저장됩니다.</div>`;
+    }
+    actHtml=`<div class="card"><b>진행 중인 테스트</b><div class="hint">${esc(act.title)} · ${fmtDate(act.createdAt)} · ${CHG.label("role",act.comparisonRole)}</div>
+      ${due}
+      <div class="btn-row"><button class="btn primary" onclick="viewStages()">이어서 기록</button>
+      <button class="btn ghost" onclick="abandonTest()">중단(삭제)</button></div></div>`;
+  }
+  render(`
+    <div class="no-print" style="margin-bottom:6px"><a class="btn ghost small" style="display:inline-block; text-decoration:none; padding:8px 12px" href="../index.html">← 약효일지로 돌아가기</a></div>
+    <h1>약효 비교 테스트 <span class="hint" style="font-weight:400">v2</span></h1>
+    <div class="hint">내 약을 등록하고, 기준 시험과 처방 변경 후 시험을 같은 방식으로 기록해 예상 곡선·실제 반응을 비교하는 도구입니다.</div>
+    ${SAFETY_HTML}
+    ${migNote? `<div class="disc">${esc(migNote)}</div>`:""}
+    ${actHtml}
+    ${act? "":`<button class="btn primary" style="margin:8px 0" onclick="viewSetup()">약효 테스트 시작</button>`}
+    <div class="btn-row"><button class="btn ghost" onclick="viewMeds()">내 복용약 관리</button><button class="btn ghost" onclick="viewList()">이전 테스트·비교</button></div>
+    <div class="btn-row"><button class="btn ghost" onclick="exportJson()">백업 내보내기</button><button class="btn ghost" onclick="$('importFile').click()">백업 불러오기</button></div>
+    <div class="btn-row"><button class="btn ghost" onclick="viewHelp()">사용 방법</button><button class="btn ghost" style="color:var(--danger)" onclick="deleteAll()">전체 데이터 삭제</button></div>
+    <input type="file" id="importFile" class="sr" accept="application/json" onchange="importJson(event)">
+  `);
+  migNote=null;
+}
+function abandonTest(){
+  if(!confirm("진행 중인 테스트를 삭제할까요? 완료된 테스트는 지워지지 않습니다.")) return;
+  CHGTIMER.clear();
+  db.tests=db.tests.filter(t=>t.status!=="in_progress"); save(); viewHome();
+}
+
+/* ========== 2. 내 복용약 관리 ========== */
+function viewMeds(){
+  render(`
+    <div class="topbar no-print"><button class="btn ghost small" onclick="viewHome()">← 처음</button><h1 style="margin:0">내 복용약</h1></div>
+    ${medList.meds.length? medList.meds.map(m=>`
+      <div class="card">
+        <b>${esc(m.name)}</b> <span class="hint">${esc(m.unitDose||"")} ${esc(m.form||"")}</span>
+        <div class="hint">평소 1회 ${esc(m.usualDose||"-")} · ${m.usualTimes&&m.usualTimes.length? esc(m.usualTimes.join(", ")):"시각 미지정"}${m.prn?" · 필요 시 복용":""}</div>
+        ${m.memo? `<div class="hint">${esc(m.memo)}</div>`:""}
+        <div class="btn-row">
+          <button class="btn ghost small" onclick="editMed('${m.id}')">수정</button>
+          <button class="btn ghost small" onclick="copyMed('${m.id}')">복사</button>
+          <button class="btn ghost small" style="color:var(--danger)" onclick="delMed('${m.id}')">삭제</button>
+        </div>
+      </div>`).join("") : `<div class="card hint">등록된 약이 없습니다. 아래에서 추가하세요.</div>`}
+    <button class="btn primary" onclick="editMed(null)">＋ 약 추가</button>
+  `);
+}
+function editMed(id){
+  const m=id? medList.meds.find(x=>x.id===id) : {name:"",unitDose:"",form:"",usualDose:"",usualTimes:[],prn:false,memo:""};
+  render(`
+    <div class="topbar no-print"><button class="btn ghost small" onclick="viewMeds()">← 목록</button><h1 style="margin:0">${id?"약 수정":"약 추가"}</h1></div>
+    <div class="card">
+      <div class="field"><label>약 이름 *</label><input type="text" id="m_name" value="${esc(m.name)}" placeholder="예: 퍼킨"></div>
+      <div class="field"><label>1정 또는 1회 함량</label><input type="text" id="m_unit" value="${esc(m.unitDose)}" placeholder="예: 100mg"></div>
+      <div class="field"><label>제형</label><input type="text" id="m_form" value="${esc(m.form)}" placeholder="예: 속방정"></div>
+      <div class="field"><label>평소 1회 복용량</label><input type="text" id="m_dose" value="${esc(m.usualDose)}" placeholder="예: 1정 (100mg)"></div>
+      <div class="field"><label>평소 복용 시각 (쉼표 구분)</label><input type="text" id="m_times" value="${esc((m.usualTimes||[]).join(", "))}" placeholder="예: 07:00, 12:00, 17:00"></div>
+      <div class="field"><label class="chip${m.prn?" sel":""}" id="m_prn" style="display:inline-flex" onclick="this.classList.toggle('sel')">필요 시 복용(PRN)</label></div>
+      <div class="field"><label>메모</label><input type="text" id="m_memo" value="${esc(m.memo)}"></div>
+      <button class="btn primary" onclick="saveMed('${id||""}')">저장</button>
+    </div>`);
+}
+function saveMed(id){
+  const name=$("m_name").value.trim();
+  if(!name){ toast("약 이름을 입력해주세요"); return; }
+  const data={name, unitDose:$("m_unit").value.trim(), form:$("m_form").value.trim(),
+    usualDose:$("m_dose").value.trim(),
+    usualTimes:$("m_times").value.split(",").map(s=>s.trim()).filter(s=>/^\d{1,2}:\d{2}$/.test(s)),
+    prn:$("m_prn").classList.contains("sel"), memo:$("m_memo").value.trim()};
+  if(id){ const m=medList.meds.find(x=>x.id===id); Object.assign(m,data); }
+  else medList.meds.push(CHG.newMed(data));
+  saveMeds(); toast("저장했어요"); viewMeds();
+}
+function copyMed(id){ const m=medList.meds.find(x=>x.id===id); if(!m) return;
+  medList.meds.push(CHG.newMed({...m, name:m.name+" (복사)"})); saveMeds(); viewMeds(); }
+function delMed(id){ if(!confirm("이 약을 목록에서 삭제할까요? 기존 테스트 기록에는 영향이 없습니다.")) return;
+  medList.meds=medList.meds.filter(x=>x.id!==id); saveMeds(); viewMeds(); }
+
+/* ========== 3. 새 테스트 설정 ========== */
+/* "1정 (100mg)" → 100. mg 표기 우선, 없으면 "N정"×1정 함량(mg), 마지막으로 첫 숫자 */
+function parseDoseMg(usualDose, unitDose){
+  const ud=String(usualDose||""), un=String(unitDose||"");
+  let m=ud.match(/([\d.]+)\s*mg/i); if(m) return parseFloat(m[1])||0;
+  const cnt=ud.match(/([\d.]+)\s*정/);
+  const unitMg=un.match(/([\d.]+)\s*mg/i);
+  if(cnt&&unitMg) return (parseFloat(cnt[1])||0)*(parseFloat(unitMg[1])||0);
+  if(unitMg&&!ud.trim()) return parseFloat(unitMg[1])||0;
+  m=ud.match(/([\d.]+)/); if(m&&unitMg&&/정|알|캡슐/.test(ud)) return (parseFloat(m[1])||0)*(parseFloat(unitMg[1])||0);
+  if(m) return parseFloat(m[1])||0;
+  return unitMg? parseFloat(unitMg[1])||0 : 0;
+}
+let wiz=null;
+function viewSetup(){
+  wiz={plannedDoses:[], symptoms:[]};
+  /* v0.9.22: 시뮬레이터에서 보낸 가상안 자동 프리필 (24시간 이내) */
+  let simPlan=null;
+  try{
+    if(typeof SHARED!=="undefined"){
+      const sp=SHARED.read();
+      const p=sp.pendingChallengePlan;
+      if(p&&p.trialPlan&&p.trialPlan.length && (Date.now()-new Date(p.createdAt).getTime())<24*3600000) simPlan=p;
+    }
+  }catch(e){}
+  const recent=[...medList.meds].sort((a,b)=>String(b.lastUsedAt||"").localeCompare(String(a.lastUsedAt||""))).slice(0,8);
+  render(`
+    <div class="topbar no-print"><button class="btn ghost small" onclick="viewHome()">← 처음</button><h1 style="margin:0">새 테스트</h1></div>
+    <div class="card">
+      <h2>1) 시험 종류</h2>
+      <div class="chips" id="tt_chips">${CHG.TEST_TYPES.map((t,i)=>`<button type="button" class="chip${i===0?" sel":""}" data-k="${t.code}">${t.ko}</button>`).join("")}</div>
+      <h2>2) 이 시험의 역할</h2>
+      <div class="chips" id="role_chips">${CHG.ROLES.map((r,i)=>`<button type="button" class="chip${i===2?" sel":""}" data-k="${r.code}">${r.ko}</button>`).join("")}</div>
+      <div class="field" id="baseSelWrap" style="display:none"><label>비교할 기준 시험 (선택)</label>
+        <div class="hint">변경 시험은 비교할 기준 시험을 선택하는 것을 권장합니다. 선택하지 않아도 진행할 수 있습니다.</div>
+        <select id="baseSel"><option value="">선택 안 함</option>${completedTests().map(t=>`<option value="${t.id}">${esc(t.title)} (${fmtDate(t.createdAt)})</option>`).join("")}</select></div>
+    </div>
+    <div class="card">
+      <h2>3) 내 약 선택</h2>
+      ${medList.meds.length? `<div class="hint">체크한 약이 아래 복용안에 추가됩니다. (최근 사용 순)</div>
+        <div class="chips" id="med_chips">${recent.concat(medList.meds.filter(m=>!recent.includes(m))).map(m=>`<button type="button" class="chip" data-id="${m.id}">${esc(m.name)}${m.usualDose?` ${esc(m.usualDose)}`:""}</button>`).join("")}</div>`
+      : `<div class="hint">등록된 약이 없습니다. "내 복용약 관리"에서 등록하거나 아래에 직접 입력하세요.</div>`}
+      <h2 style="margin-top:12px">이번 시험 복용안 (예상곡선 계산용)</h2>
+      <div id="doseRows"></div>
+      <button class="btn ghost small" onclick="addDoseRow()">＋ 직접 추가</button>
+      <div class="field"><label>변경 내용 (기준 시험이면 "기준 시험")</label><input type="text" id="chg_desc" placeholder="예: 의사와 상의 후 100mg → 150mg"></div>
+      <div id="simPreview"></div>
+    </div>
+    <div class="card">
+      <h2>4) 증상 선택 (전체 1~6개)</h2>
+      ${CHG.SYMPTOM_GROUPS.map(g=>`
+        <details class="grp" ${g.group==="motor"?"open":""}><summary>${g.ko}</summary><div class="inner">
+          <div class="chips sy_grp" data-group="${g.group}">${g.items.map(it=>`<button type="button" class="chip" data-k="${it.code}">${it.ko}</button>`).join("")}</div>
+          <div class="field sy_customWrap" data-group="${g.group}" style="display:none"><label>기타 증상 이름</label><input type="text" class="sy_custom" data-group="${g.group}"></div>
+        </div></details>`).join("")}
+    </div>
+    ${SAFETY_HTML}
+    <button class="btn primary" onclick="startTest()">테스트 시작 (복용 전 기록으로)</button>
+  `);
+  $("tt_chips").addEventListener("click",e=>{ const b=e.target.closest(".chip"); if(!b)return;
+    $("tt_chips").querySelectorAll(".chip").forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); });
+  $("role_chips").addEventListener("click",e=>{ const b=e.target.closest(".chip"); if(!b)return;
+    $("role_chips").querySelectorAll(".chip").forEach(x=>x.classList.remove("sel")); b.classList.add("sel");
+    $("baseSelWrap").style.display = b.dataset.k==="changed"? "block":"none"; renderSimPreview(); });
+  const mc=$("med_chips");
+  if(mc) mc.addEventListener("click",e=>{ const b=e.target.closest(".chip"); if(!b)return;
+    b.classList.toggle("sel");
+    const m=medList.meds.find(x=>x.id===b.dataset.id);
+    if(b.classList.contains("sel")){
+      const time=(m.usualTimes&&m.usualTimes[0])||"";
+      wiz.plannedDoses.push({name:m.name, dose:parseDoseMg(m.usualDose,m.unitDose), time, medId:m.id});
+    } else wiz.plannedDoses=wiz.plannedDoses.filter(d=>d.medId!==m.id);
+    renderDoseRows(); });
+  /* Shared Profile 주증상 미리 선택 (최대 3개 — 총 6개 제한 내) */
+  sharedPrimary.map(k=>PRIMARY_TO_CHG[k]).filter(Boolean).slice(0,3).forEach(code=>{
+    const b=document.querySelector(`.sy_grp .chip[data-k="${code}"]`); if(b) b.classList.add("sel");
+  });
+  document.querySelectorAll(".sy_grp").forEach(grp=>grp.addEventListener("click",e=>{
+    const b=e.target.closest(".chip"); if(!b)return;
+    const total=document.querySelectorAll(".sy_grp .chip.sel").length;
+    if(!b.classList.contains("sel") && total>=6){ toast("증상은 전체 6개까지 선택할 수 있어요"); return; }
+    b.classList.toggle("sel");
+    const cw=document.querySelector(`.sy_customWrap[data-group="${grp.dataset.group}"]`);
+    cw.style.display = grp.querySelector('.chip.sel[data-k$="_custom"]')? "block":"none";
+  }));
+  $("baseSel").onchange=renderSimPreview;
+  if(simPlan){
+    wiz.plannedDoses=simPlan.trialPlan.map(d=>({...d}));
+    /* v0.9.26: 시뮬레이터에서 고른 임상 문제(시험 목적)와 기간 분석 근거를 함께 받아온다 */
+    $("chg_desc").value=[simPlan.goalLabel? `[시험 목적] ${simPlan.goalLabel}`:"",
+                          simPlan.periodFindings? `[기간 분석] ${simPlan.periodFindings}`:"",
+                          simPlan.changeSummary||""].filter(Boolean).join("\n");
+    /* 역할·종류 자동: 변경 후 시험 + 용량/시간 추정 */
+    $("role_chips").querySelectorAll(".chip").forEach(x=>x.classList.toggle("sel", x.dataset.k==="changed"));
+    $("baseSelWrap").style.display="block";
+    const guessType=/시각|앞당|늦춤|→\d{2}:/.test(simPlan.changeSummary||"")? "time_changed" : (/추가/.test(simPlan.changeSummary||"")? "medication_added":"dose_changed");
+    $("tt_chips").querySelectorAll(".chip").forEach(x=>x.classList.toggle("sel", x.dataset.k===guessType));
+    toast("시뮬레이터의 가상안을 불러왔어요 — 증상만 고르면 시작할 수 있어요");
+    try{ SHARED.write({pendingChallengePlan:null}); }catch(e){}
+  }
+  renderDoseRows();
+}
+function addDoseRow(){ wiz.plannedDoses.push({name:"",dose:0,time:""}); renderDoseRows(); }
+function renderDoseRows(){
+  const el=$("doseRows");
+  el.innerHTML = wiz.plannedDoses.length? wiz.plannedDoses.map((d,i)=>`
+    <div class="doserow">
+      <input type="text" value="${esc(d.name)}" placeholder="약 이름" oninput="wiz.plannedDoses[${i}].name=this.value; renderSimPreview()">
+      <input type="number" value="${d.dose||""}" min="0" step="12.5" placeholder="mg" oninput="wiz.plannedDoses[${i}].dose=+this.value||0; renderSimPreview()">
+      <input type="time" value="${esc(d.time)}" onchange="wiz.plannedDoses[${i}].time=this.value; renderSimPreview()">
+      <button class="btn ghost small" onclick="wiz.plannedDoses.splice(${i},1); renderDoseRows()">✕</button>
+    </div>`).join("") : `<div class="hint">위에서 약을 체크하거나 "직접 추가"를 누르세요.</div>`;
+  renderSimPreview();
+}
+function simSvg(series, opt){ /* series: [{label,color,dash?,pts:[{t,val}]}] — t: 복용 기준 분(-30~150) */
+  const W=520,H=170,PL=30,PR=8,PT=10,PB=24;
+  const T0=-30,T1=150;
+  const maxV=Math.max(1,...series.flatMap(s=>s.pts.map(p=>p.val)));
+  const x=t=>PL+(W-PL-PR)*(t-T0)/(T1-T0), y=v=>PT+(H-PT-PB)*(1-v/maxV);
+  let out=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;background:#fff;border:1px solid var(--line);border-radius:10px">`;
+  [0,30,60,90,120].forEach(t=>out+=`<line x1="${x(t)}" y1="${PT}" x2="${x(t)}" y2="${H-PB}" stroke="#eef1f6"/><text x="${x(t)}" y="${H-8}" font-size="10" fill="#5b6675" text-anchor="middle">${t===0?"복용":t+"분"}</text>`);
+  series.forEach(s=>{
+    const pl=s.pts.map((p,i)=>`${i?"L":"M"}${x(p.t)},${y(p.val)}`).join(" ");
+    out+=`<path d="${pl}" fill="none" stroke="${s.color}" stroke-width="2.2"${s.dash?` stroke-dasharray="6 4"`:""}/>`;
+  });
+  return out+`</svg>`;
+}
+function renderSimPreview(){
+  const el=$("simPreview"); if(!el) return;
+  const mine=wiz.plannedDoses.filter(d=>d.name&&d.time);
+  if(!mine.length){ el.innerHTML=""; return; }
+  const t0=mine.map(d=>d.time).sort()[0];
+  const series=[{label:"이번 복용안", color:"#2563eb", pts:CHGSIM.relativeCurve(mine,t0)}];
+  const role=($("role_chips").querySelector(".chip.sel")||{}).dataset?.k;
+  const baseId=$("baseSel")? $("baseSel").value:"";
+  if(role==="changed"&&baseId){
+    const bt=db.tests.find(t=>t.id===baseId);
+    if(bt&&bt.plannedDoses&&bt.plannedDoses.length){
+      const bt0=(bt.plannedDoses.map(d=>d.time).filter(Boolean).sort()[0])||t0;
+      series.unshift({label:"기준 복용안", color:"#8a94a6", dash:true, pts:CHGSIM.relativeCurve(bt.plannedDoses,bt0)});
+    }
+  }
+  el.innerHTML=`<h2>예상 약효곡선 미리보기</h2>
+    <div class="legend">${series.map(s=>`<span><span class="sw" style="background:${s.color}"></span>${esc(s.label)}</span>`).join("")}</div>
+    ${simSvg(series)}${SIM_DISC}`;
+}
+function startTest(){
+  const doses=wiz.plannedDoses.filter(d=>d.name);
+  if(!doses.length){ toast("이번 시험 복용안에 약을 1개 이상 넣어주세요"); return; }
+  const syms=[...document.querySelectorAll(".sy_grp .chip.sel")].map(b=>{
+    const grp=b.closest(".sy_grp").dataset.group;
+    const custom=b.dataset.k.endsWith("_custom")? (document.querySelector(`.sy_custom[data-group="${grp}"]`).value.trim()||"기타"):"";
+    return {code:b.dataset.k, group:grp, customLabel:custom};
+  });
+  if(!syms.length){ toast("증상을 1개 이상 선택해주세요"); return; }
+  if(syms.length>6){ toast("증상은 6개까지입니다"); return; }
+  const role=$("role_chips").querySelector(".chip.sel").dataset.k;
+  const medsSnap=doses.map(d=>({name:d.name, doseText:d.dose? d.dose+"mg":"", form:"", memo:""}));
+  const test=CHG.newTest({
+    testType:$("tt_chips").querySelector(".chip.sel").dataset.k,
+    comparisonRole:role,
+    baselineTestId: role==="changed"? ($("baseSel").value||null):null,
+    title:doses.map(d=>`${d.name}${d.dose?` ${d.dose}mg`:""}`).join(" + "),
+    plannedDoses:doses.map(({name,dose,time})=>({name,dose,time})),
+    medications:medsSnap,
+    changeDescription:$("chg_desc").value.trim(),
+    symptoms:syms,
+  });
+  doses.forEach(d=>{ const m=medList.meds.find(x=>x.id===d.medId); if(m) m.lastUsedAt=new Date().toISOString(); });
+  saveMeds();
+  db.tests.push(test); save(); viewStages();
+}
+
+/* ========== 4. 측정 단계 ========== */
+function stageOf(t,code){ return (t.assessments||[]).find(a=>a.stage===code)||null; }
+function nextStageOf(t){ return CHG.STAGES.find(st=>!stageOf(t,st.stage))||null; }
+function viewStages(dueStage){
+  const t=inProgress(); if(!t){ viewHome(); return; }
+  let cur=nextStageOf(t);
+  if(dueStage && !stageOf(t,dueStage)) cur=CHG.STAGES.find(s=>s.stage===dueStage)||cur;
+  if(!cur){ viewFinish(); return; }
+  const bar=CHG.STAGES.map(st=>{
+    const done=!!stageOf(t,st.stage);
+    return `<div class="st${done?" done":(cur.stage===st.stage?" cur":"")}">${st.ko.replace("복용 ","").replace(" 후","")}</div>`;
+  }).join("");
+  const needDose = cur.stage!=="baseline" && !t.doseTakenAt;
+  let dueHtml="";
+  if(t.doseTakenAt){
+    const info=CHGTIMER.dueInfo(t.doseTakenAt, doneStages(t));
+    if(info.next) dueHtml=`<div class="nextdue">다음 기록: 복용 ${info.next.minutes}분 후 <small>약 ${info.next.inMin}분 남음 (경과 ${info.elapsed}분)</small></div>`;
+    if(info.missed.length) dueHtml+=`<div class="disc warn">놓친 기록: ${info.missed.map(m=>m.minutes+"분").join(", ")} — 지금 기록하면 실제 시각이 함께 저장됩니다.</div>`;
+    CHGTIMER.schedule(t.doseTakenAt, doneStages(t), (st)=>{ if(inProgress()) viewStages(st); });
+  }
+  render(`
+    <div class="topbar no-print"><button class="btn ghost small" onclick="viewHome()">← 처음</button><h1 style="margin:0">${esc(t.title)}</h1></div>
+    <div class="stagebar">${bar}</div>
+    ${dueHtml}
+    ${needDose? `<div class="card"><b>약을 복용하셨나요?</b><div class="hint">복용 직후 아래 버튼을 눌러 실제 복용 시각을 기록하세요. 30·60·90·120분 알림이 이 시각 기준으로 예약됩니다.</div>
+      <button class="btn primary" style="margin-top:8px" onclick="markDose()">지금 약을 복용했습니다 (${new Date().toTimeString().slice(0,5)})</button>
+      <div class="btn-row"><button class="btn ghost" onclick="viewFinish()">조기 종료·최종 평가</button></div></div>`
+    : assessFormHtml(t,cur)}
+  `);
+  if(!needDose) bindAssessForm(t,cur);
+}
+function markDose(){
+  const t=inProgress(); if(!t) return;
+  t.doseTakenAt=new Date().toISOString(); save();
+  CHGTIMER.schedule(t.doseTakenAt, doneStages(t), (st)=>{ if(inProgress()) viewStages(st); }); /* 복용 즉시 1회 예약 (schedule은 기존 타이머를 먼저 정리) */
+  CHGTIMER.requestPermission().then(p=>{
+    if(p==="denied") toast("알림이 꺼져 있어도 화면의 남은 시간 표시로 진행할 수 있어요");
+  });
+  viewStages();
+}
+function assessFormHtml(t,cur){
+  const elapsed=t.doseTakenAt? CHGTIMER.elapsedMin(t.doseTakenAt):null;
+  const byGroup={}; t.symptoms.forEach(s=>{ (byGroup[s.group]||(byGroup[s.group]=[])).push(s); });
+  return `<div class="card">
+    <h2>${cur.ko} <button class="btn ghost small no-print" style="float:right" onclick="showRubric()">기준 보기</button></h2>
+    ${cur.stage!=="baseline"? `<div class="hint">예정 ${cur.minutes}분 · 현재 복용 후 ${elapsed!=null? elapsed+"분":"-"} 경과 (실제 시각이 함께 저장됩니다)</div>`:""}
+    ${CHG.GROUPS.filter(g=>byGroup[g.group]).map(g=>`
+      <details class="grp" open><summary>${g.ko}</summary><div class="inner">
+        ${byGroup[g.group].map(sy=>`
+          <div class="scorerow" data-sy="${sy.code}">
+            <div class="sylabel">${esc(CHG.symptomLabel(t,sy.code))}</div>
+            ${[0,1,2,3,4].map(v=>`<button type="button" class="scorebtn" data-v="${v}">${v}</button>`).join("")}
+          </div>`).join("")}
+      </div></details>`).join("")}
+    <div class="field"><label>전체 약효 체감 (0 전혀 모르겠다 ~ 4 매우 강함)</label>
+      <div class="scorerow" id="pe_row">${CHG.PERCEIVED_RUBRIC.map(p=>`<button type="button" class="scorebtn" data-v="${p.v}" title="${p.ko}">${p.v}</button>`).join("")}</div>
+      <div class="hint" id="pe_hint">숫자를 누르면 설명이 표시됩니다</div></div>
+    <details class="grp"><summary>부작용 (해당 있으면 점수 선택)</summary><div class="inner" id="ae_wrap">
+      ${CHG.ADVERSE.map(a=>`<div class="aerow" data-ae="${a.code}"><div class="aelabel">${a.ko}</div>
+        ${[0,1,2,3,4].map(v=>`<button type="button" class="aebtn${v===0?" sel":""}" data-v="${v}">${v}</button>`).join("")}</div>`).join("")}
+      <div id="ae_warn"></div>
+      <div class="hint">0 없음 · 1 가벼움 · 2 분명하지만 감당 가능 · 3 상당히 불편함 · 4 매우 심함</div>
+    </div></details>
+    <div class="field"><label>메모 (선택)</label><textarea id="as_note"></textarea></div>
+    <div class="btn-row"><button class="btn primary" id="as_save">저장</button></div>
+    <div class="btn-row"><button class="btn ghost" id="as_skip">이 시점 건너뛰기</button><button class="btn ghost" onclick="viewFinish()">조기 종료·최종 평가</button></div>
+  </div>`;
+}
+function showRubric(){
+  alert("증상 점수 기준\n"+CHG.SCORE_RUBRIC.map(r=>`${r.v} — ${r.ko}`).join("\n")
+    +"\n\n약효 체감 점수\n"+CHG.PERCEIVED_RUBRIC.map(r=>`${r.v} — ${r.ko}`).join("\n")
+    +"\n\n점수가 낮아질수록 증상이 개선된 것으로 해석합니다.");
+}
+function bindAssessForm(t,cur){
+  document.querySelectorAll(".scorerow[data-sy]").forEach(row=>{
+    row.addEventListener("click",e=>{ const b=e.target.closest(".scorebtn"); if(!b)return;
+      row.querySelectorAll(".scorebtn").forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); });
+  });
+  $("pe_row").addEventListener("click",e=>{ const b=e.target.closest(".scorebtn"); if(!b)return;
+    $("pe_row").querySelectorAll(".scorebtn").forEach(x=>x.classList.remove("sel")); b.classList.add("sel");
+    $("pe_hint").textContent=CHG.PERCEIVED_RUBRIC.find(p=>p.v==+b.dataset.v).ko; });
+  $("ae_wrap").addEventListener("click",e=>{ const b=e.target.closest(".aebtn"); if(!b)return;
+    const row=b.closest(".aerow");
+    row.querySelectorAll(".aebtn").forEach(x=>x.classList.remove("sel","warnsel"));
+    b.classList.add(+b.dataset.v>=CHG.AE_WARN_MIN? "warnsel":"sel");
+    const anyWarn=[...document.querySelectorAll(".aerow")].some(r=>{
+      const s=r.querySelector(".aebtn.sel,.aebtn.warnsel"); return s&&+s.dataset.v>=CHG.AE_WARN_MIN; });
+    $("ae_warn").innerHTML=anyWarn? `<div class="disc warn">${CHG.SEVERE_AE_NOTE}</div>`:"";
+  });
+  $("as_save").onclick=()=>{
+    const scores={}; let missing=false;
+    document.querySelectorAll(".scorerow[data-sy]").forEach(row=>{
+      const sel=row.querySelector(".scorebtn.sel");
+      if(!sel){ missing=true; return; }
+      scores[row.dataset.sy]=+sel.dataset.v;
+    });
+    if(missing){ toast("모든 증상의 점수를 선택해주세요"); return; }
+    const pe=$("pe_row").querySelector(".scorebtn.sel");
+    const adverseScores={};
+    document.querySelectorAll(".aerow").forEach(r=>{
+      const s=r.querySelector(".aebtn.sel,.aebtn.warnsel");
+      const v=s? +s.dataset.v:0; if(v>0) adverseScores[r.dataset.ae]=v;
+    });
+    t.assessments.push({
+      stage:cur.stage, scheduledMinutes:cur.minutes,
+      actualMinutes: cur.stage==="baseline"? 0 : (t.doseTakenAt? CHGTIMER.elapsedMin(t.doseTakenAt):cur.minutes),
+      recordedAt:new Date().toISOString(),
+      symptomScores:scores, perceivedScore: pe? +pe.dataset.v:null,
+      adverseScores, note:$("as_note").value.trim(),
+    });
+    save(); toast(`${cur.ko} 기록 저장`); viewStages();
+  };
+  $("as_skip").onclick=()=>{
+    t.assessments.push({stage:cur.stage, scheduledMinutes:cur.minutes, actualMinutes:null, recordedAt:new Date().toISOString(),
+      symptomScores:{}, perceivedScore:null, adverseScores:{}, note:"", skipped:true});
+    save(); toast(`${cur.ko} 건너뜀`); viewStages();
+  };
+}
+
+/* ========== 5. 최종 평가 ========== */
+function viewFinish(){
+  const t=inProgress(); if(!t){ viewHome(); return; }
+  render(`
+    <div class="topbar no-print"><button class="btn ghost small" onclick="viewStages()">← 기록으로</button><h1 style="margin:0">최종 평가</h1></div>
+    <div class="card">
+      <div class="field"><label>전체 효과 *</label>
+        <div class="chips" id="fe_overall">${CHG.OVERALL.map(o=>`<button type="button" class="chip" data-k="${o.code}">${o.ko}</button>`).join("")}</div></div>
+      <div class="field"><label>부작용 종합 *</label>
+        <div class="chips" id="fe_ae">${CHG.AE_SUMMARY.map(o=>`<button type="button" class="chip" data-k="${o.code}">${o.ko}</button>`).join("")}</div></div>
+      <div class="field"><label>오늘 테스트에서 느낀 점 (선택)</label><textarea id="fe_note"></textarea></div>
+      <button class="btn primary" onclick="saveFinal()">평가 저장하고 결과 보기</button>
+    </div>${SAFETY_HTML}`);
+  ["fe_overall","fe_ae"].forEach(id=>$(id).addEventListener("click",e=>{ const b=e.target.closest(".chip"); if(!b)return;
+    $(id).querySelectorAll(".chip").forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); }));
+}
+function saveFinal(){
+  const t=inProgress();
+  const ov=$("fe_overall").querySelector(".chip.sel"), ae=$("fe_ae").querySelector(".chip.sel");
+  if(!ov||!ae){ toast("전체 효과와 부작용 종합을 선택해주세요"); return; }
+  t.finalEvaluation={overallEffect:ov.dataset.k, adverseEffectSummary:ae.dataset.k, note:$("fe_note").value.trim()};
+  t.status="completed"; CHGTIMER.clear(); save();
+  pushSharedSummary(t); /* PHS용 요약은 항상 갱신 */
+  if(typeof SHARED!=="undefined"){ viewSaveChoice(t.id); } else { viewResult(t.id); }
+}
+/* v0.9.21: 결과 요약을 어디에 남길지 선택 */
+function viewSaveChoice(id){
+  const t=db.tests.find(x=>x.id===id);
+  render(`
+    <div class="card">
+      <h1>결과 저장 위치</h1>
+      <div class="hint">${esc(t.title)} · 시험이 저장되었습니다. 요약을 약효일지 기록에도 남길까요?</div>
+      <button class="btn primary" style="margin-top:10px" id="saveBoth">약효일지에도 결과 요약 저장</button>
+      <button class="btn ghost" style="margin-top:8px" id="saveOnly">챌린지에만 저장</button>
+      <div class="hint" style="margin-top:8px">약효일지에는 기록 사실 요약만 추가되며, 본체 복용약·기록은 수정되지 않습니다.</div>
+    </div>`);
+  $("saveBoth").onclick=()=>{ pushDiaryEvent(t); toast("약효일지 기록에 추가했어요 (약효일지를 열면 표시됩니다)"); viewResult(id); };
+  $("saveOnly").onclick=()=>viewResult(id);
+}
+function summaryLinesFor(t){
+  const a=CHG.analyzeTest(t);
+  const lines=[];
+  (t.medications||[]).slice(0,2).forEach(m=>lines.push(`${m.name} ${m.doseText||""}`.trim()));
+  Object.entries(a.groupSummary).forEach(([g,s])=>{
+    if(s.firstChangeStage) lines.push(`${CHG.label("group",g)} ${s.firstChangeStage.minutes}분 변화`);
+    if(s.bestStage) lines.push(`${CHG.label("group",g)} ${s.bestStage.minutes}분 최저 (개선 ${s.maxImprovement}점)`);
+  });
+  if(a.worstAdverse) lines.push(`${CHG.label("adverse",a.worstAdverse.code)} ${a.worstAdverse.score}점`);
+  if(a.finalEvaluation) lines.push(CHG.label("overall",a.finalEvaluation.overallEffect));
+  return {analysis:a, lines:lines.slice(0,6)};
+}
+function pushDiaryEvent(t){
+  try{
+    const {lines}=summaryLinesFor(t);
+    const doseTs=t.doseTakenAt? new Date(t.doseTakenAt).getTime():Date.now();
+    SHARED.pushDiaryEvent({ ts:doseTs, /* 그래프 마커·정렬은 복용 시각 기준 */
+      doseTakenAt:t.doseTakenAt||null, completedAt:new Date().toISOString(),
+      challengeTestId:t.id, title:`Medication Challenge · ${t.title}`, lines });
+  }catch(e){}
+}
+function pushSharedSummary(t){
+  try{
+    if(typeof SHARED==="undefined") return;
+    const a=CHG.analyzeTest(t);
+    SHARED.putChallengeSummary({
+      id:t.id, date:fmtDate(t.createdAt), title:t.title,
+      typeCode:t.testType, roleCode:t.comparisonRole,
+      firstPerceivedMin:a.firstPerceivedStage? a.firstPerceivedStage.minutes:null,
+      firstClearMin:a.firstClearStage? a.firstClearStage.minutes:null,
+      maxImpByGroup:Object.fromEntries(Object.entries(a.groupSummary).map(([g,s])=>[g,s.maxImprovement])),
+      worstAdverse:a.worstAdverse? {code:a.worstAdverse.code, score:a.worstAdverse.score, minutes:a.worstAdverse.minutes}:null,
+      overallCode:a.finalEvaluation? a.finalEvaluation.overallEffect:null,
+    });
+  }catch(e){}
+}
+
+/* ========== 6. 결과 ========== */
+const GROUP_COLORS={motor:"#c0392b", nonmotor:"#e67e22", autonomic:"#8e44ad"};
+function actualSvg(analyses){ /* [{label,color,groupsOf:analysis}] → 그룹 곡선 + 부작용 ▲ */
+  const W=520,H=210,PL=34,PR=10,PT=14,PB=30;
+  const xs=CHG.STAGES.map((st,i)=>PL+(W-PL-PR)*i/(CHG.STAGES.length-1));
+  const yOf=v=>(H-PB)-(H-PT-PB)*(v/4);
+  let out=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;background:#fff;border:1px solid var(--line);border-radius:10px">`;
+  for(let v=0;v<=4;v++) out+=`<line x1="${PL}" y1="${yOf(v)}" x2="${W-PR}" y2="${yOf(v)}" stroke="#eef1f6"/><text x="${PL-8}" y="${yOf(v)+4}" font-size="11" fill="#5b6675" text-anchor="end">${v}</text>`;
+  CHG.STAGES.forEach((st,i)=>out+=`<text x="${xs[i]}" y="${H-8}" font-size="11" fill="#5b6675" text-anchor="middle">${st.minutes===0?"복용 전":st.minutes+"분"}</text>`);
+  analyses.forEach(item=>{
+    const a=item.analysis;
+    a.groups.forEach(g=>{
+      const color=item.colorOverride||GROUP_COLORS[g]||"#333";
+      const pts=a.stages.map((s,i)=> (s.recorded&&s.groupAvg[g]!=null)? [xs[i],yOf(s.groupAvg[g])]:null);
+      const seg=pts.map((p,i)=>p? `${pts[i-1]?"L":"M"}${p[0]},${p[1]}`:"").join(" ");
+      out+=`<path d="${seg}" fill="none" stroke="${color}" stroke-width="2.4"${item.dash?` stroke-dasharray="6 4"`:""}/>`;
+      pts.forEach(p=>{ if(p) out+=`<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="${color}"/>`; });
+    });
+    a.stages.forEach((s,i)=>{ if(s.recorded&&s.maxAeScore>0)
+      out+=`<text x="${xs[i]}" y="${PT+10}" font-size="12" fill="#c0392b" text-anchor="middle">▲${s.maxAeScore}</text>`; });
+  });
+  return out+`</svg>`;
+}
+function expectedSeriesFor(t){
+  const series=[];
+  const t0=(t.plannedDoses.map(d=>d.time).filter(Boolean).sort()[0])||(t.doseTakenAt? CHG.timeLabel(t.doseTakenAt):null);
+  if(t0) series.push({label:"이번 복용안 예상", color:"#2563eb", pts:CHGSIM.relativeCurve(t.plannedDoses,t0)});
+  if(t.baselineTestId){
+    const bt=db.tests.find(x=>x.id===t.baselineTestId);
+    if(bt&&bt.plannedDoses&&bt.plannedDoses.length){
+      const bt0=(bt.plannedDoses.map(d=>d.time).filter(Boolean).sort()[0]);
+      if(bt0) series.unshift({label:"기준 복용안 예상", color:"#8a94a6", dash:true, pts:CHGSIM.relativeCurve(bt.plannedDoses,bt0)});
+    }
+  }
+  return series;
+}
+function viewResult(id){
+  const t=db.tests.find(x=>x.id===id); if(!t){ viewHome(); return; }
+  const a=CHG.analyzeTest(t);
+  const exp=expectedSeriesFor(t);
+  const interp=CHG.buildInterpretation(a);
+  render(`
+    <div class="topbar no-print"><button class="btn ghost small" onclick="viewList()">← 목록</button>
+      <button class="btn ghost small" onclick="printDoc('약효비교결과_${esc((t.title||"시험").replace(/\s+/g,""))}_${fmtDate(t.createdAt)}')">🖨 인쇄·PDF</button>
+      <button class="btn ghost small" onclick="copyResult('${t.id}')">텍스트 복사</button>
+      <button class="btn ghost small" onclick="exportOne('${t.id}')">JSON</button></div>
+    <div class="card">
+      <h1>약효 비교 테스트 결과</h1>
+      <div class="hint">${esc(t.title)} · ${fmtDate(t.createdAt)} · ${CHG.label("testType",t.testType)} · ${CHG.label("role",t.comparisonRole)}</div>
+      ${(t.medications||[]).map(m=>`<div class="hint">💊 ${esc(m.name)} ${esc(m.doseText||"")}${m.form?` (${esc(m.form)})`:""}</div>`).join("")}
+      ${t.doseTakenAt? `<div class="hint">실제 복용 시각: ${CHG.timeLabel(t.doseTakenAt)}</div>`:""}
+      ${t.changeDescription? `<div class="hint">변경 내용: ${esc(t.changeDescription)}</div>`:""}
+      <div class="hint">선택 증상: ${t.symptoms.map(s=>`${esc(CHG.symptomLabel(t,s.code))}(${CHG.label("group",s.group).slice(0,2)})`).join(", ")}</div>
+      ${exp.length? `<h2>예상 약효곡선</h2>
+        <div class="legend">${exp.map(s=>`<span><span class="sw" style="background:${s.color}"></span>${esc(s.label)}</span>`).join("")}</div>
+        ${simSvg(exp)}${SIM_DISC}`:""}
+      <h2>실제 증상 기록</h2>
+      <div class="hint">증상 점수는 낮을수록 좋습니다. 곡선이 아래로 내려갈수록 증상이 감소한 것입니다.</div>
+      <div class="legend">${a.groups.map(g=>`<span><span class="sw" style="background:${GROUP_COLORS[g]}"></span>${CHG.label("group",g)}</span>`).join("")}<span>▲ 부작용 최고점수</span></div>
+      ${actualSvg([{analysis:a}])}
+      <div class="hint">${CHG.GRAPH_NOTE}</div>
+      <h2>기록 요약</h2>
+      <table><thead><tr><th>그룹</th><th>복용 전</th><th>최대 개선</th><th>가장 좋은 시점</th><th>120분</th></tr></thead><tbody>
+        ${a.groups.map(g=>{ const s=a.groupSummary[g]; return `<tr><td>${CHG.label("group",g)}</td>
+          <td class="num">${s.baseline??"기록 부족"}</td><td class="num">${s.maxImprovement!=null? s.maxImprovement+"점":"기록 부족"}</td>
+          <td class="num">${s.bestStage? s.bestStage.minutes+"분":"기록 부족"}</td><td class="num">${s.at120??"기록 없음"}${s.rebound120?" (재상승)":""}</td></tr>`; }).join("")}
+      </tbody></table>
+      <div class="hint">최초 체감 ${a.firstPerceivedStage? a.firstPerceivedStage.minutes+"분":"기록 없음"} · 분명한 체감 ${a.firstClearStage? a.firstClearStage.minutes+"분":"기록 없음"} · 부작용 최고 ${a.worstAdverse? `${CHG.label("adverse",a.worstAdverse.code)} ${a.worstAdverse.score}점(${a.worstAdverse.minutes}분)`:"기록 없음"} · 종합평가 ${a.finalEvaluation? CHG.label("overall",a.finalEvaluation.overallEffect):"미평가"}</div>
+      <h2>기록 기반 요약 문장</h2>
+      <ul style="margin:4px 0 0 18px; padding:0">${interp.map(l=>`<li>${esc(l)}</li>`).join("")}</ul>
+      ${a.finalEvaluation&&a.finalEvaluation.note? `<h2>자유 메모</h2><div>${esc(a.finalEvaluation.note)}</div>`:""}
+      <div class="disc">${CHG.DISCLAIMER}</div>
+    </div>`);
+}
+function copyResult(id){
+  const t=db.tests.find(x=>x.id===id);
+  const txt=CHG.buildResultText(t);
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(()=>toast("결과 텍스트를 복사했어요"),()=>toast("복사 실패"));
+  else toast("이 브라우저에서는 복사가 지원되지 않아요");
+}
+function exportOne(id){
+  const t=db.tests.find(x=>x.id===id);
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(t,null,2)],{type:"application/json"}));
+  a.download=`약효비교결과_${fmtDate(t.createdAt)}.json`; a.click(); URL.revokeObjectURL(a.href);
+}
+function printDoc(title){
+  if(typeof window.print!=="function"){ toast("이 환경에서는 인쇄가 지원되지 않아요"); return; }
+  const old=document.title; document.title=title;
+  const done=()=>{ document.title=old; window.removeEventListener("afterprint",done); };
+  window.addEventListener("afterprint",done);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ window.print(); setTimeout(done,3000); }));
+}
+
+/* ========== 7. 목록·비교 ========== */
+let cmpSel=[];
+function viewList(){
+  cmpSel=[];
+  const items=db.tests.slice().reverse();
+  render(`
+    <div class="topbar no-print"><button class="btn ghost small" onclick="viewHome()">← 처음</button><h1 style="margin:0">이전 테스트</h1></div>
+    ${items.length? items.map(t=>`
+      <div class="card">
+        <b>${esc(t.title||"(제목 없음)")}</b> <span class="hint">${fmtDate(t.createdAt)} · ${t.status==="completed"?"완료":"진행 중"} · ${CHG.label("role",t.comparisonRole)}${t.migratedFromV1?" · v1":""}</span>
+        <div class="hint">${CHG.label("testType",t.testType)}${t.changeDescription?` · ${esc(t.changeDescription)}`:""}</div>
+        <div class="btn-row">
+          ${t.status==="completed"? `<button class="btn ghost" onclick="viewResult('${t.id}')">결과</button>
+          <button class="btn ghost" onclick="toggleCmp(this,'${t.id}')">비교 선택</button>`
+          : `<button class="btn ghost" onclick="viewStages()">이어서 기록</button>`}
+          <button class="btn ghost" style="color:var(--danger)" onclick="deleteTest('${t.id}')">삭제</button>
+        </div>
+      </div>`).join("")
+    : `<div class="card hint">저장된 테스트가 없습니다.</div>`}
+    <div class="card no-print"><b>기준·변경 시험 비교</b><div class="hint">완료된 테스트 2개를 선택하세요. 먼저 고른 것이 기준 시험입니다.</div>
+      <button class="btn primary" style="margin-top:8px" onclick="goCompare()">선택한 두 시험 비교</button></div>`);
+}
+function toggleCmp(btn,id){
+  const i=cmpSel.indexOf(id);
+  if(i>=0){ cmpSel.splice(i,1); btn.style.background=""; btn.style.color=""; btn.textContent="비교 선택"; }
+  else { if(cmpSel.length>=2){ toast("비교는 2개까지만 선택할 수 있어요"); return; }
+    cmpSel.push(id); btn.style.background="var(--accent)"; btn.style.color="#fff"; btn.textContent=cmpSel.length===1?"기준 시험":"변경 시험"; }
+}
+function goCompare(){
+  if(cmpSel.length!==2){ toast("완료된 테스트 2개를 선택해주세요"); return; }
+  viewCompare(cmpSel[0],cmpSel[1]);
+}
+function deleteTest(id){
+  if(!confirm("이 테스트를 삭제할까요? 되돌릴 수 없습니다.")) return;
+  db.tests=db.tests.filter(t=>t.id!==id); save(); viewList();
+}
+function viewCompare(idA,idB){
+  const A=db.tests.find(t=>t.id===idA), B=db.tests.find(t=>t.id===idB);
+  if(!A||!B){ viewList(); return; }
+  const cmp=CHG.compareTests(A,B);
+  const notes=CHG.buildComparisonNotes(cmp);
+  const expSeries=[];
+  [[A,"#8a94a6",true,"기준 예상"],[B,"#2563eb",false,"변경 예상"]].forEach(([t,color,dash,label])=>{
+    const t0=(t.plannedDoses||[]).map(d=>d.time).filter(Boolean).sort()[0];
+    if(t0) expSeries.push({label:`${label}: ${t.title}`, color, dash, pts:CHGSIM.relativeCurve(t.plannedDoses,t0)});
+  });
+  render(`
+    <div class="topbar no-print"><button class="btn ghost small" onclick="viewList()">← 목록</button>
+      <button class="btn ghost small" onclick="printDoc('약효비교결과_비교_${fmtDate(new Date().toISOString())}')">🖨 인쇄·PDF</button></div>
+    <div class="card">
+      <h1>기준 시험 · 변경 시험 비교</h1>
+      <div class="hint">기준: ${esc(A.title)} (${fmtDate(A.createdAt)}) / 변경: ${esc(B.title)} (${fmtDate(B.createdAt)})</div>
+      ${expSeries.length? `<h2>예상 약효곡선</h2>
+        <div class="legend">${expSeries.map(s=>`<span><span class="sw" style="background:${s.color}"></span>${esc(s.label)}</span>`).join("")}</div>
+        ${simSvg(expSeries)}${SIM_DISC}`:""}
+      <h2>실제 기록 (운동 증상 기준: 회색 점선=기준 시험)</h2>
+      <div class="hint">증상 점수는 낮을수록 좋습니다. 곡선이 아래로 내려갈수록 증상이 감소한 것입니다.</div>
+      ${actualSvg([{analysis:cmp.base, colorOverride:"#8a94a6", dash:true},{analysis:cmp.after}])}
+      <div class="hint">${CHG.GRAPH_NOTE}</div>
+      <h2>비교 표</h2>
+      <table><thead><tr><th>항목</th><th>기준 시험</th><th>변경 시험</th></tr></thead>
+      <tbody>${cmp.rows.map(r=>`<tr><td>${r.ko}</td><td class="num">${esc(r.fmt(r.a))}</td><td class="num">${esc(r.fmt(r.b))}</td></tr>`).join("")}</tbody></table>
+      <h2>기록 기반 요약 문장</h2>
+      <ul style="margin:4px 0 0 18px; padding:0">${notes.map(n=>`<li>${esc(n)}</li>`).join("")}</ul>
+      <div class="disc">${CHG.DISCLAIMER}</div>
+    </div>`);
+}
+
+/* ========== 8. 백업·도움말 ========== */
+function exportJson(){
+  const payload={app:"medication-challenge", version:2, exportedAt:new Date().toISOString(), db, medList};
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}));
+  a.download=`약효비교테스트_${fmtDate(new Date().toISOString())}.json`; a.click(); URL.revokeObjectURL(a.href);
+  toast("백업을 저장했어요");
+}
+function importJson(ev){
+  const f=ev.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{ try{
+    const d=JSON.parse(r.result);
+    let db2=null, ml2=null;
+    if(d&&d.version===2&&d.db&&Array.isArray(d.db.tests)){ db2=d.db; ml2=d.medList; }
+    else if(d&&d.version===2&&Array.isArray(d.tests)){ db2=d; }
+    else if(d&&d.version===1&&Array.isArray(d.tests)){ const res=CHG.migrateV1(d); if(res.ok) db2=res.db2; }
+    if(!db2) throw 0;
+    if(!confirm(`백업의 테스트 ${db2.tests.length}건으로 현재 데이터를 교체할까요?`)) return;
+    db=db2; save();
+    if(ml2&&Array.isArray(ml2.meds)){ medList=ml2; saveMeds(); }
+    toast("백업을 불러왔어요"); viewHome();
+  }catch(e){ toast("약효 비교 테스트 백업 파일이 아닙니다"); } };
+  r.readAsText(f); ev.target.value="";
+}
+function deleteAll(){
+  if(!confirm("모든 v2 테스트·약 목록을 삭제할까요? 되돌릴 수 없습니다. (v1 백업 키는 남습니다)")) return;
+  if(!confirm("정말 삭제합니다. 백업을 먼저 내보내는 것을 권장합니다. 계속할까요?")) return;
+  db=CHG.emptyDb(); save(); medList=CHG.emptyMedList(); saveMeds(); toast("삭제했어요"); viewHome();
+}
+function viewHelp(){
+  render(`
+    <div class="topbar no-print"><button class="btn ghost small" onclick="viewHome()">← 처음</button><h1 style="margin:0">사용 방법</h1></div>
+    <div class="card">
+      <ol style="margin:0 0 0 18px; padding:0; line-height:1.9">
+        <li>"내 복용약 관리"에서 약을 등록해 두면 시험 시작이 빨라집니다.</li>
+        <li>"약효 테스트 시작"에서 시험 종류·역할(기준/변경/단독)·복용안·증상(운동/비운동/자율신경, 총 1~6개)을 고릅니다.</li>
+        <li>변경 시험이면 기준 시험을 선택해 예상 곡선을 미리 비교할 수 있습니다. ${CHGSIM.DISCLAIMER_USE}</li>
+        <li>약 먹기 전 상태를 기록한 뒤, 복용 직후 "지금 약을 복용했습니다"를 누릅니다. 30·60·90·120분 알림이 예약됩니다(앱이 열려 있을 때).</li>
+        <li>각 시점에 증상 점수·약효 체감·부작용을 기록합니다. 놓친 시점은 실제 시각과 함께 나중에 기록하거나 건너뛸 수 있습니다.</li>
+        <li>최종 평가 후 결과·그래프를 확인하고, 목록에서 기준·변경 시험을 비교합니다.</li>
+      </ol>
+    </div>
+    ${SAFETY_HTML}`);
+}
+
+/* ---------- 시작 ---------- */
+(function(){
+  if(location.hash==="#fromsim"){ history.replaceState(null,"",location.pathname); viewSetup(); return; }
+  const m=location.hash.match(/#test=([^&]+)/);
+  if(m){ const id=decodeURIComponent(m[1]);
+    if(db.tests.some(t=>t.id===id)){ viewResult(id); return; } }
+  viewHome();
+})();
+(function(){ const act=inProgress(); if(act&&act.doseTakenAt) CHGTIMER.schedule(act.doseTakenAt, doneStages(act), (st)=>{ if(inProgress()) viewStages(st); }); })();
+if("serviceWorker" in navigator){ try{ navigator.serviceWorker.register("sw.js"); }catch(e){} }
+</script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+{
+  "id": "./",
+  "name": "약효일지 · 출력기록",
+  "short_name": "약효일지",
+  "description": "파킨슨 환자의 하루 출력과 복약·생활·증상 이벤트를 기록하고 출력곡선과 진료용 보고서로 정리하는 도구",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F5F7FA",
+  "theme_color": "#1FA971",
+  "lang": "ko",
+  "orientation": "portrait",
+  "categories": [
+    "medical",
+    "health",
+    "lifestyle"
+  ],
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

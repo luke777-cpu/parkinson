@@ -1,0 +1,27 @@
+# IDE
+.idea/
+
+# Node
+node_modules/
+
+# Local backups
+www_backup_*/
+*.backup
+
+# Android local / secret files
+android/local.properties
+android/key.properties
+*.jks
+*.keystore
+google-services.json
+
+# Build outputs
+android/.gradle/
+android/build/
+android/app/build/
+*.apk
+*.aab
+
+# OS junk
+.DS_Store
+Thumbs.db

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">약효일지</string>
+    <string name="title_activity_main">약효일지</string>
+    <string name="package_name">kr.parkinson.medicationdiary</string>
+    <string name="custom_url_scheme">kr.parkinson.medicationdiary</string>
+</resources>

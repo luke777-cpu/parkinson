@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "kr.parkinson.medicationdiary",
+    "sha256_cert_fingerprints": ["62:70:0E:0E:07:29:4C:B2:5A:D2:84:C8:79:DF:77:37:DE:8F:35:A4:70:51:AD:BC:49:EF:F2:7B:AF:B7:04:EF"]
+  }
+}]
