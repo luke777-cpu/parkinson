@@ -4,9 +4,12 @@ import android.appwidget.AppWidgetManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.util.Log;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+
+import kr.parkinson.medicationdiary.BuildConfig;
 
 /**
  * 위젯 전용 캐시. 기존 앱의 localStorage(yakhyo_log_v1)는 여기서 직접 건드리지 않는다.
@@ -15,6 +18,7 @@ import org.json.JSONObject;
  * db.events에 편입한다 (본체가 이미 쓰는 SHARED 챌린지 편입 패턴과 동일한 구조).
  */
 public final class WidgetStore {
+    private static final String TAG = "WIDGET_DEBUG";
     private static final String PREFS_NAME = "widget_prefs";
     private static final String KEY_CURRENT_OUTPUT = "current_output";
     private static final String KEY_PENDING_OUTPUT = "pending_output";
@@ -59,6 +63,7 @@ public final class WidgetStore {
     /** 위젯 "기록": 현재 표시값을 확정하고, 앱이 열릴 때 편입할 대기열에 넣는다. */
     public static void commitRecord(Context context, long ts) {
         int value = getDisplayOutput(context);
+        if (BuildConfig.DEBUG) Log.d(TAG, "commitRecord() value=" + value + " ts=" + ts);
         SharedPreferences.Editor editor = prefs(context).edit();
         editor.putInt(KEY_CURRENT_OUTPUT, value);
         editor.putLong(KEY_LAST_TS, ts);
@@ -77,8 +82,17 @@ public final class WidgetStore {
             while (arr.length() > MAX_PENDING_RECORDS) {
                 arr.remove(0);
             }
-            prefs(context).edit().putString(KEY_PENDING_RECORDS, arr.toString()).apply();
-        } catch (Exception ignored) {}
+            String serialized = arr.toString();
+            prefs(context).edit().putString(KEY_PENDING_RECORDS, serialized).apply();
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "appendPendingRecord output=" + output + " ts=" + ts + " newCount=" + arr.length());
+                // 실제로 디스크/메모리에 반영됐는지 같은 프로세스에서 바로 재확인
+                int recheck = readPendingRecordsLocked(context).length();
+                Log.d(TAG, "appendPendingRecord recheck count=" + recheck);
+            }
+        } catch (Exception e) {
+            if (BuildConfig.DEBUG) Log.e(TAG, "appendPendingRecord FAILED", e);
+        }
     }
 
     private static JSONArray readPendingRecordsLocked(Context context) {
@@ -93,24 +107,33 @@ public final class WidgetStore {
     /** 큐를 지우지 않고 그대로 읽기만 한다 — 실제 편입(db.events 저장) 확인 전에는
         절대 지우지 않기 위해, "읽기"와 "확인 후 제거"를 별도 메서드로 분리했다. */
     public static synchronized JSONArray peekPendingRecords(Context context) {
-        return readPendingRecordsLocked(context);
+        JSONArray arr = readPendingRecordsLocked(context);
+        if (BuildConfig.DEBUG) Log.d(TAG, "peekPendingRecords() -> count=" + arr.length());
+        return arr;
     }
 
     /** ts가 일치하는 항목만 큐에서 제거한다. 편입에 실패한 레코드나, peek 이후 위젯에서
         새로 추가된 레코드는 절대 건드리지 않고 큐에 그대로 남긴다. */
     public static synchronized void ackPendingRecords(Context context, java.util.Set<Long> timestamps) {
+        if (BuildConfig.DEBUG) Log.d(TAG, "ackPendingRecords() called with ts=" + timestamps);
         if (timestamps == null || timestamps.isEmpty()) return;
         JSONArray arr = readPendingRecordsLocked(context);
         JSONArray remaining = new JSONArray();
+        int removed = 0;
         for (int i = 0; i < arr.length(); i++) {
             try {
                 JSONObject rec = arr.getJSONObject(i);
                 if (!timestamps.contains(rec.getLong("ts"))) {
                     remaining.put(rec);
+                } else {
+                    removed++;
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                if (BuildConfig.DEBUG) Log.e(TAG, "ackPendingRecords record parse failed", e);
+            }
         }
         prefs(context).edit().putString(KEY_PENDING_RECORDS, remaining.toString()).apply();
+        if (BuildConfig.DEBUG) Log.d(TAG, "ackPendingRecords removed=" + removed + " remaining=" + remaining.length());
     }
 
     /** 앱(WebView)이 실제로 저장한 값으로 위젯 캐시를 맞춘다. 미기록 조정값(pending)은 폐기한다. */

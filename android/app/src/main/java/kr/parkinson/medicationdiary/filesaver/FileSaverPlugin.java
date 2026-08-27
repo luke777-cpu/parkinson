@@ -10,6 +10,7 @@ import android.os.Environment;
 import android.os.ParcelFileDescriptor;
 import android.provider.MediaStore;
 import android.util.Base64;
+import android.util.Log;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -19,6 +20,8 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 
 import java.io.IOException;
 import java.io.OutputStream;
+
+import kr.parkinson.medicationdiary.BuildConfig;
 
 /**
  * 백업 JSON / PDF를 공용 Downloads 컬렉션에 저장한다 (Android 10+/scoped storage,
@@ -32,11 +35,17 @@ import java.io.OutputStream;
 @CapacitorPlugin(name = "FileSaver")
 public class FileSaverPlugin extends Plugin {
 
+    private static final String TAG = "FILESAVER_DEBUG";
+
     @PluginMethod
     public void saveToDownloads(PluginCall call) {
         String filename = call.getString("filename");
         String mimeType = call.getString("mimeType", "application/octet-stream");
         String base64Data = call.getString("data");
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "saveToDownloads() entered filename=" + filename + " mimeType=" + mimeType
+                    + " dataLen=" + (base64Data == null ? -1 : base64Data.length()));
+        }
 
         if (filename == null || filename.trim().isEmpty() || base64Data == null) {
             resolveError(call, "filename/data missing");
@@ -46,7 +55,9 @@ public class FileSaverPlugin extends Plugin {
         byte[] bytes;
         try {
             bytes = Base64.decode(base64Data, Base64.DEFAULT);
+            if (BuildConfig.DEBUG) Log.d(TAG, "decoded bytes=" + bytes.length);
         } catch (Exception e) {
+            Log.e(TAG, "base64 decode failed", e);
             resolveError(call, "base64 decode failed");
             return;
         }
@@ -54,6 +65,7 @@ public class FileSaverPlugin extends Plugin {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             /* API 24-28(스코프 스토리지 이전)은 이번 범위에서 다루지 않는다 — 호출한 쪽
                (www/index.html)이 기존 Web Share/다운로드 경로로 대체 시도한다. */
+            if (BuildConfig.DEBUG) Log.d(TAG, "unsupported_api_level sdkInt=" + Build.VERSION.SDK_INT);
             resolveError(call, "unsupported_api_level");
             return;
         }
@@ -61,6 +73,7 @@ public class FileSaverPlugin extends Plugin {
         Context context = getContext();
         ContentResolver resolver = context.getContentResolver();
         String finalName = resolveUniqueName(resolver, filename);
+        if (BuildConfig.DEBUG) Log.d(TAG, "resolved finalName=" + finalName);
 
         ContentValues values = new ContentValues();
         values.put(MediaStore.Downloads.DISPLAY_NAME, finalName);
@@ -69,7 +82,9 @@ public class FileSaverPlugin extends Plugin {
         values.put(MediaStore.Downloads.IS_PENDING, 1);
 
         Uri itemUri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+        if (BuildConfig.DEBUG) Log.d(TAG, "MediaStore insert uri=" + itemUri);
         if (itemUri == null) {
+            Log.e(TAG, "insert failed (resolver.insert returned null)");
             resolveError(call, "insert failed");
             return;
         }
@@ -81,11 +96,13 @@ public class FileSaverPlugin extends Plugin {
             out.flush();
             success = true;
         } catch (Exception e) {
+            Log.e(TAG, "write FAILED uri=" + itemUri, e);
             success = false;
         }
 
         if (success) {
             success = verifySize(resolver, itemUri, bytes.length);
+            if (BuildConfig.DEBUG) Log.d(TAG, "verifySize expected=" + bytes.length + " ok=" + success);
         }
 
         if (!success) {
@@ -100,6 +117,7 @@ public class FileSaverPlugin extends Plugin {
         done.put(MediaStore.Downloads.IS_PENDING, 0);
         resolver.update(itemUri, done, null, null);
 
+        if (BuildConfig.DEBUG) Log.d(TAG, "saveToDownloads SUCCESS fileName=" + finalName + " uri=" + itemUri + " bytes=" + bytes.length);
         JSObject result = new JSObject();
         result.put("status", "success");
         result.put("fileName", finalName);
@@ -108,6 +126,7 @@ public class FileSaverPlugin extends Plugin {
     }
 
     private void resolveError(PluginCall call, String message) {
+        if (BuildConfig.DEBUG) Log.d(TAG, "saveToDownloads FAILED reason=" + message);
         JSObject err = new JSObject();
         err.put("status", "error");
         err.put("message", message);

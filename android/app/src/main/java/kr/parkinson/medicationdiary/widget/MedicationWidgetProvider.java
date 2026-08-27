@@ -5,15 +5,19 @@ import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.Context;
 import android.content.Intent;
+import android.util.Log;
 import android.widget.RemoteViews;
 
 import java.text.SimpleDateFormat;
 import java.util.Locale;
 
+import kr.parkinson.medicationdiary.BuildConfig;
 import kr.parkinson.medicationdiary.MainActivity;
 import kr.parkinson.medicationdiary.R;
 
 public class MedicationWidgetProvider extends AppWidgetProvider {
+
+    private static final String TAG = "WIDGET_DEBUG";
 
     public static final String ACTION_PLUS = "kr.parkinson.medicationdiary.widget.ACTION_PLUS";
     public static final String ACTION_MINUS = "kr.parkinson.medicationdiary.widget.ACTION_MINUS";
@@ -21,6 +25,7 @@ public class MedicationWidgetProvider extends AppWidgetProvider {
 
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
+        if (BuildConfig.DEBUG) Log.d(TAG, "onUpdate ids=" + appWidgetIds.length);
         updateWidgets(context, appWidgetManager, appWidgetIds);
     }
 
@@ -28,16 +33,28 @@ public class MedicationWidgetProvider extends AppWidgetProvider {
     public void onReceive(Context context, Intent intent) {
         super.onReceive(context, intent);
         String action = intent.getAction();
+        if (BuildConfig.DEBUG) Log.d(TAG, "onReceive action=" + action);
         if (action == null) return;
 
         if (ACTION_PLUS.equals(action)) {
+            int before = WidgetStore.getDisplayOutput(context);
             WidgetStore.adjustPending(context, 10);
+            if (BuildConfig.DEBUG) Log.d(TAG, "plus clicked before=" + before + " after=" + WidgetStore.getDisplayOutput(context));
             WidgetStore.requestWidgetRefresh(context);
         } else if (ACTION_MINUS.equals(action)) {
+            int before = WidgetStore.getDisplayOutput(context);
             WidgetStore.adjustPending(context, -10);
+            if (BuildConfig.DEBUG) Log.d(TAG, "minus clicked before=" + before + " after=" + WidgetStore.getDisplayOutput(context));
             WidgetStore.requestWidgetRefresh(context);
         } else if (ACTION_RECORD.equals(action)) {
-            WidgetStore.commitRecord(context, System.currentTimeMillis());
+            int value = WidgetStore.getDisplayOutput(context);
+            long ts = System.currentTimeMillis();
+            if (BuildConfig.DEBUG) Log.d(TAG, "record clicked value=" + value + " ts=" + ts);
+            WidgetStore.commitRecord(context, ts);
+            if (BuildConfig.DEBUG) {
+                int pendingCount = WidgetStore.peekPendingRecords(context).length();
+                Log.d(TAG, "pending saved count=" + pendingCount);
+            }
             WidgetStore.requestWidgetRefresh(context);
         }
     }

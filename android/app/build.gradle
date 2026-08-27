@@ -3,6 +3,11 @@ apply plugin: 'com.android.application'
 android {
     namespace = "kr.parkinson.medicationdiary"
     compileSdk = rootProject.ext.compileSdkVersion
+    // AGP 8+에서는 BuildConfig 생성이 기본 꺼져 있다 — 위젯/FileSaver 진단 로그가
+    // BuildConfig.DEBUG로 release 빌드를 자동 걸러내므로 켜야 한다.
+    buildFeatures {
+        buildConfig true
+    }
     defaultConfig {
         applicationId "kr.parkinson.medicationdiary"
         minSdkVersion rootProject.ext.minSdkVersion
