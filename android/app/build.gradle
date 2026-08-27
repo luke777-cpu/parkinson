@@ -17,6 +17,13 @@ android {
         }
     }
     buildTypes {
+        debug {
+            // 실기기에 이미 설치된 Play Store 정식 앱(kr.parkinson.medicationdiary)과 서명이
+            // 달라 같은 package로 설치할 수 없다 — debug만 별도 package/버전 표시로 분리해
+            // 정식 앱을 지우지 않고도 나란히 설치해 테스트할 수 있게 한다. release는 그대로 둔다.
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'

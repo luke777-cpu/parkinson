@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- debug 빌드 전용 오버라이드. release(main) 쪽 strings.xml은 건드리지 않는다 —
+     Android Gradle Plugin이 build type별 res를 merge할 때 debug 값이 우선 적용된다. -->
+<resources>
+    <string name="app_name">파킨슨 약효 기록 DEBUG</string>
+    <string name="title_activity_main">파킨슨 약효 기록 DEBUG</string>
+    <string name="widget_app_title">파킨슨 약효 기록 DEBUG</string>
+</resources>
