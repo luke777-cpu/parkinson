@@ -30,6 +30,17 @@ public class MedicationWidgetProvider extends AppWidgetProvider {
         RemoteViews로 대신 골라줄 수 없어 앱을 열어 기존 화면으로 보낸다(딥링크). */
     public static final String ACTION_QUICK_TEMPNOTE = "kr.parkinson.medicationdiary.widget.ACTION_QUICK_TEMPNOTE";
 
+    /** 증상/생활/느낌메모/점수매기기 딥링크 전용 Intent action. requestCode만 다르고
+        나머지(컴포넌트/action/data/category)가 전부 같은 Intent 4개를 만들면, 일부
+        기기(삼성 One UI 등)의 위젯 클릭 처리 경로에서 requestCode 구분을 무시하고
+        extra가 유실/뒤섞이는 사례가 실기기 로그로 확인됐다(onCreate extras: empty).
+        각 버튼마다 action 문자열 자체를 다르게 줘서 4개가 어떤 기준으로도 절대
+        같은 Intent로 간주되지 않게 한다. */
+    public static final String ACTION_DEEPLINK_SYMPTOM = "kr.parkinson.medicationdiary.widget.DEEPLINK_SYMPTOM";
+    public static final String ACTION_DEEPLINK_LIFE = "kr.parkinson.medicationdiary.widget.DEEPLINK_LIFE";
+    public static final String ACTION_DEEPLINK_NOTE = "kr.parkinson.medicationdiary.widget.DEEPLINK_NOTE";
+    public static final String ACTION_DEEPLINK_SCORE = "kr.parkinson.medicationdiary.widget.DEEPLINK_SCORE";
+
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         if (BuildConfig.DEBUG) Log.d(TAG, "onUpdate ids=" + appWidgetIds.length);
@@ -124,10 +135,10 @@ public class MedicationWidgetProvider extends AppWidgetProvider {
         views.setOnClickPendingIntent(R.id.widget_btn_trend_falling, actionPendingIntent(context, ACTION_TREND_FALLING, 7));
 
         views.setOnClickPendingIntent(R.id.widget_btn_quick_tempnote, actionPendingIntent(context, ACTION_QUICK_TEMPNOTE, 8));
-        views.setOnClickPendingIntent(R.id.widget_btn_quick_symptom, deepLinkPendingIntent(context, WidgetStore.ACTION_SYMPTOM, 9));
-        views.setOnClickPendingIntent(R.id.widget_btn_quick_life, deepLinkPendingIntent(context, WidgetStore.ACTION_LIFE, 10));
-        views.setOnClickPendingIntent(R.id.widget_btn_quick_note, deepLinkPendingIntent(context, WidgetStore.ACTION_NOTE, 11));
-        views.setOnClickPendingIntent(R.id.widget_btn_quick_score, deepLinkPendingIntent(context, WidgetStore.ACTION_SCORE, 12));
+        views.setOnClickPendingIntent(R.id.widget_btn_quick_symptom, deepLinkPendingIntent(context, WidgetStore.ACTION_SYMPTOM, 9, ACTION_DEEPLINK_SYMPTOM));
+        views.setOnClickPendingIntent(R.id.widget_btn_quick_life, deepLinkPendingIntent(context, WidgetStore.ACTION_LIFE, 10, ACTION_DEEPLINK_LIFE));
+        views.setOnClickPendingIntent(R.id.widget_btn_quick_note, deepLinkPendingIntent(context, WidgetStore.ACTION_NOTE, 11, ACTION_DEEPLINK_NOTE));
+        views.setOnClickPendingIntent(R.id.widget_btn_quick_score, deepLinkPendingIntent(context, WidgetStore.ACTION_SCORE, 12, ACTION_DEEPLINK_SCORE));
 
         return views;
     }
@@ -151,16 +162,21 @@ public class MedicationWidgetProvider extends AppWidgetProvider {
         FLAG_UPDATE_CURRENT로 같은 requestCode를 재사용하면 먼저 만든 PendingIntent의
         extra가 나중 것으로 덮여써져서(예: "앱 열기"용 4번을 같이 쓰면) 서로 다른
         딥링크 버튼이 전부 마지막에 만든 것과 같은 동작을 하게 되는 사고로 이어진다. */
-    private static PendingIntent deepLinkPendingIntent(Context context, String widgetAction, int requestCode) {
+    private static PendingIntent deepLinkPendingIntent(Context context, String widgetAction, int requestCode, String intentAction) {
         /* 주의: 이 로그는 위젯이 "그려질 때"(buildViews) 한 번 찍히는 것이지, 버튼을
            "누를 때" 찍히는 게 아니다 — PendingIntent.getActivity()로 만든 딥링크는
            탭하면 Android가 직접 MainActivity를 여는 것이라 이 앱의 코드(onReceive 등)를
            거치지 않는다. 그래서 "버튼을 눌렀을 때"의 로그는 여기가 아니라 항상
            MainActivity.onCreate()/onNewIntent()에서부터 시작된다. */
-        if (BuildConfig.DEBUG) Log.d(TAG, "deepLinkPendingIntent built action=" + widgetAction + " requestCode=" + requestCode);
         Intent intent = new Intent(context, MainActivity.class);
+        intent.setAction(intentAction);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         intent.putExtra(WidgetStore.EXTRA_WIDGET_ACTION, widgetAction);
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "deepLinkPendingIntent built action=" + widgetAction + " requestCode=" + requestCode
+                    + " intentAction=" + intentAction
+                    + " extraJustSet=" + intent.getStringExtra(WidgetStore.EXTRA_WIDGET_ACTION));
+        }
         return PendingIntent.getActivity(context, requestCode, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
