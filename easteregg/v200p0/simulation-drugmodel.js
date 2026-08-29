@@ -89,6 +89,44 @@ DM.loadDictionary = function(url){
     .catch(e=>({ok:false, reason:String(e && e.message || e)})); /* 실패해도 내장 기본값으로 계속 동작 */
 };
 
+/* ---- Phase 7: 개인 곡선 보정 레이어 (치료구간 설계도 Phase 7) ----
+   실측으로 확인된 개인 파라미터(발현·피크·지속시간 등)를 표준 CURVES 위에 얕게 덮어쓴다.
+   원본 DM.CURVES는 절대 변형(mutate)하지 않는다 — 조회 시점(applyPersonalOverride, DM.classify
+   진입부)에 Object.assign({}, curve, override)로 새 객체를 만들어 반환한다.
+   DM.loadDictionary()로 사전이 교체돼도 이 오버라이드는 별도 레이어이므로 자동으로 유지된다
+   (applyDictionary는 DM.CURVES만 바꾸고 _personalOverrides는 건드리지 않는다).
+   DM.classify()를 거치는 모든 소비자(곡선탭·SIMTHR·SIMCOV·SIMCAND·SIMDAY 등)가 조회 시점에
+   같은 보정 곡선을 보게 되므로, 소비자 쪽 추가 작업이 필요 없다. */
+DM.OVERRIDE_WHITELIST = {
+  direct_curve: ["onsetMin", "peakMin", "durationMin"],
+  modifier: ["durationMultiplier", "coverageWindowMin"],
+};
+let _personalOverrides = {};
+DM.setPersonalOverrides = function(map){
+  const next = {};
+  Object.keys(map || {}).forEach(curveId => {
+    const curve = DM.CURVES[curveId];
+    if(!curve){ console.warn(`[DM.setPersonalOverrides] 알 수 없는 curveId "${curveId}" — 무시합니다`); return; }
+    const whitelist = DM.OVERRIDE_WHITELIST[curve.role];
+    if(!whitelist){ console.warn(`[DM.setPersonalOverrides] curveId "${curveId}"(role:${curve.role})는 개인 보정을 지원하지 않습니다 — 무시합니다`); return; }
+    const src = map[curveId] || {};
+    const filtered = {};
+    Object.keys(src).forEach(k => {
+      if(whitelist.includes(k)) filtered[k] = src[k];
+      else console.warn(`[DM.setPersonalOverrides] "${curveId}.${k}"는 허용되지 않는 키 — 무시합니다`);
+    });
+    if(Object.keys(filtered).length) next[curveId] = filtered;
+  });
+  _personalOverrides = next;
+  return DM.getPersonalOverrides();
+};
+DM.getPersonalOverrides = function(){ return JSON.parse(JSON.stringify(_personalOverrides)); };
+DM.clearPersonalOverrides = function(){ _personalOverrides = {}; };
+DM.applyPersonalOverride = function(curveId, curve){
+  const ov = _personalOverrides[curveId];
+  return ov ? Object.assign({}, curve, ov) : curve;
+};
+
 /* 별칭 인덱스 — 여러 약에 걸쳐 가장 긴 별칭부터 매칭해야 "마도파"가 "마도파 HBS"를
    가로채는 오분류를 막는다. 최초 1회 계산 후 캐시. */
 let _aliasIndex=null;
@@ -123,7 +161,7 @@ DM.findDrug = function(name){
 DM.classify = function(name){
   const drug=DM.findDrug(name);
   if(!drug) return null;
-  const curve=DM.CURVES[drug.curveId] || {};
+  const curve=DM.applyPersonalOverride(drug.curveId, DM.CURVES[drug.curveId] || {});
   return Object.assign({}, curve, {
     curveId:drug.curveId, genericName:drug.genericName, formulation:drug.formulation,
     roleLabel:drug.roleLabel, leddFactor:drug.leddFactor, leddIncluded:drug.leddIncluded,
