@@ -418,7 +418,7 @@ body{font-size:calc(15px*var(--app-font-scale))}
       <select id="curveDate" class="btn" style="font-weight:700"></select>
     </div>
     <div class="chart-card">
-      <div class="card-title"><span data-i18n="estCurve">약효 추정 곡선</span><span id="curveRange"></span></div>
+      <div class="card-title"><span data-i18n="estCurve">약효 추정 곡선</span><span id="curveOverrideBadge" style="display:none; margin-left:6px; font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; background:var(--surface-2); color:var(--accent)" data-i18n="curveOverrideBadge">개인 보정 적용 중</span><span id="curveRange"></span></div>
       <div id="curveChart"></div>
       <div class="legend">
         <span><i style="background:#1FA971"></i><span data-i18n="legendDA">추정 도파민 작용</span></span>
@@ -466,6 +466,15 @@ body{font-size:calc(15px*var(--app-font-scale))}
       <div class="card-title"><span data-i18n="anCoverageTitle">치료 구간 안에 머문 시간</span></div>
       <div class="disclaimer" style="margin-bottom:10px" data-i18n="anCoverageDisclaimer">이 계산은 추정된 치료 구간과 약효 추정곡선을 비교한 것으로, 처방을 권고하지 않습니다. 약물 조정은 담당 의료진과 상의하세요.</div>
       <div id="anCoverageBody"></div>
+    </div>
+
+    <!-- v2.17 Phase 6: 일일 잔차 성적표 -->
+    <div class="chart-card" id="anDailyCard" style="background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin-bottom:14px; display:none">
+      <div class="card-title"><span data-i18n="anDailyTitle">오늘의 잔차 성적표</span></div>
+      <div class="disclaimer" style="margin-bottom:10px" data-i18n="anDailyDisclaimer">예측 약효 곡선과 그 날 실측 기록의 차이(잔차)를 숫자로 보여줍니다. 판단이나 처방 변경을 권고하지 않으며, 계산할 수 없는 지표는 추정하지 않고 —로 표시합니다.</div>
+      <div id="anDailyBody"></div>
+      <div class="card-title" style="margin-top:14px; font-size:13px"><span data-i18n="anDailyAggTitle">누적</span></div>
+      <div id="anDailyAggBody"></div>
     </div>
 
     <!-- 2026-08-14: Phase4 후보안 확장(실험용) — buildCandidatesExpanded, 최대 14개.
@@ -603,6 +612,19 @@ body{font-size:calc(15px*var(--app-font-scale))}
       <div class="list-card" id="unregDrugList"></div>
     </div>
 
+    <!-- v2.17 Phase 7: 개인 곡선 보정 — 표준 CURVES 파라미터를 실측값으로 덮어쓰는 레이어.
+         원본 사전은 건드리지 않는다(simulation-drugmodel.js의 setPersonalOverrides 참고). -->
+    <div id="personalCurveSection">
+      <div class="section-label" data-i18n="personalCurveTitle">개인 곡선 보정</div>
+      <div class="disclaimer" style="margin-bottom:8px" data-i18n="personalCurveDesc">표준 곡선 파라미터를 회원님이 실측으로 확인한 값으로 덮어씁니다. 곡선탭·분석탭 등 모든 화면이 조회 시점에 이 값을 사용합니다. 입력칸을 비우면 표준 기본값으로 돌아갑니다.</div>
+      <div class="list-card" style="padding:12px">
+        <select id="pcCurveSelect" class="btn" style="font-weight:700; margin-bottom:10px; width:100%"></select>
+        <div id="pcFields"></div>
+        <div id="pcSuggested" style="margin-top:8px; font-size:12.5px; color:var(--ink-2)"></div>
+        <button class="btn ghost no-print" id="pcResetBtn" style="margin-top:10px; width:auto" data-i18n="personalCurveResetBtn">기본값으로 되돌리기</button>
+      </div>
+    </div>
+
     <div class="section-label" data-i18n="medAlarm">약 알림</div>
     <div class="list-card">
       <div class="li"><div class="grow"><div class="name" data-i18n="appNotify">앱 알림 켜기</div><div class="meta" data-i18n="appNotifyDesc">앱이 켜져 있을 때 예약 시간에 알려줘요</div></div><div class="toggle" id="notifyToggle"></div></div>
@@ -675,6 +697,7 @@ body{font-size:calc(15px*var(--app-font-scale))}
 <script src="analysis-coverage.js"></script>
 <script src="analysis-candidates.js"></script>
 <script src="analysis-validation.js"></script>
+<script src="analysis-daily.js"></script>
 <script>
 "use strict";
 /* ---------- i18n ---------- */
@@ -725,10 +748,19 @@ const I18N = {
     anWindowDisclaimer:"이 구간은 회원님이 실제로 기록한 OFF 시각·이상운동증 시각을 근거로 추정한 값이며, 절대 기준이 아닙니다. 표본이 부족하면 추정하지 않습니다.",
     anCoverageTitle:"치료 구간 안에 머문 시간",
     anCoverageDisclaimer:"이 계산은 추정된 치료 구간과 약효 추정곡선을 비교한 것으로, 처방을 권고하지 않습니다. 약물 조정은 담당 의료진과 상의하세요.",
+    anDailyTitle:"오늘의 잔차 성적표",
+    anDailyDisclaimer:"예측 약효 곡선과 그 날 실측 기록의 차이(잔차)를 숫자로 보여줍니다. 판단이나 처방 변경을 권고하지 않으며, 계산할 수 없는 지표는 추정하지 않고 —로 표시합니다.",
+    anDailyAggTitle:"누적",
     anValidationTitle:"예측 vs 실제",
     anValidationDisclaimer:"보고서에서 제안했던 후보안을 실제로 복용한 날의 기록과, 그때 예측했던 값을 비교합니다. 예측과 다르다고 해서 잘못된 것이 아니며, 그 차이가 다음 추정을 더 정확하게 만드는 데 쓰입니다.",
     unregDrugTitle:"미등록 약 정리",
     unregDrugDesc:"기록에 있지만 앱 사전에 없는 약 이름입니다. 성분을 한 번만 골라 두면, 그 이름으로 기록된 모든 복용이 앞으로 계산에 포함됩니다. 이 설정은 이 기기에만 저장됩니다.",
+    personalCurveTitle:"개인 곡선 보정",
+    personalCurveDesc:"표준 곡선 파라미터를 회원님이 실측으로 확인한 값으로 덮어씁니다. 곡선탭·분석탭 등 모든 화면이 조회 시점에 이 값을 사용합니다. 입력칸을 비우면 표준 기본값으로 돌아갑니다.",
+    personalCurveResetBtn:"기본값으로 되돌리기",
+    personalCurveSuggestedLabel:"실측 제안값",
+    personalCurveApplyHint:"제안값은 참고용 숫자일 뿐입니다 — 적용하려면 위 입력칸에 직접 넣어주세요.",
+    curveOverrideBadge:"개인 보정 적용 중",
     medSetTitle:"복용 세트", medSetDesc:"같이 드시는 약들을 묶어두면, 매번 하나씩 기록할 필요 없이 한 번에 같은 시각으로 기록됩니다. 시각이 정확히 겹쳐야 기록 분석도 더 정확해집니다.", addMedSet:"+ 세트 만들기", addRx:"📋 처방전으로 한 번에 등록",
     quickOutputTitle:"지금 몸이 어떠세요?", qoLabel:"현재 출력",
     qoStep90:"아주 잘 움직여요", qoStep70:"지낼 만해요", qoStep50:"불편하지만 움직여요", qoStep30:"많이 느리고 힘들어요", qoStep10:"거의 못 움직여요", qoHelpBtn:"ⓘ 도움말 · 기준 설정", qoReset:"오늘 기준점 다시 설정", qoGuide:"출력 점수 기준 보기",
@@ -796,10 +828,19 @@ const I18N = {
     anWindowDisclaimer:"This window is estimated from your own recorded OFF times and dyskinesia times — it is not an absolute standard. It is not estimated when there isn't enough data.",
     anCoverageTitle:"Time within the therapeutic window",
     anCoverageDisclaimer:"This is a comparison of your estimated window against the effect-estimate curve. It does not recommend a prescription. Discuss medication changes with your clinician.",
+    anDailyTitle:"Today's Residual Scorecard",
+    anDailyDisclaimer:"Shows the numeric difference (residual) between the predicted effect curve and that day's actual records. It does not recommend a judgment or prescription change, and metrics that can't be calculated are shown as — rather than estimated.",
+    anDailyAggTitle:"Cumulative",
     anValidationTitle:"Predicted vs Actual",
     anValidationDisclaimer:"Compares a candidate suggested in a past report against records from a day it was actually taken. A mismatch isn't a failure — the difference helps refine future estimates.",
     unregDrugTitle:"Unrecognized medications",
     unregDrugDesc:"These drug names appear in your records but aren't in the app dictionary. Choose the ingredient once and every past and future dose under that name will be included in calculations. Saved on this device only.",
+    personalCurveTitle:"Personal Curve Correction",
+    personalCurveDesc:"Overrides the standard curve parameters with values you've confirmed from your own records. Every screen (curve tab, analysis tab, etc.) uses these values at lookup time. Leave a field blank to fall back to the standard default.",
+    personalCurveResetBtn:"Reset to default",
+    personalCurveSuggestedLabel:"Suggested from your records",
+    personalCurveApplyHint:"The suggested value is reference only — enter it into the field above yourself to apply it.",
+    curveOverrideBadge:"Personal correction active",
     medSetTitle:"Medication sets", medSetDesc:"Group medications you take together — logging the set records them all at the exact same time, instead of one by one. Matching timestamps also make analysis more accurate.", addMedSet:"+ Create set", addRx:"📋 Add from a prescription",
     quickOutputTitle:"How is your body right now?", qoLabel:"Current output",
     qoStep90:"Moving very well", qoStep70:"Manageable", qoStep50:"Uncomfortable but moving", qoStep30:"Very slow and hard", qoStep10:"Can barely move", qoHelpBtn:"ⓘ Help & baseline", qoReset:"Reset today's baseline", qoGuide:"View output score guide",
@@ -1196,6 +1237,10 @@ function medRole(name){
 }
 
 let db = load();
+/* v2.17 Phase 7: 저장된 개인 곡선 보정을 엔진에 반영한다. 조회 시점에 적용되는 별도
+   레이어이므로(simulation-drugmodel.js §Phase 7 참고) 여기서 한 번만 걸어두면
+   곡선탭·분석탭 등 모든 소비자가 자동으로 이 값을 보게 된다. */
+if(typeof SIMDRUG!=="undefined" && SIMDRUG.setPersonalOverrides) SIMDRUG.setPersonalOverrides((db.settings&&db.settings.personalCurves)||{});
 function load(){
   try{ const d = JSON.parse(localStorage.getItem(KEY)); if(d&&d.events){ d.meds=(d.meds||[]).map(m=>({sched:[],...m})); d.settings=d.settings||{theme:"light"}; d.outputChecks=d.outputChecks||[]; d.dayMemos=d.dayMemos||{};
     if(typeof PHS!=="undefined") PHS.migrate(d); /* v0.9.19: db.phs 네임스페이스 추가 (기존 키 무변경·가역적) */
@@ -3357,6 +3402,9 @@ function renderCurve(){
     document.getElementById("curveRange").textContent=fmtDateK(k);
     document.getElementById("curveChart").innerHTML=svgCurve(k);
     document.getElementById("curveEventList").innerHTML=curveEventListHtml(k)+curveGapNoticeHtml(k);
+    /* Phase 7: 개인 곡선 보정이 하나라도 적용 중이면 배지로 알린다(탭 신뢰성 표시) */
+    const hasOverride = typeof SIMDRUG!=="undefined" && SIMDRUG.getPersonalOverrides && Object.keys(SIMDRUG.getPersonalOverrides()).length>0;
+    document.getElementById("curveOverrideBadge").style.display = hasOverride? "inline-block" : "none";
   };
   sel.onchange=draw;
   draw();
@@ -3688,6 +3736,124 @@ function findUnregisteredDrugNames(){
   const map=personalAliasMap();
   return [...names].filter(n => !map[n] && !SIMDRUG.classify(n)).sort();
 }
+
+/* ============================================================
+   v2.17 Phase 7: 개인 곡선 보정 — 설정 탭 컨트롤러
+   ------------------------------------------------------------
+   db.settings.personalCurves = {curveId:{key:value,...}} 를 저장소에 두고,
+   SIMDRUG.setPersonalOverrides()로 엔진에 반영한다(조회 시점 병합이므로 여기서
+   한 번만 걸면 다른 화면은 추가 작업 없이 그 값을 본다).
+   ============================================================ */
+/* label/필드명은 언어 토글에 즉시 반응해야 하므로 상수로 고정하지 않고 함수로 매번 계산한다
+   (다른 render 함수들처럼 L()을 렌더 시점에 호출 — const로 얼려두면 언어를 바꿔도 안 바뀜). */
+const PC_CURVES=[
+  {curveId:"LEVO_IR", fields:["onsetMin","peakMin","durationMin"]},
+  {curveId:"LEVO_HBS", fields:["onsetMin","peakMin","durationMin"]},
+  {curveId:"STALEVO", fields:["onsetMin","peakMin","durationMin"]},
+  {curveId:"ONGENTYS", fields:["durationMultiplier","coverageWindowMin"]},
+];
+function pcCurveLabel(curveId){
+  return {
+    LEVO_IR:L("레보도파 (즉방형)","Levodopa (IR)"),
+    LEVO_HBS:L("레보도파 (서방형/HBS)","Levodopa (HBS/CR)"),
+    STALEVO:L("스타레보 (레보도파+엔타카폰)","Stalevo (levodopa+entacapone)"),
+    ONGENTYS:L("온젠티스 (오피카폰)","Ongentys (opicapone)"),
+  }[curveId] || curveId;
+}
+function pcFieldLabel(key){
+  return {
+    onsetMin:L("발현(분)","Onset (min)"), peakMin:L("피크(분)","Peak (min)"), durationMin:L("지속(분)","Duration (min)"),
+    durationMultiplier:L("지속 배수","Duration ×"), coverageWindowMin:L("적용 창(분)","Coverage window (min)"),
+  }[key] || key;
+}
+let _pcSelected = PC_CURVES[0].curveId;
+function personalCurvesMap(){ return (db.settings && db.settings.personalCurves) || {}; }
+function savePersonalCurveField(curveId, key, rawValue){
+  if(!db.settings.personalCurves) db.settings.personalCurves={};
+  const cur=db.settings.personalCurves;
+  const v = rawValue===""||rawValue==null ? null : Number(rawValue);
+  if(v==null || Number.isNaN(v)){
+    if(cur[curveId]) delete cur[curveId][key];
+    if(cur[curveId] && !Object.keys(cur[curveId]).length) delete cur[curveId];
+  } else {
+    cur[curveId]=cur[curveId]||{};
+    cur[curveId][key]=v;
+  }
+  save();
+  SIMDRUG.setPersonalOverrides(db.settings.personalCurves||{});
+}
+function resetPersonalCurve(curveId){
+  if(db.settings.personalCurves) delete db.settings.personalCurves[curveId];
+  save();
+  SIMDRUG.setPersonalOverrides(db.settings.personalCurves||{});
+  renderPersonalCurveSettings();
+}
+/* 실측 제안값 — 그 curveId로 분류되는 모든 복용의 analyzeEpisode 결과에서
+   riseStartMin(발현 후보)·peakAtMin(피크 후보) 중앙값을 낸다. 표본 3 미만이면
+   제안하지 않는다(다른 analysis-*.js 모듈과 같은 기준). 자동 적용 버튼은 만들지
+   않는다 — 적용은 사용자가 입력칸에 직접 넣는 행위로만(설계도 §3.3). */
+function personalCurveSuggestion(curveId){
+  const days=byDay();
+  const onsets=[], peaks=[];
+  Object.keys(days).forEach(k=>{
+    const evs=days[k];
+    const outs=evs.filter(e=>e.type==="state"&&e.output!=null)
+      .map(e=>({timeMin:new Date(e.ts).getHours()*60+new Date(e.ts).getMinutes(), val:e.output}))
+      .sort((a,b)=>a.timeMin-b.timeMin);
+    const medEvs=evs.filter(e=>e.type==="med" && e.drug)
+      .map(e=>({name:resolveDrugName(e.drug), dose:(e.dose==null||e.dose==="")?null:+e.dose, timeMin:new Date(e.ts).getHours()*60+new Date(e.ts).getMinutes()}))
+      .sort((a,b)=>a.timeMin-b.timeMin);
+    medEvs.forEach((d,i)=>{
+      const model=SIMDRUG.classify(d.name);
+      if(!model || model.curveId!==curveId) return;
+      const next=medEvs.slice(i+1).find(x=>x.timeMin>d.timeMin);
+      const ep=SIMCLIN.analyzeEpisode({dayKey:k, name:d.name, dose:d.dose, timeMin:d.timeMin}, outs, null, next?next.timeMin:null, []);
+      if(ep.riseStartMin!=null) onsets.push(ep.riseStartMin);
+      if(ep.peakAtMin!=null) peaks.push(ep.peakAtMin);
+    });
+  });
+  const MIN_N=3;
+  return {
+    onsetMin: onsets.length>=MIN_N? Math.round(SIMCLIN.median(onsets)) : null, onsetN:onsets.length,
+    peakMin: peaks.length>=MIN_N? Math.round(SIMCLIN.median(peaks)) : null, peakN:peaks.length,
+  };
+}
+function renderPersonalCurveSettings(){
+  const sel=document.getElementById("pcCurveSelect");
+  sel.innerHTML=PC_CURVES.map(c=>`<option value="${c.curveId}">${escapeHtml(pcCurveLabel(c.curveId))}</option>`).join("");
+  sel.value=_pcSelected;
+  sel.onchange=()=>{ _pcSelected=sel.value; renderPersonalCurveSettings(); };
+
+  const conf=PC_CURVES.find(c=>c.curveId===_pcSelected);
+  const standard=SIMDRUG.CURVES[conf.curveId]||{};
+  const applied=personalCurvesMap()[conf.curveId]||{};
+
+  document.getElementById("pcFields").innerHTML=conf.fields.map(key=>{
+    const cur=applied[key]!=null? applied[key] : "";
+    return `<div class="li"><div class="grow"><div class="name">${escapeHtml(pcFieldLabel(key))}</div>
+      <div class="meta">${L("표준","Standard")} ${standard[key]}</div></div>
+      <input type="number" step="any" data-key="${key}" value="${cur}" placeholder="${standard[key]}"
+        style="width:96px; text-align:right; padding:6px 8px; border-radius:8px; border:1px solid var(--line); background:var(--surface)"></div>`;
+  }).join("");
+  document.getElementById("pcFields").querySelectorAll("input[data-key]").forEach(inp=>{
+    inp.onchange=()=>savePersonalCurveField(conf.curveId, inp.dataset.key, inp.value);
+  });
+
+  if(conf.fields.includes("onsetMin")){
+    const sug=personalCurveSuggestion(conf.curveId);
+    const parts=[];
+    if(sug.onsetMin!=null) parts.push(`${pcFieldLabel("onsetMin")} ${sug.onsetMin} (n=${sug.onsetN})`);
+    if(sug.peakMin!=null) parts.push(`${pcFieldLabel("peakMin")} ${sug.peakMin} (n=${sug.peakN})`);
+    document.getElementById("pcSuggested").innerHTML = parts.length
+      ? `<b>${L("실측 제안값","Suggested from your records")}</b>: ${parts.join(" · ")}<br>${L("제안값은 참고용 숫자일 뿐입니다 — 적용하려면 위 입력칸에 직접 넣어주세요.","This is reference only — enter it into the field above yourself to apply it.")}`
+      : L("실측 제안값을 내기에 기록이 부족합니다(각 지표 최소 3회 필요).","Not enough records yet to suggest a value (each metric needs at least 3 occurrences).");
+  } else {
+    document.getElementById("pcSuggested").innerHTML="";
+  }
+
+  document.getElementById("pcResetBtn").onclick=()=>resetPersonalCurve(conf.curveId);
+}
+
 function medsForSimulationDay(dayKey){
   const today=medsForDay(dayKey).map(d=>({...d, dayOffset:0, name:resolveDrugName(d.name)}));
   const carry=carryoverDosesFor(dayKey).map(d=>({...d, name:resolveDrugName(d.name)}));
@@ -4076,6 +4242,7 @@ function renderAnalysis(){
     document.getElementById("anTable").innerHTML="";
     document.getElementById("anWindowCard").style.display="none";
     document.getElementById("anCoverageCard").style.display="none";
+    document.getElementById("anDailyCard").style.display="none";
     document.getElementById("anCandidatesCard").style.display="none";
     return;
   }
@@ -4216,7 +4383,7 @@ function anGatherThresholdSamples(period){
 }
 function renderTherapeuticWindow(period){
   const card=document.getElementById("anWindowCard");
-  if(typeof SIMTHR==="undefined"){ card.style.display="none"; document.getElementById("anCoverageCard").style.display="none"; document.getElementById("anCandidatesCard").style.display="none"; return; }
+  if(typeof SIMTHR==="undefined"){ card.style.display="none"; document.getElementById("anCoverageCard").style.display="none"; document.getElementById("anDailyCard").style.display="none"; document.getElementById("anCandidatesCard").style.display="none"; return; }
   const {offSamples, dyskSamples}=anGatherThresholdSamples(period);
   const lower=SIMTHR.estimateLowerBound(offSamples);
   const upper=SIMTHR.estimateUpperBound(dyskSamples);
@@ -4241,6 +4408,86 @@ function renderTherapeuticWindow(period){
       : `<div class="hint" style="margin-top:8px; color:var(--danger)">${escapeHtml(win.reasons.join(" "))}</div>`}
   `;
   renderCoverage(period, lower, upper);
+  renderAnalysisDaily(period, lower);
+}
+/* v2.17 Phase 6: 하루(dayKey)마다 예측곡선과 실측(출력 체크·이상운동 사건)을 비교해
+   analysis-daily.js(SIMDAY)의 잔차 4지표를 계산한다. Phase 2가 이미 추정한 하한(lower)을
+   그대로 받아 쓴다 — 이 카드만의 별도 역치를 새로 추정하지 않는다. */
+function anGatherDailyResidualsForPeriod(period, lower){
+  const days=byDay();
+  const thresholds={lower: (lower && lower.value!=null) ? lower.value : null};
+  return period.keys.map(k=>{
+    const evs=days[k]||[];
+    const outputChecks=evs.filter(e=>e.type==="state" && e.output!=null)
+      .map(e=>({timeMin:new Date(e.ts).getHours()*60+new Date(e.ts).getMinutes(), val:e.output}));
+    /* 이상운동증은 type:"symptom", key:"dysk"로 저장된다(anGatherThresholdSamples와 동일 근거) */
+    const events=evs.filter(e=>e.type==="symptom" && e.key==="dysk")
+      .map(e=>({timeMin:new Date(e.ts).getHours()*60+new Date(e.ts).getMinutes(), kind:"dysk", phase:e.phase}));
+    const {today, carry}=medsForSimulationDay(k);
+    const doses=carry.concat(today);
+    const res=SIMDAY.dailyResiduals({doses, outputChecks, events, thresholds});
+    return Object.assign({dayKey:k}, res);
+  });
+}
+function anDailyMetricTile(label, val, unit, reasons){
+  const shown = val==null? "–" : `${val>0?"+":""}${val}${unit}`;
+  return `<div style="background:var(--surface-2); border-radius:10px; padding:10px 12px">
+    <div style="font-size:11.5px; color:var(--ink-2)">${label}</div>
+    <div style="font-weight:800; font-size:17px">${shown}</div>
+  </div>`;
+}
+function renderAnalysisDaily(period, lower){
+  const card=document.getElementById("anDailyCard");
+  if(typeof SIMDAY==="undefined"){ card.style.display="none"; return; }
+  const dayResults=anGatherDailyResidualsForPeriod(period, lower);
+  card.style.display="block";
+
+  const today=dayResults.find(d=>d.dayKey===todayKey());
+  const bodyEl=document.getElementById("anDailyBody");
+  if(!today || !today.valid){
+    bodyEl.innerHTML=`<div class="hint">${escapeHtml((today&&today.reasons&&today.reasons.join(" · "))||L("오늘 기록이 아직 없습니다.","No records for today yet."))}</div>`;
+  } else {
+    const troughTxt = today.troughs.length
+      ? today.troughs.map(t=>`${t.beforeDoseTime} ${t.output}`).join(" · ")
+      : "–";
+    bodyEl.innerHTML=`
+      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:8px">
+        ${anDailyMetricTile(L("도달 지연","Onset delay"), today.onsetDelayMin, L("분","min"))}
+        ${anDailyMetricTile(L("피크 잔차","Peak residual"), today.peakResidual.timeDeltaMin, L("분","min"))}
+        <div style="background:var(--surface-2); border-radius:10px; padding:10px 12px">
+          <div style="font-size:11.5px; color:var(--ink-2)">${L("이상운동 발생","Dyskinesia today")}</div>
+          <div style="font-weight:800; font-size:17px">${today.peakResidual.overflow? L("있음","Yes") : L("없음","No")}</div>
+        </div>
+        ${anDailyMetricTile(L("조기 소진","Early fade"), today.earlyFadeMin, L("분","min"))}
+      </div>
+      <div style="margin-top:8px; font-size:12.5px">${L("복용 직전 골","Pre-dose troughs")}: ${escapeHtml(troughTxt)}</div>
+      ${today.reasons.length? `<div class="hint" style="margin-top:6px">${escapeHtml(today.reasons.join(" · "))}</div>` : ""}
+    `;
+  }
+
+  const agg=SIMDAY.aggregate(dayResults);
+  const aggEl=document.getElementById("anDailyAggBody");
+  if(!agg.valid){
+    aggEl.innerHTML=`<div class="hint">${escapeHtml(agg.reasons.join(" · "))}</div>`;
+  } else {
+    const row=(label, m, unit)=>`<tr><td style="padding:4px 6px">${label}</td>
+      <td style="padding:4px 6px; text-align:right">${m.median!=null? (m.median>0&&unit!=="회"?"+":"")+Math.round(m.median*10)/10+unit : "–"}</td>
+      <td style="padding:4px 6px; text-align:right; color:var(--ink-2)">${m.n}${L("건","x")}</td></tr>`;
+    aggEl.innerHTML=`
+      <div class="hint" style="margin-bottom:6px">${L(`최근 ${period.calendarDays}일 · 계산된 날 ${agg.n}일`,`Last ${period.calendarDays} days · ${agg.n} days calculated`)}</div>
+      <table style="width:100%; font-size:12px; border-collapse:collapse">
+        <tr style="color:var(--ink-2)"><td style="padding:4px 6px">${L("지표","Metric")}</td>
+          <td style="padding:4px 6px; text-align:right">${L("중앙값","Median")}</td>
+          <td style="padding:4px 6px; text-align:right">${L("표본","n")}</td></tr>
+        ${row(L("도달 지연","Onset delay"), agg.onsetDelayMin, L("분","min"))}
+        ${row(L("피크 잔차","Peak residual"), agg.peakTimeDeltaMin, L("분","min"))}
+        ${row(L("조기 소진","Early fade"), agg.earlyFadeMin, L("분","min"))}
+        ${row(L("복용 직전 골 출력","Pre-dose trough output"), agg.troughOutput, "")}
+        <tr><td style="padding:4px 6px">${L("이상운동 발생일","Days with dyskinesia")}</td>
+          <td style="padding:4px 6px; text-align:right" colspan="2">${agg.overflowDays}/${agg.n}${L("일","d")}</td></tr>
+      </table>
+    `;
+  }
 }
 /* v2.4 Phase 3: 기간 내 각 날짜의 복합곡선을 다시 계산해 하한·상한과 비교한다.
    목표는 "얼마나 부족한가"가 아니라 "구간 안에 머문 시간이 얼마나 되는가"이므로
@@ -4429,6 +4676,7 @@ window.addQ=()=>{ const t=prompt(L("질문을 입력하세요","Enter your quest
 function renderMeds(){
   renderUnregisteredDrugList(); /* v2.7 */
   renderMedSets(); /* v2.9 */
+  renderPersonalCurveSettings(); /* v2.17 Phase 7 */
   const el=document.getElementById("medList"); el.innerHTML="";
   if(!db.meds.length){ el.innerHTML=`<div class="li"><div class="grow"><div class="meta">${L("아직 등록된 약이 없어요. 아래에서 추가하세요.","No medications registered yet. Add one below.")}</div></div></div>`; }
   const ordered = db.meds.map((m,i)=>({m,i})).sort((a,b)=>(b.m.fav?1:0)-(a.m.fav?1:0));
@@ -5730,12 +5978,12 @@ document.getElementById("importBtn").onclick=()=>document.getElementById("import
 document.getElementById("importFile").onchange=function(){
   const f=this.files[0]; if(!f) return; const r=new FileReader();
   r.onload=()=>{ try{ const d=JSON.parse(r.result); if(!d.events) throw 0;
-    if(confirm(L("현재 기록을 불러온 데이터로 덮어쓸까요?","Overwrite current records with the imported data?"))){ db=Object.assign({questions:defaultQuestions(),settings:{theme:db.settings.theme,notify:false},meds:[]},d); db.meds=(db.meds||[]).map(m=>({sched:[],...m})); db.settings=db.settings||{theme:"light"}; save(); applyTheme(); applyI18nStatic(); renderLangToggle(); renderAll(); renderNotifyToggle(); switchTab("today"); toast(L("불러왔어요","Imported")); } }
+    if(confirm(L("현재 기록을 불러온 데이터로 덮어쓸까요?","Overwrite current records with the imported data?"))){ db=Object.assign({questions:defaultQuestions(),settings:{theme:db.settings.theme,notify:false},meds:[]},d); db.meds=(db.meds||[]).map(m=>({sched:[],...m})); db.settings=db.settings||{theme:"light"}; save(); if(typeof SIMDRUG!=="undefined" && SIMDRUG.setPersonalOverrides) SIMDRUG.setPersonalOverrides(db.settings.personalCurves||{}); /* v2.17: 백업 복원에 담긴 개인 곡선 보정도 즉시 반영 */ applyTheme(); applyI18nStatic(); renderLangToggle(); renderAll(); renderNotifyToggle(); switchTab("today"); toast(L("불러왔어요","Imported")); } }
     catch(e){ toast(L("올바른 백업 파일이 아니에요","Not a valid backup file")); } };
   r.readAsText(f); this.value="";
 };
 document.getElementById("resetBtn").onclick=()=>{
-  if(confirm(L("모든 기록과 약 목록이 삭제됩니다. 계속할까요?","All records and medications will be deleted. Continue?"))){ localStorage.removeItem(KEY); db=load(); applyTheme(); applyI18nStatic(); renderLangToggle(); renderAll(); switchTab("today"); toast(L("초기화했어요","Reset complete")); }
+  if(confirm(L("모든 기록과 약 목록이 삭제됩니다. 계속할까요?","All records and medications will be deleted. Continue?"))){ localStorage.removeItem(KEY); db=load(); if(typeof SIMDRUG!=="undefined" && SIMDRUG.clearPersonalOverrides) SIMDRUG.clearPersonalOverrides(); /* v2.17: 전체 초기화 시 엔진의 개인 곡선 보정도 함께 비움 */ applyTheme(); applyI18nStatic(); renderLangToggle(); renderAll(); switchTab("today"); toast(L("초기화했어요","Reset complete")); }
 };
 
 /* ---------- boot ---------- */
