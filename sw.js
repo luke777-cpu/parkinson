@@ -1,4 +1,4 @@
-const CACHE = "yakhyo-v2163-pdflibs";
+const CACHE = "yakhyo-v2163-p1-isolation";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -45,7 +45,7 @@ self.addEventListener("install", event => {
 self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key))))
+      .then(keys => Promise.all(keys.filter(key => key !== CACHE && !key.startsWith("p1-lab-shell-")).map(key => caches.delete(key))))
       .then(() => self.clients.claim())
   );
 });
@@ -54,7 +54,7 @@ self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;
   { /* v0.9.21: 챌린지·이스터에그는 각자 SW/네트워크가 처리 — 본체 캐시가 가로채지 않음 */
     const p=new URL(event.request.url).pathname;
-    if (p.includes("/challenge/") || p.includes("/easteregg/")) return;
+    if (p.includes("/challenge/") || p.includes("/easteregg/") || p.includes("/p1-lab/")) return;
   }
 
   // HTML navigation is network-first so GitHub Pages updates do not remain stuck on an old version.
