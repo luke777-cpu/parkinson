@@ -4,7 +4,15 @@
 </style>
 <header><div><small>개인 관찰 · 오프라인 실험판 1.0</small><h1>P1 나의 약효 실험실</h1></div><div>관찰 → 비교 → 검증</div></header>
 <main class="wrap"><div id="storageWarning" class="notice hidden" role="alert"></div><div class="toolbar"><label for="day" style="margin:0">보는 날짜</label><input id="day" type="date"><button id="today">오늘</button><span id="storageStatus" class="muted right"></span></div>
-<nav class="tabs" aria-label="화면"><button class="active" data-tab="record">오늘과 그래프</button><button data-tab="analysis">차이와 이유 찾기</button><button data-tab="verify">예측 검증</button><button data-tab="settings">표준·백업·도움말</button></nav>
+<nav class="tabs" aria-label="화면"><button data-tab="purpose">내가 하고 싶은 일</button><button class="active" data-tab="record">오늘과 그래프</button><button data-tab="analysis">차이와 이유 찾기</button><button data-tab="verify">예측 검증</button><button data-tab="settings">표준·백업·도움말</button></nav>
+<section id="purpose" class="tabpage hidden"><article class="card" style="max-width:860px;margin:0 auto 18px;line-height:1.85"><small>P1을 만드는 이유</small><h2 style="font-size:28px;margin-top:10px">내가 하고 싶은 일</h2><p style="font-size:19px;color:#126a65;font-weight:650">두 번째 그래프를 완성한 후, 내가 나아갈 방향</p><p>첫 번째 약효일지 앱을 만든 목적은 내 몸의 상태를 기록하는 습관을 갖는 것이었다. 약을 언제 먹었는지, 언제 잘 움직였는지, 언제 몸이 굳고 이상운동증이 생겼는지를 남기는 일이다. 그 기록은 기억에 의존하던 하루를 눈으로 확인할 수 있게 해 주었다.</p>
+<p>이제 나는 두 번째 단계로 나아가고 싶다. 약을 먹은 뒤 작용이 올라갔다 내려오는 약물 추정 곡선과, 내가 실제로 움직일 수 있는 능력을 나타내는 몸의 출력 곡선을 함께 보고 싶다. 두 선이 닮은 곳과 서로 어긋나는 곳에서 내 몸의 반응을 이해할 단서를 찾으려 한다.</p>
+<p>최근의 출력 패턴에는 특징이 있다. 아침에는 빠르게 올라가 비교적 좋은 ON에 도달하지만, 오후에는 회복이 충분하지 않고 급격히 떨어진다. 저녁에는 다시 걸을 수 있을 만큼 회복해도 ON이 안정적으로 유지되지는 않는다. 이상운동증으로 움직임이 많아질 때도 내가 원하는 대로 움직이는 능력은 오히려 떨어질 수 있다.</p>
+<p>이번에 그린 몸의 곡선은 내가 설명한 평소 패턴을 옮긴 출발점이다. 앞으로 실제 기록을 겹쳐 보면서 어느 부분이 반복되고 어느 부분이 달라지는지 확인해야 한다. 잘 맞는 날과 어긋나는 날을 모두 보아야 이 곡선이 내 몸을 얼마나 설명하는지 알 수 있다.</p>
+<p>내가 궁극적으로 알고 싶은 것은 약으로 내 출력선을 어느 정도 조절할 수 있느냐는 것이다. 복용 시각과 용량, 제형이 달라졌을 때 아침 ON은 더 일정해질 수 있는지, 오후의 급락은 줄어들 수 있는지, 저녁에는 안정적인 보행을 더 오래 유지할 수 있는지 살펴보고 싶다. 높은 출력만큼이나 이상운동증의 부담과 하루의 안정성도 중요하다.</p>
+<p>P1은 기존 약효일지에 쌓인 기록을 가져와 이런 질문을 시험하는 공간으로 발전해야 한다. 변경 전의 가설과 예상 곡선을 먼저 남기고, 이후 실제 반응과 비교하는 것이다. 식사와 수면, 운동, 변비처럼 함께 달라지는 조건도 살펴보아야 한다. 두 일이 함께 나타났다는 사실과, 한 일이 다른 일의 원인이었다는 판단은 구분해서 다루고 싶다.</p>
+<p>현재 만들어진 앱은 평소 패턴과 실제 출력을 비교하고 예측 오차를 확인하는 첫 실험판이다. 아직 약물 변경에 따른 나의 반응을 학습하거나 인과관계를 검증한 모델은 아니다. 다음 개발은 기록을 반복해서 입력하게 만드는 방향보다, 기존 기록을 연결하고 약물 조건과 출력 반응의 관계를 검증하는 방향으로 나아가야 한다.</p>
+<p>내가 바라는 것은 내 몸을 완벽하게 통제한다는 약속이 아니다. 어떤 조건에서 잘 움직이고, 언제 어려워지며, 무엇을 바꾸었을 때 실제로 도움이 되었는지를 조금씩 더 정확하게 아는 것이다. 그 이해가 쌓여 내 하루를 더 예측 가능하고 안정적으로 살아가는 데 도움이 되기를 바란다.</p><p class="muted">이 글은 앞으로의 개발 방향을 남긴 글입니다. 현재 구현된 기능과 구분해 읽습니다.</p></article></section>
 <section id="record" class="tabpage">
 <div class="card"><div class="row spaced"><h2>평소 패턴과 오늘의 차이</h2><select id="curveMode" aria-label="약물 곡선 기준"><option value="plan">표준 복약 가정</option><option value="actual">실제 확인된 복약만</option></select></div>
 <div class="legend"><span><b style="color:#247697">━</b>약물 추정 지수</span><span><b style="color:#cf773b">┄</b>평소 출력 도식</span><span><b style="color:#167255">●</b>실제 출력</span><span><b style="color:#8871b3">◆</b>저장된 예측</span></div><div id="chart" class="chart"></div><p id="curveNote" class="muted"></p><details><summary>그래프를 읽는 방법</summary><p class="muted">약물 지수와 몸의 출력은 다른 척도입니다. 두 선 사이 간격은 약의 부족량이 아닙니다. 주황선은 형이 설명한 평소 패턴을 대표 시각·중간값으로 연결한 도식이며, 확인되지 않은 OFF 구간은 비워 둡니다. 실제 기록점은 2시간 이내인 경우만 직선으로 연결합니다. 선 사이의 값은 측정값이 아닙니다. 보라색 배경은 평소 이상운동증 가능 시간대이며 오늘의 발생 기록과 다릅니다.</p></details></div>
@@ -21,4 +29,5 @@
 <!--ENGINE-->
 <!--CORE-->
 <!--APP-->
+<script>if(location.hash==='#purpose')document.querySelector('[data-tab="purpose"]').click();</script>
 </html>
