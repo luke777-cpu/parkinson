@@ -1,1 +1,1 @@
-{"name":"p1-personal-lab","private":true,"version":"1.0.0","scripts":{"test":"node tests.cjs"},"devDependencies":{"jsdom":"30.0.1"}}
+{"name":"p1-personal-lab","private":true,"version":"1.0.0","scripts":{"test":"node tests.cjs","test:dedup":"node tests-dedup.cjs && node tests-dedup-ui.cjs"},"devDependencies":{"jsdom":"30.0.1"}}
