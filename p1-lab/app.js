@@ -4,10 +4,26 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const names=['퍼킨 CR','퍼킨','미라펙스 ER','아만타딘','아질렉트','마도파 확산정'];
 SIMDRUG.DRUGS.find(d=>d.curveId==='LEVO_HBS').aliases.push('퍼킨 CR');
 let state=C.defaults(),blocked=false,lastDeleted=null,editing=null,timer;
-try{const raw=localStorage.getItem(KEY);if(raw)state=C.validate(JSON.parse(raw));}catch(e){blocked=true;$('storageWarning').classList.remove('hidden');$('storageWarning').textContent='기존 저장 자료를 읽을 수 없습니다. 덮어쓰기를 막았습니다. 백업 파일을 복원하거나 다른 브라우저에서 시작하세요.';}
+let loadedRaw=null, medicationBackupMade=false;
+try{const raw=localStorage.getItem(KEY);loadedRaw=raw;if(raw)state=C.validate(JSON.parse(raw));}catch(e){blocked=true;$('storageWarning').classList.remove('hidden');$('storageWarning').textContent='기존 저장 자료를 읽을 수 없습니다. 덮어쓰기를 막았습니다. 백업 파일을 복원하거나 다른 브라우저에서 시작하세요.';}
 const toast=s=>{$('toast').textContent=s;$('toast').classList.remove('hidden');clearTimeout(timer);timer=setTimeout(()=>$('toast').classList.add('hidden'),5000);};
-function save(next=state){if(blocked){toast('저장 차단 상태입니다. 백업 복원을 먼저 확인하세요.');return false;}try{C.validate(next);localStorage.setItem(KEY,JSON.stringify(next));state=next;$('storageStatus').textContent='이 브라우저에 저장됨';return true;}catch(e){toast('저장하지 못했습니다. 저장 공간 또는 입력값을 확인하고 백업하세요.');return false;}}
-function commitEvent(e){const next=structuredClone(state);const i=next.events.findIndex(x=>x.id===e.id);if(i>=0)next.events[i]=e;else next.events.push(e);return save(next);}
+function save(next=state){
+ if(blocked){toast('저장 차단 상태입니다. 새로고침하거나 백업 복원을 확인하세요.');return false;}
+ try{
+  C.validate(next);
+  const current=localStorage.getItem(KEY);
+  if(current!==loadedRaw)throw Error('다른 화면에서 기록이 변경되었습니다. 새로고침 후 다시 확인하세요.');
+  if(!medicationBackupMade && current!==null){
+   const backupKey=KEY+'-before-medication-'+new Date().toISOString()+'-'+C.id();
+   localStorage.setItem(backupKey,current);
+   if(localStorage.getItem(backupKey)!==current)throw Error('변경 전 백업을 만들지 못했습니다.');
+   medicationBackupMade=true;
+  }
+  const raw=JSON.stringify(next);localStorage.setItem(KEY,raw);loadedRaw=raw;state=next;
+  $('storageStatus').textContent='이 브라우저에 저장됨 · 변경 전 백업 보존';return true;
+ }catch(e){toast(e.message || '저장하지 못했습니다. 저장 공간을 확인하세요.');return false;}
+}
+function commitEvent(e){if(e.type==='med'&&e.slot&&P1Medication.matches(state,e.day,e.slot).some(r=>r.id!==e.id)){toast('같은 예정 복용 건이 이미 있습니다. 기록 수정에서 확인하세요.');return false;}const next=structuredClone(state);const i=next.events.findIndex(x=>x.id===e.id);if(i>=0)next.events[i]=e;else next.events.push(e);return save(next);}
 const selected=()=>$('day').value;
 const dayEvents=()=>state.events.filter(e=>e.day===selected()).sort((a,b)=>a.minute-b.minute);
 function validTime(day,minute){const now=new Date();return day<C.day(now)||(day===C.day(now)&&minute<=C.minute(now));}
@@ -32,9 +48,10 @@ function plot(){
  $('curveNote').textContent=($('curveMode').value==='plan'?'파란선은 표준표대로 복용했다고 가정합니다. 실제 복용 확인과 다릅니다.':'파란선은 해당 날짜 확인된 약만 반영합니다. 배경약은 반복 복용 누적 가정을 유지합니다.')+' 06시 이전 기록은 목록에 표시합니다. 점심·저녁 변경은 실제 복약으로 기록하세요.';
 }
 function renderMeds(){
- $('meds').innerHTML=state.schedule.map(m=>{
-  const done=dayEvents().filter(e=>e.type==='med'&&e.slot===m.id);
-  return `<div class="medrow"><div><strong>${esc(m.time)} · ${esc(m.name)}</strong><p>${m.dose}mg</p>${done.length?`<small>기록됨: ${done.map(e=>C.clock(e.minute)+' · '+e.dose+'mg').join(', ')}</small>`:'<small>미확인</small>'}</div><button data-slot="${esc(m.id)}" ${done.length?'disabled':''}>${done.length?'기록 완료':'복용 기록'}</button></div>`;
+ $('meds').innerHTML=P1Medication.groups(state).map(g=>{
+  const rows=g.items.map(m=>({plan:m,done:P1Medication.matches(state,selected(),m.id)}));
+  const conflict=rows.some(r=>r.done.length>1),all=rows.every(r=>r.done.length===1);
+  return '<div class="medrow"><div><strong>예정 '+esc(g.time)+'</strong>'+rows.map(({plan:m,done})=>'<p>'+esc(m.name)+' '+m.dose+'mg</p><small>'+(done.length?done.map(e=>'현재 기록: '+C.clock(e.minute)+' · '+esc(e.name)+' '+e.dose+'mg').join(' / '):'미확인')+'</small>').join('')+(conflict?'<p class="error">동일 예정 건에 여러 기록이 있습니다. 자동 삭제하지 않았습니다. 기록 수정에서 각각 확인하세요.</p>':'')+'</div><button data-group="'+esc(g.time)+'" '+(conflict?'disabled':'')+'>'+(conflict?'개별 확인 필요':all?'기록 수정':'먹었음')+'</button></div>';
  }).join('');
 }
 function renderEvents(){
@@ -61,15 +78,19 @@ function editors(){
 }
 function render(){plot();renderMeds();renderEvents();metrics();renderPrediction();}
 function openEditor(type,e=null,slot=null,factor=null){
- editing={type,event:e,slot};$('editTitle').textContent=e?'기록 수정':type==='med'?'실제 복약 기록':type==='factor'?'함께 있었던 일':'출력 수정';
+ editing={type,event:e,slot,day:e?.day || selected(),id:C.id()};$('editTitle').textContent=e?'기록 수정':type==='med'?'별도 약 추가 (예정 복약과 별개)' :type==='factor'?'함께 있었던 일':'출력 수정';
  $('eventTime').value=e?C.clock(e.minute):C.clock(C.minute(new Date()));
  $('medFields').hidden=type!=='med';$('factorFields').hidden=type!=='factor';$('outputFields').hidden=type!=='output';
  $('medDose').required=type==='med';$('editValue').required=type==='output';
  $('medName').value=e?.name||slot?.name||names[0];$('medDose').value=e?.dose??slot?.dose??100;
- $('editValue').value=e?.value??30;$('factorName').value=e?.factor||factor||C.factors[0];$('severity').value=e?.severity||'';$('eventNote').value=e?.note||'';$('formError').textContent='';$('editor').showModal();
+ $('editValue').value=e?.value??30;$('factorName').value=e?.factor||factor||C.factors[0];$('severity').value=e?.severity||'';$('eventNote').value=e?.note||'';$('formError').textContent='';medicationPreview();$('editor').showModal();
 }
-$('eventForm').onsubmit=e=>{
- e.preventDefault();const m=C.toMinute($('eventTime').value);if(!Number.isFinite(m)||!validTime(selected(),m)){ $('formError').textContent='실제로 지난 날짜·시각만 기록할 수 있습니다.';return;}
+$('eventForm').onsubmit=async e=>{
+ e.preventDefault();if(!editing || medicationBusy)return;const m=C.toMinute($('eventTime').value);if(!Number.isFinite(m)||!validTime(editing.day,m)){ $('formError').textContent='실제로 지난 날짜·시각만 기록할 수 있습니다.';return;}
+ if(editing.type==='med'){
+  const command={mode:editing.event?'correct':'confirm',day:editing.day,items:[{id:editing.event?.id || editing.id,expected:editing.event,slot:editing.event?.slot || '',time:$('eventTime').value,name:$('medName').value,dose:+$('medDose').value,note:$('eventNote').value}]};
+  if(await persistMedication([command])){$('editor').close();editing=null;render();toast('복약 기록을 저장했습니다.');}return;
+ }
  let rec=editing.event?{...editing.event}:baseEvent(editing.type,$('eventTime').value);rec.minute=m;rec.note=$('eventNote').value;rec.updatedAt=new Date().toISOString();
  if(rec.type==='med'){rec.name=$('medName').value;rec.dose=+$('medDose').value;rec.slot=editing.event?.slot||editing.slot?.id||'';}
  if(rec.type==='factor'){rec.factor=$('factorName').value;rec.severity=$('severity').value;}
@@ -88,7 +109,7 @@ function adjust(n){$('slider').value=Math.max(0,Math.min(100,+$('slider').value+
 $('plus').onclick=()=>adjust(10);$('minus').onclick=()=>adjust(-10);
 $('meds').onclick=e=>{const b=e.target.closest('[data-slot]');if(b)openEditor('med',null,state.schedule.find(m=>m.id===b.dataset.slot));};
 $('extraMed').onclick=()=>openEditor('med');
-$('events').onclick=e=>{const b=e.target.closest('[data-edit],[data-delete]');if(!b)return;const id=b.dataset.edit||b.dataset.delete,rec=state.events.find(x=>x.id===id);if(!rec)return;if(b.dataset.edit)openEditor(rec.type,rec);else{const next=structuredClone(state);next.events=next.events.filter(x=>x.id!==id);if(save(next)){lastDeleted=rec;$('undo').classList.remove('hidden');render();toast('삭제했습니다. 방금 삭제 취소로 복구할 수 있습니다.');}}};
+$('events').onclick=e=>{const b=e.target.closest('[data-edit],[data-delete]');if(!b)return;const id=b.dataset.edit||b.dataset.delete,rec=state.events.find(x=>x.id===id);if(!rec)return;if(b.dataset.edit)openEditor(rec.type,rec);else{if(rec.type==='med'&&!confirm('이 복약 기록을 현재 목록에서 삭제할까요? 원래 기록은 내부 이력에 보존됩니다.'))return;const next=structuredClone(state);if(rec.type==='med')P1Medication.audit(next,rec,null,new Date().toISOString(),'delete');next.events=next.events.filter(x=>x.id!==id);if(save(next)){lastDeleted=rec;$('undo').classList.remove('hidden');render();toast('삭제했습니다. 방금 삭제 취소로 복구할 수 있습니다.');}}};
 $('undo').onclick=()=>{if(lastDeleted&&commitEvent(lastDeleted)){lastDeleted=null;$('undo').classList.add('hidden');render();}};
 $('factorButtons').innerHTML=C.factors.map(f=>`<button data-factor="${f}">${f}</button>`).join('');$('factorButtons').onclick=e=>{const f=e.target.dataset.factor;if(f)openEditor('factor',null,null,f);};
 $('predict').onclick=()=>{
@@ -102,7 +123,7 @@ $('saveBaseline').onclick=()=>{const next=structuredClone(state);next.baseline.f
 function download(name,content,type){const url=URL.createObjectURL(new Blob([content],{type})),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 function backup(){download('P1-backup-'+C.day()+'.json',JSON.stringify(state,null,2),'application/json');}
 $('export').onclick=backup;
-$('csv').onclick=()=>{const quote=v=>'"'+String(v??'').replace(/^[=+@-]/,"'$&").replace(/"/g,'""')+'"';const rows=[['날짜','시각','종류','출력','약명','용량mg','요인','정도','메모'],...state.events.map(e=>[e.day,C.clock(e.minute),e.type,e.value,e.name,e.dose,e.factor,e.severity,e.note])];download('P1-events-'+C.day()+'.csv','\ufeff'+rows.map(r=>r.map(quote).join(',')).join('\r\n'),'text/csv;charset=utf-8');};
+$('csv').onclick=()=>{const quote=v=>'"'+String(v??'').replace(/^[=+@-]/,"'<!--APP-->").replace(/"/g,'""')+'"';const rows=[['날짜','시각','종류','출력','약명','용량mg','요인','정도','메모'],...state.events.map(e=>[e.day,C.clock(e.minute),e.type,e.value,e.name,e.dose,e.factor,e.severity,e.note])];download('P1-events-'+C.day()+'.csv','\ufeff'+rows.map(r=>r.map(quote).join(',')).join('\r\n'),'text/csv;charset=utf-8');};
 $('importFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{if(f.size>20*1024*1024)throw Error('파일은 20MB 이하여야 합니다.');const incoming=C.validate(JSON.parse(await f.text()));if(incoming.schedule.some(m=>!names.includes(m.name)))throw Error('지원하지 않는 약물 이름입니다.');if(!confirm(`백업의 실제 기록 ${incoming.events.length}개로 현재 자료 전체를 복원할까요? 현재 자료도 먼저 다운로드합니다.`))return;if(!blocked)backup();const was=blocked;blocked=false;if(save(incoming)){$('storageWarning').classList.add('hidden');editors();render();toast('백업을 복원했습니다.');}else blocked=was;}catch(err){toast(err.message||'백업을 읽지 못했습니다.');}finally{e.target.value='';}};
 $('print').onclick=()=>window.print();
 $('curveMode').onchange=plot;
@@ -113,4 +134,66 @@ $('medName').innerHTML=names.map(n=>`<option>${n}</option>`).join('');$('factorN
 $('medName').onchange=()=>{$('medDose').value='';};
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('.tabpage').forEach(p=>p.classList.toggle('hidden',p.id!==b.dataset.tab));if(b.dataset.tab==='settings')editors();else render();});
 window.addEventListener('storage',e=>{if(e.key===KEY){blocked=true;$('storageWarning').classList.remove('hidden');$('storageWarning').textContent='다른 탭에서 기록이 바뀌었습니다. 이 탭의 덮어쓰기를 막았습니다. 새로고침해 최신 기록을 불러오세요.';}});
+const M=P1Medication;
+let groupEditing=null, medicationBusy=false;
+function medicationPreview(){
+  $('eventPreview').textContent=editing?.type==='med'?`${editing.day} ${$('eventTime').value || '시각 미입력'}에 ${$('medName').value} ${$('medDose').value || '?'}mg 복용한 것으로 기록합니다. 확인 시각은 저장할 때 따로 남습니다.`:'';
+}
+function groupPreview(){
+  const rows=[...$('groupRows').querySelectorAll('[data-med-row]')].filter(r=>r.querySelector('[data-include]').checked);
+  $('groupPreview').textContent=rows.length?groupEditing.day+' 실제 복용 기록: '+rows.map(r=>`${r.querySelector('[data-time]').value || '시각 미입력'} · ${r.querySelector('[data-name]').value} ${r.querySelector('[data-dose]').value || '?'}mg`).join(' / ')+' · 확인 시각은 저장 시 별도로 보존합니다.':'이번에 기록할 약을 선택하세요. 체크하지 않은 약은 복용 기록을 만들지 않습니다.';
+}
+function openGroup(time){
+  const day=selected(),items=state.schedule.filter(m=>m.time===time);
+  if(items.some(m=>M.matches(state,day,m.id).length>1)){toast('같은 예정 복용에 여러 기록이 있습니다. 아래 오늘 기록에서 개별 기록 수정을 이용하세요.');return;}
+  groupEditing={day,items:items.map(m=>({plan:m,old:M.matches(state,day,m.id)[0] || null,id:C.id()}))};
+  $('groupTitle').textContent=`${day} · 예정 ${time} 복약 확인`;
+  $('groupRows').innerHTML=groupEditing.items.map(({plan:m,old},i)=>`<div data-med-row="${i}" class="card" style="padding:12px"><label><input type="checkbox" data-include checked ${old?'disabled':''}> ${esc(m.name)} · ${old?'기록 수정':'이번에 먹었음'}</label><label>실제 복용 시각 <input type="time" data-time required value="${old?C.clock(old.minute):m.time}"></label><details><summary>구성이 달랐나요? 약·용량 수정</summary><label>약물·제형 <select data-name>${names.map(n=>`<option ${n===(old?.name || m.name)?'selected':''}>${esc(n)}</option>`).join('')}</select></label><label>용량 (mg) <input data-dose type="number" min=".001" max="2000" step="any" required value="${old?.dose ?? m.dose}"></label></details></div>`).join('');
+  $('groupError').textContent='';groupPreview();$('medGroupEditor').showModal();
+}
+async function persistMedication(commands){
+  if(medicationBusy)return false;
+  medicationBusy=true;
+  try{
+    if(blocked)throw Error('다른 탭에서 변경되었거나 저장이 차단되었습니다. 새로고침 후 다시 확인하세요.');
+    if(!navigator.locks)throw Error('중복 방지를 위한 브라우저 잠금 기능이 없습니다. 최신 Edge 또는 Chrome에서 열어 주세요.');
+    return await navigator.locks.request('p1-lab-v1-medication-write',async()=>{
+      const raw=localStorage.getItem(KEY);
+      let next=raw?C.validate(JSON.parse(raw)):C.defaults();
+      for(const command of commands)next=M.apply(next,command);
+      // Compare-and-save against the exact data read under the browser lock.
+      loadedRaw=raw;
+      return save(next);
+    });
+  }catch(err){toast(err.message);$('groupError').textContent=err.message;$('formError').textContent=err.message;return false;}
+  finally{medicationBusy=false;}
+}
+$('groupRows').oninput=groupPreview;
+$('groupForm').onsubmit=async e=>{
+  e.preventDefault();if(!groupEditing || medicationBusy)return;
+  const commands=[...$('groupRows').querySelectorAll('[data-med-row]')].filter(r=>r.querySelector('[data-include]').checked).map(r=>{
+    const item=groupEditing.items[+r.dataset.medRow];
+    return {mode:item.old?'correct':'confirm',day:groupEditing.day,items:[{id:item.old?.id || item.id,expected:item.old,slot:item.plan.id,name:r.querySelector('[data-name]').value,dose:+r.querySelector('[data-dose]').value,time:r.querySelector('[data-time]').value,note:item.old?.note || ''}]};
+  });
+  if(!commands.length){$('groupError').textContent='기록할 약을 선택하세요.';return;}
+  if(await persistMedication(commands)){$('medGroupEditor').close();groupEditing=null;render();toast('실제 복용 시각으로 저장했습니다.');}
+};
+$('cancelGroup').onclick=()=>$('medGroupEditor').close();
+$('meds').onclick=e=>{const b=e.target.closest('[data-group]');if(b)openGroup(b.dataset.group);};
+$('editMed').onclick=()=>{
+  const rows=dayEvents().filter(e=>e.type==='med');
+  $('recordChoices').innerHTML=rows.length?rows.map(e=>`<button type="button" data-choice="${esc(e.id)}">${C.clock(e.minute)} · ${esc(e.name)} ${e.dose}mg${e.slot?'':' · 별도 복용'}</button>`).join(''):'<p>이 날짜에 확인한 복약 기록이 없습니다.</p>';
+  $('recordPicker').showModal();
+};
+$('recordChoices').onclick=e=>{const b=e.target.closest('[data-choice]');if(!b)return;$('recordPicker').close();openEditor('med',state.events.find(r=>r.id===b.dataset.choice));};
+$('closePicker').onclick=()=>$('recordPicker').close();
+$('eventTime').addEventListener('input',medicationPreview);
+$('medDose').addEventListener('input',medicationPreview);
+$('medName').addEventListener('change',medicationPreview);
+$('downloadMedicationBackup').onclick=()=>{
+  const keys=Object.keys(localStorage).filter(k=>k.startsWith(KEY+'-before-medication-')).sort();
+  if(!keys.length){toast('아직 변경 전 자동 백업이 없습니다. 현재 자료는 전체 JSON 백업으로 저장할 수 있습니다.');return;}
+  download('P1-before-medication-change.json',localStorage.getItem(keys.at(-1)),'application/json');
+};
+
 $('storageStatus').textContent='기기 내 저장 · 외부 전송 없음';editors();render();

@@ -1,4 +1,4 @@
-const CACHE='p1-lab-shell-v3-essay';
+const CACHE='p1-lab-shell-v1.1.0-20260916';
 const SHELL=['./','./index.html','./manifest.webmanifest','./icon.svg','./medication-output-overlay.svg'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('p1-lab-shell-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
