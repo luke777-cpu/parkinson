@@ -1,0 +1,12 @@
+{
+  "name": "yakhyo-ilji",
+  "version": "2.15.1",
+  "private": true,
+  "description": "약효일지 — 파킨슨 출력 중심 복약 일지 PWA (테스트 러너 포함)",
+  "scripts": {
+    "test": "node tests/phs-engine.test.js && node tests/phs-integration.test.js"
+  },
+  "devDependencies": {
+    "jsdom": "^29.1.1"
+  }
+}

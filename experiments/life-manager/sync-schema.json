@@ -1,0 +1,1598 @@
+{
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "enum": [
+        "plm-0.1",
+        "plm-0.2",
+        "plm-1.0",
+        "plm-1.1"
+      ]
+    },
+    "exported_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": ".*(Z|[+-]\\d{2}:\\d{2})$"
+    },
+    "events": {
+      "type": "array",
+      "maxItems": 100000,
+      "items": {
+        "$ref": "#/$defs/event"
+      }
+    },
+    "heads": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      }
+    },
+    "merge_parents": {
+      "type": "array",
+      "maxItems": 100000,
+      "items": {
+        "type": "object",
+        "properties": {
+          "revision_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "parent_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          }
+        },
+        "required": [
+          "revision_id",
+          "parent_id"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "exported_at",
+    "events"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PLM 1.1 scheduler offline envelope",
+  "$defs": {
+    "event": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "parent_revision_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "kind": {
+          "enum": [
+            "medication_set",
+            "medication",
+            "output",
+            "motor_state",
+            "exercise",
+            "note",
+            "dyskinesia",
+            "dystonia",
+            "freezing",
+            "schedule",
+            "schedule_override",
+            "schedule_result",
+            "task",
+            "routine",
+            "routine_application"
+          ]
+        },
+        "occurred_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": ".*(Z|[+-]\\d{2}:\\d{2})$"
+        },
+        "timezone": {
+          "type": "string",
+          "pattern": "^[+-](?:0\\d|1[0-4]):[0-5]\\d$"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": ".*(Z|[+-]\\d{2}:\\d{2})$"
+        },
+        "modified_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": ".*(Z|[+-]\\d{2}:\\d{2})$"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "deleted": {
+          "type": "boolean"
+        },
+        "payload": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "revision_id",
+        "parent_revision_id",
+        "kind",
+        "occurred_at",
+        "timezone",
+        "created_at",
+        "modified_at",
+        "version",
+        "deleted",
+        "payload"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "medication_set"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "slot": {
+                        "enum": [
+                          "아침",
+                          "점심",
+                          "저녁"
+                        ]
+                      },
+                      "medicines": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 50,
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "maxLength": 4000,
+                              "minLength": 1
+                            },
+                            "form": {
+                              "type": "string",
+                              "maxLength": 4000,
+                              "minLength": 1
+                            },
+                            "dose": {
+                              "type": "string",
+                              "maxLength": 4000,
+                              "minLength": 1
+                            },
+                            "time": {
+                              "type": "string",
+                              "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "form",
+                            "dose",
+                            "time"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "slot",
+                      "medicines"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "slot": {
+                        "enum": [
+                          "아침",
+                          "점심",
+                          "저녁"
+                        ]
+                      },
+                      "medicines": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 50,
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "maxLength": 4000,
+                              "minLength": 1
+                            },
+                            "form": {
+                              "type": "string",
+                              "maxLength": 4000,
+                              "minLength": 1
+                            },
+                            "dose": {
+                              "type": "string",
+                              "maxLength": 4000,
+                              "minLength": 1
+                            },
+                            "time": {
+                              "type": "string",
+                              "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$"
+                            },
+                            "medicine_id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "form",
+                            "dose",
+                            "time",
+                            "medicine_id"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "effective_date": {
+                        "type": "string",
+                        "format": "date"
+                      },
+                      "enabled": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "slot",
+                      "medicines",
+                      "effective_date",
+                      "enabled"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "medication"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "set_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                      },
+                      "set_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                      },
+                      "slot": {
+                        "enum": [
+                          "아침",
+                          "점심",
+                          "저녁"
+                        ]
+                      },
+                      "name": {
+                        "type": "string",
+                        "maxLength": 4000,
+                        "minLength": 1
+                      },
+                      "form": {
+                        "type": "string",
+                        "maxLength": 4000,
+                        "minLength": 1
+                      },
+                      "dose": {
+                        "type": "string",
+                        "maxLength": 4000,
+                        "minLength": 1
+                      },
+                      "scheduled_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": ".*(Z|[+-]\\d{2}:\\d{2})$"
+                      },
+                      "actual_at": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": ".*(Z|[+-]\\d{2}:\\d{2})$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "completed": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "set_id",
+                      "set_revision_id",
+                      "slot",
+                      "name",
+                      "form",
+                      "dose",
+                      "scheduled_at",
+                      "actual_at",
+                      "completed"
+                    ],
+                    "additionalProperties": false,
+                    "allOf": [
+                      {
+                        "if": {
+                          "properties": {
+                            "completed": {
+                              "const": true
+                            }
+                          }
+                        },
+                        "then": {
+                          "properties": {
+                            "actual_at": {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": ".*(Z|[+-]\\d{2}:\\d{2})$"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "set_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                      },
+                      "set_revision_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                      },
+                      "slot": {
+                        "enum": [
+                          "아침",
+                          "점심",
+                          "저녁"
+                        ]
+                      },
+                      "name": {
+                        "type": "string",
+                        "maxLength": 4000,
+                        "minLength": 1
+                      },
+                      "form": {
+                        "type": "string",
+                        "maxLength": 4000,
+                        "minLength": 1
+                      },
+                      "dose": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "maxLength": 4000
+                      },
+                      "scheduled_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": ".*(Z|[+-]\\d{2}:\\d{2})$"
+                      },
+                      "actual_at": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": ".*(Z|[+-]\\d{2}:\\d{2})$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "plan_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                      },
+                      "medicine_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                      },
+                      "planned_dose": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 4000
+                      },
+                      "status": {
+                        "enum": [
+                          "taken",
+                          "not_taken"
+                        ]
+                      },
+                      "note": {
+                        "type": "string",
+                        "maxLength": 4000
+                      }
+                    },
+                    "required": [
+                      "set_id",
+                      "set_revision_id",
+                      "slot",
+                      "name",
+                      "form",
+                      "dose",
+                      "scheduled_at",
+                      "actual_at",
+                      "plan_id",
+                      "medicine_id",
+                      "planned_dose",
+                      "status",
+                      "note"
+                    ],
+                    "additionalProperties": false,
+                    "allOf": [
+                      {
+                        "if": {
+                          "properties": {
+                            "status": {
+                              "const": "taken"
+                            }
+                          }
+                        },
+                        "then": {
+                          "properties": {
+                            "actual_at": {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": ".*(Z|[+-]\\d{2}:\\d{2})$"
+                            },
+                            "dose": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 4000
+                            }
+                          }
+                        },
+                        "else": {
+                          "properties": {
+                            "actual_at": {
+                              "type": "null"
+                            },
+                            "dose": {
+                              "type": "null"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "output"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 4000
+                  }
+                },
+                "required": [
+                  "value",
+                  "note"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "motor_state"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "enum": [
+                      "ON",
+                      "OFF"
+                    ]
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 4000
+                  }
+                },
+                "required": [
+                  "state",
+                  "note"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "exercise"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 4000,
+                    "minLength": 1
+                  },
+                  "minutes": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1440
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 4000
+                  }
+                },
+                "required": [
+                  "name",
+                  "minutes",
+                  "note"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "note"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "date": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "text": {
+                    "type": "string",
+                    "maxLength": 4000
+                  }
+                },
+                "required": [
+                  "date",
+                  "text"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "dyskinesia"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "severity": {
+                    "enum": [
+                      "기록함",
+                      "경도",
+                      "중등도",
+                      "심함"
+                    ]
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 4000
+                  }
+                },
+                "required": [
+                  "severity",
+                  "note"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "dystonia"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "severity": {
+                    "enum": [
+                      "기록함",
+                      "경도",
+                      "중등도",
+                      "심함"
+                    ]
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 4000
+                  }
+                },
+                "required": [
+                  "severity",
+                  "note"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "freezing"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "severity": {
+                    "enum": [
+                      "기록함",
+                      "경도",
+                      "중등도",
+                      "심함"
+                    ]
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 4000
+                  }
+                },
+                "required": [
+                  "severity",
+                  "note"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "version": {
+                "const": 1
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "parent_revision_id": {
+                "type": "null"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "parent_revision_id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "schedule"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000
+                  },
+                  "category": {
+                    "enum": [
+                      "운동",
+                      "진료",
+                      "외출",
+                      "개인",
+                      "휴식"
+                    ]
+                  },
+                  "starts_at": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "ends_at": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "all_day": {
+                    "type": "boolean"
+                  },
+                  "location": {
+                    "type": "string",
+                    "maxLength": 4000
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 4000
+                  },
+                  "recurrence": {
+                    "type": "object",
+                    "properties": {
+                      "frequency": {
+                        "enum": [
+                          "none",
+                          "daily",
+                          "weekly",
+                          "monthly"
+                        ]
+                      },
+                      "interval": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 365
+                      },
+                      "weekdays": {
+                        "type": "array",
+                        "uniqueItems": true,
+                        "items": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 6
+                        }
+                      },
+                      "until": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "date"
+                      }
+                    },
+                    "required": [
+                      "frequency",
+                      "interval",
+                      "weekdays",
+                      "until"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "checklist": {
+                    "type": "array",
+                    "maxItems": 50,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                        },
+                        "text": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 4000
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "text"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "reminder_minutes": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 10080
+                  },
+                  "prep_minutes": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 10080
+                  }
+                },
+                "required": [
+                  "title",
+                  "category",
+                  "starts_at",
+                  "ends_at",
+                  "all_day",
+                  "location",
+                  "note",
+                  "recurrence",
+                  "checklist",
+                  "reminder_minutes",
+                  "prep_minutes"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "schedule_override"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "series_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                  },
+                  "original_date": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "cancelled": {
+                    "type": "boolean"
+                  },
+                  "details": {
+                    "type": "object",
+                    "properties": {
+                      "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 4000
+                      },
+                      "category": {
+                        "enum": [
+                          "운동",
+                          "진료",
+                          "외출",
+                          "개인",
+                          "휴식"
+                        ]
+                      },
+                      "starts_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "ends_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "all_day": {
+                        "type": "boolean"
+                      },
+                      "location": {
+                        "type": "string",
+                        "maxLength": 4000
+                      },
+                      "note": {
+                        "type": "string",
+                        "maxLength": 4000
+                      },
+                      "recurrence": {
+                        "type": "object",
+                        "properties": {
+                          "frequency": {
+                            "enum": [
+                              "none",
+                              "daily",
+                              "weekly",
+                              "monthly"
+                            ]
+                          },
+                          "interval": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 365
+                          },
+                          "weekdays": {
+                            "type": "array",
+                            "uniqueItems": true,
+                            "items": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 6
+                            }
+                          },
+                          "until": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date"
+                          }
+                        },
+                        "required": [
+                          "frequency",
+                          "interval",
+                          "weekdays",
+                          "until"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "checklist": {
+                        "type": "array",
+                        "maxItems": 50,
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                            },
+                            "text": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 4000
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "text"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "reminder_minutes": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "minimum": 0,
+                        "maximum": 10080
+                      },
+                      "prep_minutes": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "minimum": 0,
+                        "maximum": 10080
+                      }
+                    },
+                    "required": [
+                      "title",
+                      "category",
+                      "starts_at",
+                      "ends_at",
+                      "all_day",
+                      "location",
+                      "note",
+                      "recurrence",
+                      "checklist",
+                      "reminder_minutes",
+                      "prep_minutes"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "series_id",
+                  "original_date",
+                  "cancelled",
+                  "details"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "schedule_result"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "series_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                  },
+                  "original_date": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "occurrence_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                  },
+                  "status": {
+                    "enum": [
+                      "pending",
+                      "done",
+                      "not_done"
+                    ]
+                  },
+                  "checked": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                    },
+                    "uniqueItems": true
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 4000
+                  },
+                  "snapshot": {
+                    "type": "object",
+                    "properties": {
+                      "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 4000
+                      },
+                      "category": {
+                        "enum": [
+                          "운동",
+                          "진료",
+                          "외출",
+                          "개인",
+                          "휴식"
+                        ]
+                      },
+                      "starts_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "ends_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "all_day": {
+                        "type": "boolean"
+                      },
+                      "location": {
+                        "type": "string",
+                        "maxLength": 4000
+                      },
+                      "note": {
+                        "type": "string",
+                        "maxLength": 4000
+                      },
+                      "recurrence": {
+                        "type": "object",
+                        "properties": {
+                          "frequency": {
+                            "enum": [
+                              "none",
+                              "daily",
+                              "weekly",
+                              "monthly"
+                            ]
+                          },
+                          "interval": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 365
+                          },
+                          "weekdays": {
+                            "type": "array",
+                            "uniqueItems": true,
+                            "items": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 6
+                            }
+                          },
+                          "until": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date"
+                          }
+                        },
+                        "required": [
+                          "frequency",
+                          "interval",
+                          "weekdays",
+                          "until"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "checklist": {
+                        "type": "array",
+                        "maxItems": 50,
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                            },
+                            "text": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 4000
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "text"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "reminder_minutes": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "minimum": 0,
+                        "maximum": 10080
+                      },
+                      "prep_minutes": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "minimum": 0,
+                        "maximum": 10080
+                      }
+                    },
+                    "required": [
+                      "title",
+                      "category",
+                      "starts_at",
+                      "ends_at",
+                      "all_day",
+                      "location",
+                      "note",
+                      "recurrence",
+                      "checklist",
+                      "reminder_minutes",
+                      "prep_minutes"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "linked_event_ids": {
+                    "type": "array",
+                    "maxItems": 50,
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                    }
+                  }
+                },
+                "required": [
+                  "series_id",
+                  "original_date",
+                  "occurrence_id",
+                  "status",
+                  "checked",
+                  "note",
+                  "snapshot",
+                  "linked_event_ids"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "task"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000
+                  },
+                  "category": {
+                    "enum": [
+                      "운동",
+                      "진료",
+                      "외출",
+                      "개인",
+                      "휴식"
+                    ]
+                  },
+                  "due": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date"
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 4000
+                  },
+                  "checklist": {
+                    "type": "array",
+                    "maxItems": 50,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                        },
+                        "text": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 4000
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "text"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "status": {
+                    "enum": [
+                      "pending",
+                      "done",
+                      "not_done",
+                      "scheduled"
+                    ]
+                  },
+                  "scheduled_id": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "title",
+                  "category",
+                  "due",
+                  "note",
+                  "checklist",
+                  "status",
+                  "scheduled_id"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "routine"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000
+                  },
+                  "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 30,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "title": {
+                          "type": "string",
+                          "maxLength": 4000
+                        },
+                        "category": {
+                          "enum": [
+                            "운동",
+                            "진료",
+                            "외출",
+                            "개인",
+                            "휴식"
+                          ]
+                        },
+                        "time": {
+                          "type": "string",
+                          "pattern": "^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"
+                        },
+                        "minutes": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 1440
+                        },
+                        "checklist": {
+                          "type": "array",
+                          "maxItems": 50,
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                              },
+                              "text": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4000
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "text"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "title",
+                        "category",
+                        "time",
+                        "minutes",
+                        "checklist"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "title",
+                  "items"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "routine_application"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "type": "object",
+                "properties": {
+                  "routine_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                  },
+                  "routine_revision_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                  },
+                  "date": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "schedule_ids": {
+                    "type": "array",
+                    "maxItems": 30,
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                    }
+                  }
+                },
+                "required": [
+                  "routine_id",
+                  "routine_revision_id",
+                  "date",
+                  "schedule_ids"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$comment": "Scheduler planned entities and explicit execution results are separate from clinical events. Server also checks recurrence semantics, canonical deterministic occurrence/exception/result identity, lineage, merge ancestry, time ordering and references.",
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "schema_version": {
+            "enum": [
+              "plm-1.0",
+              "plm-1.1"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "heads",
+          "merge_parents"
+        ]
+      },
+      "else": {
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "heads"
+              ]
+            },
+            {
+              "required": [
+                "merge_parents"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
