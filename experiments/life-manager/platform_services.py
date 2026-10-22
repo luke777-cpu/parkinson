@@ -15,7 +15,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 
 def utc(): return datetime.now(timezone.utc).isoformat()
 def canonical(doc): return json.dumps(doc,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode('utf-8')
-DEFAULTS={'reminders':False,'schedule_reminders':False,'large_text':False,'backup_directory':'','auto_backup':True,'reminder_window_minutes':30}
+DEFAULTS={'calendar_life':True,'calendar_exercise':True,'calendar_medication':False,'reminders':False,'schedule_reminders':False,'large_text':False,'backup_directory':'','auto_backup':True,'reminder_window_minutes':30}
 
 class PlatformServices:
     def __init__(self,path,maintenance=True):
@@ -39,7 +39,7 @@ class PlatformServices:
     def update_settings(self,values):
         if not isinstance(values,dict) or set(values)-set(DEFAULTS):raise ValueError('설정 항목 오류')
         for k,v in values.items():
-            if k in ('reminders','schedule_reminders','large_text','auto_backup') and type(v) is not bool:raise ValueError('설정 값 오류')
+            if k in ('calendar_life','calendar_exercise','calendar_medication','reminders','schedule_reminders','large_text','auto_backup') and type(v) is not bool:raise ValueError('설정 값 오류')
             if k=='reminder_window_minutes' and (type(v) is not int or not 1<=v<=120):raise ValueError('알림 확인 범위는 1~120분입니다.')
             if k=='backup_directory' and (not isinstance(v,str) or len(v)>1000 or '\x00' in v):raise ValueError('백업 폴더 오류')
             if k=='backup_directory' and v and not Path(v).is_absolute():raise ValueError('백업 폴더는 전체 경로를 입력하세요.')
