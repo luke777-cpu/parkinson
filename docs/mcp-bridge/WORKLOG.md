@@ -48,7 +48,7 @@
 - Claude Code에서 모델 세션으로 도구를 실제 호출하는 것과 `/mcp` 화면 확인은 이 환경(모델 인증 없음)에서 못 했다. 같은 Worker에 대해 SDK 클라이언트로 `tools/list`·`tools/call` 전 흐름을 검증했고, Claude Code로는 연결(initialize)·차단까지 확인했다.
 - Pages 원본 브랜치·경로 설정(관리자 API) 미확인.
 - 로컬 스택은 PostgreSQL 16(운영 Supabase는 17), Kong 대신 간이 게이트웨이. SQL·정책은 동일하지만 `supabase start`/`supabase test db`로 한 번 더 돌려볼 것.
-- 개인정보 처리방침 2-4항의 **데이터 저장 지역은 자리표시자**다. 시험 Supabase 프로젝트를 만든 뒤 실제 지역으로 채워야 하며, 채우기 전에는 운영 게시 금지. 방침 문안은 법률 검토를 거치지 않았다.
+- 개인정보 처리방침 문안은 법률 검토를 거치지 않았다(저장 지역은 서울로 기입 완료).
 - 시험 단계에는 사용자가 앱에서 원격 기록을 지우는 기능이 없다(방침에 운영자 이메일 삭제 요청으로 명시).
 - 기존 이벤트의 `dose`는 mg로 간주한다(앱 화면 표기 기준). 단위가 섞인 문자열은 변환 불가로 남긴다.
 
@@ -69,3 +69,11 @@
   - 켜기·로그인 → 미리보기 4건 → 업로드(메모 미전송) → 에이전트 요청 2건 중 중복 후보 표시 → 1건 승인·1건 거절 → 원격 읽기 영역 → 오프라인 안내 → `yakhyo_log_v1` 원문 불변, 페이지 오류 0건
 - 화면 확인 중 고친 것: 목록에 내부 코드("state · off", "life · meal")가 그대로 보이던 것을 앱 기존 이름표(상태 · OFF, 생활 · 식사 · 점심)로 바꿈. 결과 안내가 카드 아래 작은 글씨에만 나오던 것을 앱 토스트로도 표시(토스트에는 첫 문장만). 오프라인 안내 문장을 한 줄에 들어가게 줄임.
 - 재검증: 기존 5종 + 브리지 단위 56 + 브라우저 통합 38 + 값 동기화 50 전부 통과. SW 캐시 `yakhyo-v2163-mcpbridge-b2`.
+
+## 7. 원격 시험 DB (2026-11-22)
+
+- 사용자 승인 후 Supabase 커넥터로 시험 전용 Free 프로젝트 생성: `yakhyo-mcp-staging`, ref `hvfqujnazjlofjcxbeft`, 서울 `ap-northeast-2`, PostgreSQL 17.12. 기존 `luke777-cpu's Project`(토토의 집·가족 사이트 테이블)는 건드리지 않음.
+- 마이그레이션 2개 적용(`diary_bridge`, `diary_import_preview`) — 커넥터의 `apply_migration`이 원격 기록 버전을 적용 시각으로 붙이므로, 이후 CLI `supabase db push`를 쓰면 `supabase migration repair`로 로컬 파일 버전(20261122000000, 20261122000100)과 맞춰야 한다.
+- 원격 점검(읽기 전용 SQL): RLS 4/4 활성, 정책 9개, SECURITY DEFINER 0, anon 테이블·함수 권한 0, authenticated의 확정 기록 UPDATE/DELETE·연결 INSERT 권한 없음. 보안 advisor 경고 0건.
+- 이 작업 환경에서는 `*.supabase.co`로 나가는 연결이 프록시에서 막혀 Auth 설정(가입 차단·익명 로그인)과 JWT 서명 키 종류는 확인하지 못함 → 대시보드에서 확인 필요.
+- `workers/mcp/wrangler.toml` staging에 프로젝트 URL·publishable key(공개 값) 기입. `cloud-config.js`는 비워 둠(운영 Pages 영향 없음).

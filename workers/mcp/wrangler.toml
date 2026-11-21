@@ -14,8 +14,8 @@ name = "yakhyo-mcp-staging"
 workers_dev = true
 [env.staging.observability]
 enabled = false
-# 배포 전에 시험 전용 Supabase 프로젝트 값으로 채운다(공개 값만).
+# 시험 전용 Supabase 프로젝트 yakhyo-mcp-staging (서울 ap-northeast-2). 공개 값만.
 [env.staging.vars]
-SUPABASE_URL = "https://YOUR-STAGING-REF.supabase.co"
-SUPABASE_PUBLISHABLE_KEY = "sb_publishable_REPLACE_ME"
+SUPABASE_URL = "https://hvfqujnazjlofjcxbeft.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable_giZSWsc7mnrtfb745S2S-w_TyzkzhYA"
 ALLOWED_ORIGINS = "https://luke777-cpu.github.io"
