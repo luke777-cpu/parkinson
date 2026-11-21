@@ -77,3 +77,5 @@
 - 원격 점검(읽기 전용 SQL): RLS 4/4 활성, 정책 9개, SECURITY DEFINER 0, anon 테이블·함수 권한 0, authenticated의 확정 기록 UPDATE/DELETE·연결 INSERT 권한 없음. 보안 advisor 경고 0건.
 - 이 작업 환경에서는 `*.supabase.co`로 나가는 연결이 프록시에서 막혀 Auth 설정(가입 차단·익명 로그인)과 JWT 서명 키 종류는 확인하지 못함 → 대시보드에서 확인 필요.
 - `workers/mcp/wrangler.toml` staging에 프로젝트 URL·publishable key(공개 값) 기입. `cloud-config.js`는 비워 둠(운영 Pages 영향 없음).
+- 대시보드 확인(사용자): JWT 현재 서명 키 ECC (P-256), 이전 HS256 키는 남겨 둠(미폐기).
+- 계정: 사용자가 대시보드에서 사용자 1·에이전트 1 생성(이메일 확인 완료). 관리자 SQL로 에이전트→사용자 연결 생성(범위 read·request_write, 14일 만료). 역할 시뮬레이션(롤백) 결과: 에이전트는 유효 연결 1·소유자 일치, 사용자는 에이전트 아님·자기 연결 1건 조회.
