@@ -7,7 +7,7 @@ tools/local-stack/start.sh --reset
 node tools/local-stack/seed.mjs
 echo "== DB: pgTAP"; tools/local-stack/run-pgtap.sh | tail -1
 echo "== DB: Data API"; node --test supabase/tests-api/data-api.test.mjs 2>&1 | grep -E '^# (pass|fail)'
-echo "== Worker"; npm --prefix workers/mcp run typecheck --silent && npm --prefix workers/mcp test --silent 2>&1 | grep -E 'Tests'
+echo "== Worker"; npm --prefix workers/mcp ci --no-audit --no-fund --silent && npm --prefix workers/mcp run typecheck --silent && npm --prefix workers/mcp test --silent 2>&1 | grep -E 'Tests'
 PK=$(node -pe "require('$LOCAL_STACK_DIR/stack.json').publishableKey")
 ( cd workers/mcp && WRANGLER_SEND_METRICS=false npx wrangler dev --env staging --port 8787 --ip 127.0.0.1 \
     --var SUPABASE_URL:http://127.0.0.1:54321 --var SUPABASE_PUBLISHABLE_KEY:"$PK" --var ALLOWED_ORIGINS:http://127.0.0.1:8080 \
