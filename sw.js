@@ -1,4 +1,4 @@
-const CACHE = "yakhyo-v2163-p1-isolation";
+const CACHE = "yakhyo-v2163-mcpbridge-b1";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -14,6 +14,8 @@ const APP_SHELL = [
   "./phs-report.js",
   "./manifest.json",
   "./privacy.html",
+  "./cloud-config.js",
+  "./cloud-bridge.js",
   "./icon-192.png",
   "./icon-512.png",
   "./icon-192-maskable.png",
@@ -52,6 +54,13 @@ self.addEventListener("activate", event => {
 
 self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;
+  { /* MCP 브리지 B단계: 다른 출처(Supabase 인증·Data API 등)와 인증·원격 기록 응답은 절대 캐시하지 않는다.
+       이 서비스 워커는 같은 출처의 앱 셸만 다룬다. */
+    const u=new URL(event.request.url);
+    const own=(self.location && self.location.origin) || null;
+    if (own && u.origin !== own) return;
+    if (u.pathname.includes("/auth/v1/") || u.pathname.includes("/rest/v1/")) return;
+  }
   { /* v0.9.21: 챌린지·이스터에그는 각자 SW/네트워크가 처리 — 본체 캐시가 가로채지 않음 */
     const p=new URL(event.request.url).pathname;
     if (p.includes("/challenge/") || p.includes("/easteregg/") || p.includes("/p1-lab/")) return;
@@ -77,7 +86,7 @@ self.addEventListener("fetch", event => {
   event.respondWith(
     caches.match(event.request).then(cached => {
       const network = fetch(event.request).then(response => {
-        if (response && response.ok && (response.type === "basic" || response.type === "cors")) {
+        if (response && response.ok && response.type === "basic") {
           const copy = response.clone();
           caches.open(CACHE).then(cache => cache.put(event.request, copy));
         }

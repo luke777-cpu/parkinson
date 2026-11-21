@@ -634,6 +634,10 @@ body{font-size:calc(15px*var(--app-font-scale))}
     </div>
     <input type="file" id="importFile" accept="application/json,.json,text/plain" style="display:none">
 
+    <!-- MCP 브리지 B단계: 클라우드 연동(시험) — 기본 비활성, cloud-bridge.js가 채운다 -->
+    <div class="section-label">클라우드 연동 (시험) · Cloud (beta)</div>
+    <div class="list-card" id="cloudBridgeCard"></div>
+
     <div class="section-label" data-i18n="screen">화면</div>
     <div class="list-card">
       <div class="li"><div class="grow"><div class="name" data-i18n="darkScreen">어두운 화면</div></div><button class="btn ghost" id="darkToggle" style="width:auto" data-i18n="toggleBtn">전환</button></div>
@@ -6312,5 +6316,7 @@ phsStatus();
 /* ================= /Patient History Summary UI ================= */
 
 </script>
+<script src="cloud-config.js"></script>
+<script src="cloud-bridge.js"></script>
 </body>
 </html>

@@ -22,3 +22,14 @@ npm-debug.log*
 
 # OS/에디터
 .DS_Store
+
+# MCP 브리지: Worker 패키지는 잠금 파일을 커밋한다(버전 고정). 나머지 관행은 위와 같다.
+!workers/mcp/package-lock.json
+.wrangler/
+.dev.vars
+.dev.vars.*
+.env
+.env.*
+workers/mcp/dist/
+*.raw-backup.json
+yakhyo_raw_backup_*.json

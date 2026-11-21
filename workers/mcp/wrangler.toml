@@ -1,0 +1,21 @@
+# 약효일지 MCP 브리지 Worker (Workers Free 기준)
+# 비밀값 없음: SUPABASE_PUBLISHABLE_KEY는 공개 키다. service_role/secret key는 넣지 않는다.
+name = "yakhyo-mcp"
+main = "src/index.ts"
+compatibility_date = "2026-11-01"
+workers_dev = true
+
+# 요청·응답 내용이 로그에 남지 않도록 관측 로그를 끈다.
+[observability]
+enabled = false
+
+[env.staging]
+name = "yakhyo-mcp-staging"
+workers_dev = true
+[env.staging.observability]
+enabled = false
+# 배포 전에 시험 전용 Supabase 프로젝트 값으로 채운다(공개 값만).
+[env.staging.vars]
+SUPABASE_URL = "https://YOUR-STAGING-REF.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable_REPLACE_ME"
+ALLOWED_ORIGINS = "https://luke777-cpu.github.io"
