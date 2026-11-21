@@ -661,7 +661,7 @@ body{font-size:calc(15px*var(--app-font-scale))}
     <div class="section-label" data-i18n="guide">안내</div>
     <div class="disclaimer" data-i18n-html="guideText">
       <b>약효일지는 증상과 약효 패턴을 기록·관찰하는 도구입니다.</b> 의학적 진단이나 처방을 대체하지 않습니다.
-      약물 용량·복용 간격 조정은 반드시 주치의와 상의하세요. 모든 기록은 이 기기 안에만 저장되며, 다른 곳으로 전송되지 않습니다.
+      약물 용량·복용 간격 조정은 반드시 주치의와 상의하세요. 기록은 기본적으로 이 기기 안에만 저장됩니다. 설정의 '클라우드 연동(시험)'을 직접 켜고 로그인한 경우에만, 미리보기에서 고른 복약·상태·생활 기록이 시험 서버(Supabase)에 저장됩니다. 메모·약 목록·알림·설정은 보내지 않습니다.
     </div>
     <div class="section-label" data-i18n="medicalDisclaimerLabel">의료 고지</div>
     <div class="disclaimer" data-i18n-html="medicalDisclaimer">
@@ -729,7 +729,7 @@ const I18N = {
     data:"데이터", backupExport:"⬇ 백업 내보내기", backupImport:"⬆ 불러오기",
     screen:"화면", darkScreen:"어두운 화면", toggleBtn:"전환",
     guide:"안내",
-    guideText:"<b>약효일지는 증상과 약효 패턴을 기록·관찰하는 도구입니다.</b> 의학적 진단이나 처방을 대체하지 않습니다. 약물 용량·복용 간격 조정은 반드시 주치의와 상의하세요. 모든 기록은 이 기기 안에만 저장되며, 다른 곳으로 전송되지 않습니다.",
+    guideText:"<b>약효일지는 증상과 약효 패턴을 기록·관찰하는 도구입니다.</b> 의학적 진단이나 처방을 대체하지 않습니다. 약물 용량·복용 간격 조정은 반드시 주치의와 상의하세요. 기록은 기본적으로 이 기기 안에만 저장됩니다. 설정의 '클라우드 연동(시험)'을 직접 켜고 로그인한 경우에만, 미리보기에서 고른 복약·상태·생활 기록이 시험 서버(Supabase)에 저장됩니다. 메모·약 목록·알림·설정은 보내지 않습니다.",
     resetAll:"모든 기록 삭제",
     lang:"언어", langDesc:"한국어 / English",
     navToday:"오늘", navLog:"기록", navTrend:"추이", navCurve:"곡선", navSim:"시뮬", navReport:"보고서", navSet:"설정",
@@ -820,7 +820,7 @@ const I18N = {
     data:"Data", backupExport:"⬇ Export backup", backupImport:"⬆ Import",
     screen:"Display", darkScreen:"Dark mode", toggleBtn:"Toggle",
     guide:"About",
-    guideText:"<b>Med Log is a tool for recording and observing symptom and medication-response patterns.</b> It does not replace medical diagnosis or prescription. Always consult your doctor before adjusting dosage or timing. All records are stored only on this device and are never transmitted anywhere.",
+    guideText:"<b>Med Log is a tool for recording and observing symptom and medication-response patterns.</b> It does not replace medical diagnosis or prescription. Always consult your doctor before adjusting dosage or timing. By default, records are stored only on this device. Only if you turn on 'Cloud sync (beta)' in Settings and sign in, the medication, state and daily-life records you select in the preview are stored on a test server (Supabase). Notes, medication list, reminders and settings are never sent.",
     resetAll:"Delete all records",
     lang:"Language", langDesc:"한국어 / English",
     navToday:"Today", navLog:"Log", navTrend:"Trend", navCurve:"Curve", navSim:"Sim", navReport:"Report", navSet:"Settings",

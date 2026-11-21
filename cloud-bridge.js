@@ -242,13 +242,13 @@ function api(method, path, body){
 }
 function errText(e){
   if(!e) return tr("알 수 없는 오류","Unknown error");
-  if(e.name==="AbortError" || e.name==="TypeError") return tr("연결할 수 없어요(오프라인이거나 서버 응답 없음). 로컬 기록은 그대로 쓸 수 있어요.","Cannot reach the server. Local records still work.");
+  if(e.name==="AbortError" || e.name==="TypeError") return tr("연결할 수 없어요. 로컬 기록은 그대로예요.","Can't connect. Local records still work.");
   if(e.status===401 || e.message==="NO_SESSION") return tr("로그인이 필요해요","Please sign in");
   if(e.status===400 && /AUTH_/.test(e.message)) return tr("이메일 또는 비밀번호를 확인하세요","Check email or password");
   if(e.status===403) return tr("권한이 없어요","Not allowed");
   if(e.status===409) return tr("같은 요청 키로 다른 내용이 이미 보내졌어요. 업로드 계획을 다시 만드세요.","Request key conflict. Rebuild the upload plan.");
   if(e.status===429) return tr("요청 한도를 넘었어요. 잠시 후 다시 시도하세요.","Rate limited. Try later.");
-  if(e.status>=500) return tr("서버가 일시적으로 응답하지 않아요(일시중지·한도 초과일 수 있음). 로컬 기록은 그대로예요.","Server unavailable. Local records still work.");
+  if(e.status>=500) return tr("서버가 응답하지 않아요. 로컬 기록은 그대로예요.","Server unavailable. Local records still work.");
   return tr("요청이 실패했어요","Request failed");
 }
 
@@ -299,14 +299,24 @@ function fmtKst(iso){
   function p(n){ return ("0"+n).slice(-2); }
   return d.getUTCFullYear()+"-"+p(d.getUTCMonth()+1)+"-"+p(d.getUTCDate())+" "+p(d.getUTCHours())+":"+p(d.getUTCMinutes());
 }
+function kindLabel(kind){ return kind==="med"?tr("복약","Medication"):kind==="state"?tr("상태","State"):kind==="life"?tr("생활","Daily life"):kind; }
+/* 화면 표시는 앱의 기존 이름표(stateName·lifeLabel·tagLabel)를 그대로 쓴다. 저장 값은 바꾸지 않는다. */
 function payloadText(kind, p){
   p = p || {};
-  if(kind==="med") return (p.drug||"") + (p.dose_mg!=null ? " "+p.dose_mg+"mg" : "");
-  if(kind==="state") return (p.state||"") + (p.output!=null ? " · "+tr("출력","output")+" "+p.output : "");
-  if(kind==="life") return [p.kind, p.phase, p.meal_type, p.ex_type, p.amount].filter(Boolean).join(" · ");
-  return "";
+  function st(k){ try{ return typeof stateName==="function" ? stateName(k) : k; }catch(e){ return k; } }
+  function lf(k){ try{ return typeof lifeLabel==="function" ? lifeLabel(k) : k; }catch(e){ return k; } }
+  function tg(k){ try{ return typeof tagLabel==="function" ? tagLabel(k) : k; }catch(e){ return k; } }
+  var body;
+  if(kind==="med") body = (p.drug||"") + (p.dose_mg!=null ? " "+p.dose_mg+"mg" : "");
+  else if(kind==="state") body = st(p.state||"") + (p.output!=null ? " · "+tr("출력","output")+" "+p.output : "");
+  else if(kind==="life"){
+    var ph = p.phase==="nap" ? tr("낮잠","Nap") : p.phase==="start" ? (p.kind==="sleep"?tr("취침","Bedtime"):tr("시작","Start")) : p.phase==="end" ? (p.kind==="sleep"?tr("기상","Wake up"):tr("종료","End")) : null;
+    body = [lf(p.kind), ph, p.meal_type&&tg(p.meal_type), p.ex_type&&tg(p.ex_type), p.amount&&tg(p.amount)].filter(Boolean).join(" · ");
+  } else body = "";
+  return kindLabel(kind) + " · " + body;
 }
-function setMsg(t){ ui.msg = t; var m = el("cbMsg"); if(m) m.textContent = t; }
+/* 결과는 카드 아래 상태줄과 함께 앱의 기존 토스트로도 알린다(누른 버튼에서 먼 곳만 바뀌면 반응을 놓친다). */
+function setMsg(t){ ui.msg = t; var m = el("cbMsg"); if(m) m.textContent = t; try{ if(t && typeof toast==="function") toast(t.length>30 ? t.split(/\. |\(/)[0] : t); }catch(e){} } /* 토스트는 한 줄이라 첫 문장만, 전체 문장은 카드 상태줄에 */
 function todayIso(offsetDays){ var d=new Date(Date.now()+9*3600000+(offsetDays||0)*86400000); return d.toISOString().slice(0,10); }
 function kstStart(dateStr){ return Date.parse(dateStr+"T00:00:00+09:00"); }
 
@@ -318,7 +328,7 @@ function render(){
   }
   var on = isEnabled(), s = getSession();
   var h = '<div class="li"><div class="grow"><div class="name">'+tr("클라우드 연동 (시험)","Cloud sync (beta)")+'</div><div class="meta">'+
-    tr("켜면 고른 복약·상태·생활 기록만 시험 서버로 보낼 수 있어요. 메모·약 목록·알림·설정은 보내지 않아요.","When on, only selected med/state/life records can be sent. Notes, med list, reminders and settings stay here.")+
+    tr("켜고 로그인하면 미리보기에서 고른 복약·상태·생활 기록만 시험 서버(Supabase)에 저장할 수 있어요. 자동으로 보내지는 기록은 없고, 메모·약 목록·알림·설정은 보내지 않아요. 연결한 AI 에이전트는 여기 저장된 기록을 읽고 추가 요청을 보낼 수 있어요(확정은 승인할 때만).","When on and signed in, only the med/state/life records you pick in the preview can be stored on a test server (Supabase). Nothing is sent automatically; notes, med list, reminders and settings are never sent. A linked AI agent can read the stored records and send add requests (confirmed only when you approve).")+' <a href="privacy.html" target="_blank" rel="noopener">'+tr("개인정보 처리방침","Privacy policy")+'</a>'+
     '</div></div><button class="btn ghost" id="cbToggle" style="width:auto">'+(on?tr("끄기","Turn off"):tr("켜기","Turn on"))+'</button></div>';
   h += backupRowHtml();
   if(on){
@@ -422,7 +432,7 @@ function renderPreview(box){
     (p.excludedText ? '<br>'+tr("메모·자유 텍스트는 보내지 않아요","Notes/free text are not sent")+' ('+p.excludedText+')' : '')+'</div>';
   if(p.add.length){
     h += '<div style="max-height:220px; overflow:auto; padding:0 12px">' + p.add.slice(0,500).map(function(x,i){
-      return '<label style="display:block"><input type="checkbox" class="cbPick" data-i="'+i+'" checked> '+esc(fmtKst(x.item.occurred_at))+' · '+esc(x.item.kind)+' · '+esc(payloadText(x.item.kind, x.item.payload))+'</label>';
+      return '<label style="display:block"><input type="checkbox" class="cbPick" data-i="'+i+'" checked> '+esc(fmtKst(x.item.occurred_at))+' · '+esc(payloadText(x.item.kind, x.item.payload))+'</label>';
     }).join("") + '</div><button class="btn" id="cbUpload" style="margin:6px 12px; width:auto">'+tr("선택한 기록 올리기","Upload selected")+'</button>';
   }
   if(p.needsId.length) h += '<button class="btn ghost" id="cbAssign" style="margin:6px 12px; width:auto">'+tr("ID 없는 "+p.needsId.length+"건에 ID 부여(확인)","Assign IDs to "+p.needsId.length+" items")+'</button>';
@@ -445,7 +455,7 @@ function resumeUpload(){
   setMsg(tr("올리는 중…","Uploading…"));
   runPlan(s.user_id, function(st){ var sm=summarizePlan(st); setMsg(tr("진행: 추가 ","Progress: added ")+sm.inserted+" · "+tr("남음 ","left ")+sm.pending); })
     .then(function(st){ var sm=summarizePlan(st); setMsg(tr("완료: 추가 "+sm.inserted+" · 이미 등록 "+sm.already+" · 충돌 "+sm.conflict+" · 변환 불가 "+sm.invalid,"Done: added "+sm.inserted+", already "+sm.already+", conflict "+sm.conflict+", invalid "+sm.invalid)); })
-    .catch(function(e){ setMsg(errText(e)+" "+tr("(같은 요청 키로 이어서 올릴 수 있어요)","(you can resume with the same request keys)")); renderResume(); });
+    .catch(function(e){ setMsg(errText(e)+" "+tr("(이어서 올리기 가능)","(resumable)")); renderResume(); });
 }
 function renderResume(){
   var box = el("cbPreviewBox"); if(!box) return;
@@ -459,7 +469,7 @@ function loadPending(){
     if(!rows || !rows.length){ box.innerHTML = '<div class="meta" style="padding:6px 12px">'+tr("대기 중인 요청이 없어요","No pending requests")+'</div>'; return; }
     box.innerHTML = rows.map(function(r){
       var dup = r.duplicate_event_id || r.duplicate_pending_count>0;
-      return '<div class="li" data-pid="'+esc(r.id)+'"><div class="grow"><div class="name">'+esc(fmtKst(r.occurred_at))+' · '+esc(r.kind)+' · '+esc(payloadText(r.kind, r.payload))+'</div>'+
+      return '<div class="li" data-pid="'+esc(r.id)+'"><div class="grow"><div class="name">'+esc(fmtKst(r.occurred_at))+' · '+esc(payloadText(r.kind, r.payload))+'</div>'+
         '<div class="meta">'+(r.status==="expired"?tr("만료됨","Expired"):tr("승인 대기","Pending"))+(dup?' · <b>'+tr("중복 후보","Possible duplicate")+'</b>':'')+'</div></div>'+
         (r.status==="pending" ? '<button class="btn ghost cbApprove" style="width:auto" data-id="'+esc(r.id)+'">'+tr("승인","Approve")+'</button><button class="btn ghost cbReject" style="width:auto" data-id="'+esc(r.id)+'">'+tr("거절","Reject")+'</button>' : '')+'</div>';
     }).join("");
@@ -477,7 +487,7 @@ function loadRemoteDay(){
   api("GET", "/diary_events?select=id,kind,occurred_at,payload,source&occurred_at=gte."+encodeURIComponent(new Date(start).toISOString())+
     "&occurred_at=lt."+encodeURIComponent(new Date(start+86400000).toISOString())+"&order=occurred_at.asc,id.asc&limit=200").then(function(rows){
     box.innerHTML = (rows && rows.length) ? rows.map(function(r){
-      return '<div class="li"><div class="grow"><div class="name">'+esc(fmtKst(r.occurred_at))+' · '+esc(r.kind)+' · '+esc(payloadText(r.kind, r.payload))+'</div><div class="meta">'+(r.source==="agent_request"?tr("에이전트 요청 승인","Agent request"):tr("기기에서 올림","Uploaded"))+'</div></div></div>';
+      return '<div class="li"><div class="grow"><div class="name">'+esc(fmtKst(r.occurred_at))+' · '+esc(payloadText(r.kind, r.payload))+'</div><div class="meta">'+(r.source==="agent_request"?tr("에이전트 요청 승인","Agent request"):tr("기기에서 올림","Uploaded"))+'</div></div></div>';
     }).join("") : '<div class="meta" style="padding:6px 12px">'+tr("공유된 기록이 없어요","No shared records")+'</div>';
   }).catch(function(e){ setMsg(errText(e)); });
 }

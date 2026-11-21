@@ -62,6 +62,12 @@ tools/local-stack/verify-all.sh               # 스택 초기화부터 전체 �
 Docker가 되는 환경이면 `supabase start && supabase db reset --local && supabase test db`도 같은 마이그레이션·테스트를 쓴다.
 로컬 스택 비밀번호·키는 `/tmp/yakhyo-mcp-local`에만 생기고 저장소에 쓰지 않는다.
 
+실제 Chrome 화면 확인(원문 백업·복원, 승인 화면, 오프라인; 스크린샷 저장):
+```bash
+npm i --prefix /tmp/pp puppeteer-core
+NODE_PATH=/tmp/pp/node_modules CHROME_PATH=/usr/bin/google-chrome node tools/local-stack/chrome-check.mjs
+```
+
 ## 시험 배포 (저장소 소유자 승인 후에만)
 
 1. **Supabase**: 시험 전용 Free 프로젝트. Auth 설정에서 공개 가입·익명 로그인 끄기, JWT **비대칭 서명 키(ECC/RSA)** 사용(Worker는 JWKS로 검증하며 공유 HS256 비밀을 받지 않는다).
