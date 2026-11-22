@@ -90,3 +90,20 @@
 - 최종 검증용 묶음(로컬 앱 사본 + Claude Code 연결 스크립트) 전달. 로컬 사본은 file:// 에서 보안 문맥·crypto.subtle·클라우드 카드 설정 정상 확인.
 - 수정: Windows에서 headersHelper가 아무것도 출력하지 않던 문제 — 직접 실행 판별이 `import.meta.url === file://${argv[1]}`라 Windows 경로(C:\ vs file:///C:/)에서 항상 거짓. realpath 비교로 수정하고 실패 이유를 토큰 파일 옆 helper.log에 기록(토큰 미기록). 사용자 Windows PC의 Claude Code 디버그 로그("did not return a valid value")로 발견.
 - 수정: 추가 요청 결과 안내 문구가 상태와 무관하게 '승인 대기'로 고정 → 상태별(pending/approved/rejected/expired) 문구. 사용자 PC Claude Code 검증 중 발견. 다음 Worker 배포 때 반영.
+
+## 9. 최종 검증 — 실제 Claude Code(Windows) + 시험 Worker + 시험 Supabase (2026-11-22)
+
+사용자 PC의 Claude Code 2.1.330(Windows, 모델 세션)에서 가상 기록 1건으로 진행. 서버 상태는 Supabase에서 읽기 전용 SQL로 대조.
+
+| 단계 | 결과 |
+|---|---|
+| add_medication(verify-0001, 가상약 100mg, 07:00 KST) | pending 1건 생성, 소유자=사용자 계정·요청자=에이전트 계정 |
+| 같은 키·같은 내용 재전송 | 같은 pending_id, created=false, 대기 요청 1건 유지 |
+| 같은 키·200mg | CONFLICT, 요청 미생성 |
+| 승인 전 get_daily_log | 0건 |
+| 시험 앱 사본(file://)에서 사용자 계정 로그인 → 승인 | 12:25 승인, 확정 1건(agent_request) |
+| 승인 후 get_daily_log | 1건 |
+| 승인 후 재전송 | status=approved, created=false, 확정 1건 유지 |
+| 앱에서 연결 폐기(13:27:09) → 유효 토큰(14:14 만료)으로 조회 | "rejected the credential from its headersHelper" — 접근 차단 |
+
+검증 중 발견·수정: Windows headersHelper 무출력 버그, 한글 경로 등록 깨짐(영문 경로로 우회), 상태와 무관한 안내 문구. 운영상 메모: 에이전트 토큰 1시간 만료로 재로그인이 잦음(C단계 전 정책 결정 필요), 앱에 에이전트 계정으로 로그인해도 막히긴 하나 안내 문구 없음.
