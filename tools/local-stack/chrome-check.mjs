@@ -156,6 +156,21 @@ try {
   await A.waitForFunction(() => document.getElementById("cbRemoteBox").textContent.includes("에이전트 요청 승인"), { timeout: 8000 });
   await A.$eval("#cbRemoteBox", (el) => el.scrollIntoView({ block: "start" })); await shot(A, "06-remote-read.png");
 
+  console.log("== 서버 기록 가져오기 ==");
+  await A.$eval("#cbImpFrom", (e) => { e.value = "2026-11-20"; }); await A.$eval("#cbImpTo", (e) => { e.value = "2026-11-20"; });
+  await tap(A, "#cbImpPreview"); await A.waitForSelector("#cbImpCntAdd", { timeout: 8000 });
+  ok((await text(A, "#cbImpCntAdd")) === "1" && (await text(A, "#cbImpCntAlready")) === "4", "가져오기 미리보기: 새로 1(승인분)·이미 있음 4(이 기기에서 올림)");
+  await A.$eval("#cbImpBox", (el) => el.scrollIntoView({ block: "start" })); await shot(A, "08-import-preview.png");
+  await tap(A, "#cbImpRun");
+  await A.waitForFunction(() => JSON.parse(localStorage.getItem("yakhyo_log_v1")).events.some((e) => e.cloudId), { timeout: 8000 });
+  const imp = await A.evaluate(() => JSON.parse(localStorage.getItem("yakhyo_log_v1")).events.filter((e) => e.cloudId));
+  ok(imp.length === 1 && imp[0].state === "off" && imp[0].output === 20, "승인된 기록 1건이 기기 기록에 추가");
+  await A.evaluate(() => switchTab("log")); await sleep(300);
+  ok((await text(A, "body")).includes("09:00"), "기록 화면에 09:00 기록 표시");
+  await shot(A, "09-imported-in-log.png");
+  await A.evaluate(() => CloudBridge.undoImport()); await A.reload({ waitUntil: "load" }); await toSettings(A);
+  ok((await A.evaluate(() => localStorage.getItem("yakhyo_log_v1"))) === RAW, "되돌리기 후 원문 복원");
+
   console.log("== 오프라인 ==");
   await A.setOfflineMode(true);
   await tap(A, "#cbRemote");

@@ -1,8 +1,11 @@
 /* 약효일지 클라우드 연동(시험, B단계) — 기본 비활성.
  *
  * 원칙
- *  - 로컬 원본(localStorage "yakhyo_log_v1")은 읽기만 한다. 유일한 쓰기 경로는 사용자가 고른
- *    "원문 백업 복구"이며, 바이트 수·SHA-256 검증을 통과한 경우에만 쓴다.
+ *  - 로컬 원본(localStorage "yakhyo_log_v1")에 쓰는 경로는 둘뿐이다.
+ *    (1) 사용자가 고른 "원문 백업 복구" — 바이트 수·SHA-256 검증 통과 시에만.
+ *    (2) 사용자가 미리보기 후 누른 "서버 기록 가져오기" — 직전 원문을 별도 키에 자동 백업(SHA-256)한 뒤,
+ *        앱의 기존 저장 경로(db.events 추가 → save())로 "추가만" 한다. 기존 기록은 수정·삭제하지 않고,
+ *        가져온 기록에는 cloudId를 붙여 다시 올리지 않으며, 같은 서버 기록을 두 번 가져오지 않는다.
  *  - 원격에는 사용자가 미리보기 후 고른 복약·상태·생활 이벤트만 추가한다. 자유 메모·사용자 정의
  *    텍스트는 보내지 않는다. 약 목록·알림·질문·설정은 브라우저에 둔다.
  *  - 로컬 편집·삭제는 원격에 자동 전파하지 않고, 원격 기록은 별도 읽기 영역에만 보여준다.
@@ -22,6 +25,7 @@ var SESSION_KEY = "yakhyo_cloud_session_v1";
 var BACKUP_FORMAT = "yakhyo-raw-backup";
 var BACKUP_FORMAT_VERSION = 1;
 var BATCH_SIZE = 100;
+var IMPORT_BACKUP_KEY = "yakhyo_log_v1_before_cloud_import";
 
 var SCHEMA = {
   STATE_VALUES: ["wake","off","rising","on","falling","signal","partial","dysk","dyst","wearoff"],
@@ -167,7 +171,7 @@ function readIdMap(){ try{ return JSON.parse(localStorage.getItem(IDMAP_KEY)) ||
 
 /* 로컬 분류: 범위 안의 med/state/life만. 원격 조회 없이 결정 가능한 것(ID 없음·ID 중복·변환 불가)을 먼저 가른다. */
 function classifyLocal(events, fromMs, toMs){
-  var inRange = events.filter(function(e){ return e && (e.type==="med"||e.type==="state"||e.type==="life") && isNum(e.ts) && e.ts>=fromMs && e.ts<toMs; });
+  var inRange = events.filter(function(e){ return e && !e.cloudId && (e.type==="med"||e.type==="state"||e.type==="life") && isNum(e.ts) && e.ts>=fromMs && e.ts<toMs; });
   var idCount = {};
   events.forEach(function(e){ if(e && e.id!=null) { var k=String(e.id); idCount[k]=(idCount[k]||0)+1; } });
   var idmap = readIdMap();
@@ -200,6 +204,89 @@ function assignIds(needsId){
   return m;
 }
 
+/* ---------- 서버 기록 → 앱 기록 (가져오기) ---------- */
+function arr(v){ return Array.isArray(v) ? v.slice() : []; }
+/* 서버 행 → 앱의 기존 이벤트 모양(addMed/addState/addLife와 같은 필드). 값을 추정해 채우지 않는다. */
+function remoteToLocal(row){
+  var p = row && row.payload || {}, ts = Date.parse(row && row.occurred_at);
+  if(!row || !row.id || !isFinite(ts)) return null;
+  var base = { id:"cloud-"+row.id, ts:ts, memo:"", cloudId:row.id, cloudSource:row.source||null };
+  if(row.kind==="med"){
+    if(typeof p.drug!=="string" || !p.drug) return null;
+    return Object.assign(base, { type:"med", drug:p.drug, dose:isNum(p.dose_mg)?p.dose_mg:null });
+  }
+  if(row.kind==="state"){
+    if(SCHEMA.STATE_VALUES.indexOf(p.state)<0) return null;
+    return Object.assign(base, { type:"state", state:p.state,
+      output:isNum(p.output)?p.output:null, trend:p.trend||null, gait:isNum(p.gait)?p.gait:null, dysk:isNum(p.dysk)?p.dysk:null, dyst:null,
+      symptoms:arr(p.symptoms), customSymptom:"", riseResult:null, inputMethod:"cloud_import", retrospective:true });
+  }
+  if(row.kind==="life"){
+    if(SCHEMA.LIFE_KINDS.indexOf(p.kind)<0) return null;
+    return Object.assign(base, { type:"life", kind:p.kind, phase:p.phase||null, mealType:p.meal_type||null, protein:false,
+      quality:arr(p.quality), exType:p.ex_type||null, exTypeCustom:"", intensity:p.intensity||null,
+      durationMin:isNum(p.duration_min)?p.duration_min:null, amount:p.amount||null, extras:arr(p.extras),
+      consistency:p.consistency||null, firstToday:false, symptoms:arr(p.body_symptoms), customSymptom:"" });
+  }
+  return null;
+}
+function sameContent(a, b){
+  if(a.type!==b.type || a.ts!==b.ts) return false;
+  if(a.type==="med") return String(a.drug||"").trim()===String(b.drug||"").trim() && (a.dose==null?null:+a.dose)===(b.dose==null?null:+b.dose);
+  if(a.type==="state") return a.state===b.state && (a.output==null?null:a.output)===(b.output==null?null:b.output);
+  if(a.type==="life") return a.kind===b.kind && (a.phase||null)===(b.phase||null) && (a.mealType||null)===(b.mealType||null);
+  return false;
+}
+/* 서버 행 분류: new(가져올 수 있음) / already(이미 이 기기에 있음) / dupe(같은 시각·내용 기록이 있어 확인 필요) / invalid */
+function classifyRemote(rows, localEvents){
+  var byId = {}, byCloud = {}, idmapVals = {};
+  localEvents.forEach(function(e){ if(!e) return; if(e.id!=null) byId[String(e.id)] = true; if(e.cloudId) byCloud[e.cloudId] = true; });
+  var m = readIdMap(); Object.keys(m).forEach(function(k){ idmapVals[m[k]] = true; });
+  var out = { add:[], already:[], dupe:[], invalid:[] };
+  rows.forEach(function(r){
+    if(byCloud[r.id] || byId["cloud-"+r.id]) { out.already.push({row:r}); return; }
+    if(r.source==="browser_upload" && r.legacy_id && (byId[r.legacy_id] || idmapVals[r.legacy_id])) { out.already.push({row:r}); return; }
+    var ev = remoteToLocal(r);
+    if(!ev){ out.invalid.push({row:r}); return; }
+    if(localEvents.some(function(e){ return e && sameContent(e, ev); })) { out.dupe.push({row:r, ev:ev}); return; }
+    out.add.push({row:r, ev:ev});
+  });
+  return out;
+}
+/* 앱 메모리의 db(index.html의 전역)와 저장 경로를 그대로 쓴다. 직전 원문은 별도 키에 백업. */
+function importLocalEvents(evs){
+  if(!evs.length) return Promise.resolve({ok:true, added:0});
+  var appDb = (typeof db!=="undefined") ? db : null; // eslint-disable-line no-undef
+  if(!appDb || !Array.isArray(appDb.events) || typeof save!=="function") return Promise.resolve({ok:false, reason:"APP_NOT_READY"}); // eslint-disable-line no-undef
+  var have = {}; appDb.events.forEach(function(e){ if(e && e.cloudId) have[e.cloudId] = true; });
+  var fresh = evs.filter(function(e){ return !have[e.cloudId]; });
+  /* 실제로 추가할 것이 없으면 백업도 덮어쓰지 않는다(직전 가져오기의 되돌리기 지점을 지킨다). */
+  if(!fresh.length) return Promise.resolve({ok:true, added:0});
+  var raw = localStorage.getItem(LOCAL_KEY) || "";
+  return sha256Hex(raw).then(function(h){
+    try{ localStorage.setItem(IMPORT_BACKUP_KEY, JSON.stringify({ created_at:new Date().toISOString(), byte_length:utf8Bytes(raw).length, sha256:h, raw:raw })); }
+    catch(e){ return {ok:false, reason:"BACKUP_FAILED"}; }
+    fresh.forEach(function(e){ appDb.events.push(e); });
+    appDb.events.sort(function(a,b){ return a.ts-b.ts; });
+    save(); // eslint-disable-line no-undef
+    try{ if(typeof renderAll==="function") renderAll(); }catch(e){} // eslint-disable-line no-undef
+    var saved = []; try{ saved = JSON.parse(localStorage.getItem(LOCAL_KEY)).events; }catch(e){}
+    var ok = fresh.every(function(e){ return saved.some(function(x){ return x.cloudId===e.cloudId; }); });
+    return ok ? {ok:true, added:fresh.length} : {ok:false, reason:"WRITE_VERIFY"};
+  });
+}
+/* 가져오기 직전 상태로 되돌리기(백업 검증 후). */
+function undoImport(){
+  var b; try{ b = JSON.parse(localStorage.getItem(IMPORT_BACKUP_KEY)); }catch(e){ b = null; }
+  if(!b || typeof b.raw!=="string") return Promise.resolve({ok:false, reason:"NO_BACKUP"});
+  return sha256Hex(b.raw).then(function(h){
+    if(h!==b.sha256 || utf8Bytes(b.raw).length!==b.byte_length) return {ok:false, reason:"BACKUP_CORRUPT"};
+    localStorage.setItem(LOCAL_KEY, b.raw);
+    localStorage.removeItem(IMPORT_BACKUP_KEY);
+    return {ok:true};
+  });
+}
+
 /* ---------- 네트워크 ---------- */
 function getSession(){ try{ return JSON.parse(sessionStorage.getItem(SESSION_KEY)); }catch(e){ return null; } }
 function setSession(s){ if(s) sessionStorage.setItem(SESSION_KEY, JSON.stringify(s)); else sessionStorage.removeItem(SESSION_KEY); }
@@ -219,7 +306,15 @@ function storeTokenResponse(j){
   var s = { access_token:j.access_token, refresh_token:j.refresh_token, expires_at:j.expires_at, user_id:j.user && j.user.id, email:j.user && j.user.email };
   setSession(s); return s;
 }
-function signIn(email, password){ return authCall("/token?grant_type=password", {email:email, password:password}).then(storeTokenResponse); }
+function signIn(email, password){
+  return authCall("/token?grant_type=password", {email:email, password:password}).then(storeTokenResponse).then(function(sess){
+    /* 에이전트 전용 계정이면 알려 준다(서버도 승인·업로드를 막지만, 화면에서 먼저 안내). */
+    /* 폐기·만료된 연결이어도 에이전트 계정이면 자기 연결 행은 보인다(RLS) → 그것으로 판별 */
+    return api("GET", "/diary_agent_links?select=agent_id&agent_id=eq."+encodeURIComponent(sess.user_id)+"&limit=1").then(function(rows){
+      sess.is_agent = !!(rows && rows.length); setSession(sess); return sess;
+    }, function(){ return sess; });
+  });
+}
 function ensureSession(){
   var s = getSession();
   if(!s) return Promise.reject(Object.assign(new Error("NO_SESSION"), {status:401}));
@@ -338,12 +433,26 @@ function render(){
         '<button class="btn" id="cbLogin" style="width:auto">'+tr("로그인","Sign in")+'</button></div>';
     } else {
       h += '<div class="li"><div class="grow"><div class="meta">'+tr("로그인됨","Signed in")+': '+esc(s.email||"")+'</div></div><button class="btn ghost" id="cbLogout" style="width:auto">'+tr("로그아웃","Sign out")+'</button></div>';
+      if(s.is_agent){
+        h += '<div class="li" id="cbAgentNotice"><div class="grow"><div class="name">'+tr("이 계정은 AI 에이전트 전용이에요","This is an AI-agent-only account")+'</div><div class="meta">'+
+          tr("승인·기록 올리기·연결 관리는 본인(사용자) 계정으로 로그인해야 해요. 로그아웃 후 다시 로그인하세요.","Approving, uploading and managing links need your own (user) account. Sign out and sign in again.")+'</div></div></div>';
+        h += '<div class="meta" id="cbMsg" role="status" style="padding:8px 12px">'+esc(ui.msg)+'</div>';
+        host.innerHTML = h; bindBackup();
+        var lo0 = el("cbLogout"); if(lo0) lo0.onclick = function(){ signOut().then(function(){ setMsg(""); render(); }); };
+        var t0 = el("cbToggle"); if(t0) t0.onclick = function(){ localStorage.removeItem(ENABLED_KEY); signOut(); render(); };
+        return;
+      }
       h += '<div class="li" style="flex-wrap:wrap; gap:6px"><div class="name" style="width:100%">'+tr("① 기록 올리기(미리보기 후 선택)","① Upload (preview first)")+'</div>'+
         '<input id="cbFrom" type="date" value="'+todayIso(-6)+'"> ~ <input id="cbTo" type="date" value="'+todayIso(0)+'">'+
         '<button class="btn ghost" id="cbPreview" style="width:auto">'+tr("미리보기","Preview")+'</button></div><div id="cbPreviewBox"></div>';
       h += '<div class="li" style="flex-wrap:wrap; gap:6px"><div class="name" style="width:100%">'+tr("② 에이전트 추가 요청 승인","② Approve agent requests")+'</div><button class="btn ghost" id="cbPending" style="width:auto">'+tr("요청 불러오기","Load requests")+'</button></div><div id="cbPendingBox"></div>';
       h += '<div class="li" style="flex-wrap:wrap; gap:6px"><div class="name" style="width:100%">'+tr("③ 공유된 기록 보기(원격, 읽기 전용)","③ Shared records (remote, read-only)")+'</div><input id="cbDay" type="date" value="'+todayIso(0)+'"><button class="btn ghost" id="cbRemote" style="width:auto">'+tr("보기","View")+'</button></div><div id="cbRemoteBox"></div>';
       h += '<div class="li" style="flex-wrap:wrap; gap:6px"><div class="name" style="width:100%">'+tr("④ 에이전트 연결","④ Agent links")+'</div><button class="btn ghost" id="cbLinks" style="width:auto">'+tr("연결 보기","Show links")+'</button></div><div id="cbLinksBox"></div>';
+      h += '<div class="li" style="flex-wrap:wrap; gap:6px"><div class="name" style="width:100%">'+tr("⑤ 서버 기록 가져오기(내 앱 기록에 추가)","⑤ Import server records into this app")+'</div>'+
+        '<input id="cbImpFrom" type="date" value="'+todayIso(-6)+'"> ~ <input id="cbImpTo" type="date" value="'+todayIso(0)+'">'+
+        '<button class="btn ghost" id="cbImpPreview" style="width:auto">'+tr("미리보기","Preview")+'</button>'+
+        (localStorage.getItem(IMPORT_BACKUP_KEY) ? '<button class="btn ghost" id="cbImpUndo" style="width:auto">'+tr("직전 가져오기 되돌리기","Undo last import")+'</button>' : '')+
+        '</div><div id="cbImpBox"></div>';
     }
   }
   h += '<div class="meta" id="cbMsg" role="status" style="padding:8px 12px">'+esc(ui.msg)+'</div>';
@@ -365,6 +474,14 @@ function render(){
   var pe = el("cbPending"); if(pe) pe.onclick = loadPending;
   var rm = el("cbRemote"); if(rm) rm.onclick = loadRemoteDay;
   var lk = el("cbLinks"); if(lk) lk.onclick = loadLinks;
+  var ip = el("cbImpPreview"); if(ip) ip.onclick = previewImport;
+  var iu = el("cbImpUndo"); if(iu) iu.onclick = function(){
+    if(!confirm(tr("직전 '서버 기록 가져오기' 전 상태로 되돌릴까요? 그 뒤에 새로 적은 기록도 함께 사라집니다.","Restore the state before the last import? Records added after it will also be removed."))) return;
+    undoImport().then(function(r){
+      if(r.ok){ setMsg(tr("되돌렸어요. 화면을 새로 고칩니다.","Restored. Reloading.")); setTimeout(function(){ location.reload(); }, 300); }
+      else setMsg(tr("되돌리지 못했어요","Could not undo")+" ("+r.reason+")");
+    });
+  };
 }
 
 function backupRowHtml(){
@@ -507,12 +624,52 @@ function loadLinks(){
   }).catch(function(e){ setMsg(errText(e)); });
 }
 
+function previewImport(){
+  var from = kstStart(el("cbImpFrom").value), to = kstStart(el("cbImpTo").value) + 86400000, box = el("cbImpBox");
+  if(!isFinite(from) || !isFinite(to) || to<=from){ setMsg(tr("날짜 범위를 확인하세요","Check the date range")); return; }
+  setMsg(tr("서버 기록을 확인하는 중…","Checking server records…"));
+  api("GET", "/diary_events?select=id,kind,occurred_at,payload,source,legacy_id&occurred_at=gte."+encodeURIComponent(new Date(from).toISOString())+
+    "&occurred_at=lt."+encodeURIComponent(new Date(to).toISOString())+"&order=occurred_at.asc,id.asc&limit=1000").then(function(rows){
+    var localEvents = (typeof db!=="undefined" && db && Array.isArray(db.events)) ? db.events : readLocalDb().events; // eslint-disable-line no-undef
+    var c = classifyRemote(rows||[], localEvents);
+    ui.importPreview = c;
+    var h = '<div class="meta" style="padding:6px 12px">'+tr("가져올 수 있음","Can import")+' <b id="cbImpCntAdd">'+c.add.length+'</b> · '+
+      tr("이미 있음","Already here")+' <b id="cbImpCntAlready">'+c.already.length+'</b> · '+tr("중복 후보","Possible duplicate")+' <b id="cbImpCntDupe">'+c.dupe.length+'</b>'+
+      (c.invalid.length ? ' · '+tr("변환 불가","Cannot convert")+' <b>'+c.invalid.length+'</b>' : '')+
+      ((rows||[]).length>=1000 ? '<br>'+tr("기간이 길어 1,000건까지만 확인했어요. 기간을 나눠 주세요.","Only the first 1,000 checked — use a shorter range.") : '')+
+      '<br>'+tr("가져오기 전 현재 기록을 자동 백업하고, 기존 기록은 바꾸지 않아요.","Current records are backed up first; existing records are never changed.")+'</div>';
+    var list = c.add.map(function(x,i){ return {x:x, i:i, kind:"add"}; }).concat(c.dupe.map(function(x,i){ return {x:x, i:i, kind:"dupe"}; }));
+    if(list.length){
+      h += '<div style="max-height:220px; overflow:auto; padding:0 12px">'+list.map(function(o){
+        return '<label style="display:block"><input type="checkbox" class="cbImpPick" data-k="'+o.kind+'" data-i="'+o.i+'"'+(o.kind==="add"?' checked':'')+'> '+
+          esc(fmtKst(o.x.row.occurred_at))+' · '+esc(payloadText(o.x.row.kind, o.x.row.payload))+
+          (o.kind==="dupe" ? ' <b>('+tr("같은 기록이 이미 있음","same record exists")+')</b>' : '')+
+          (o.x.row.source==="agent_request" ? ' · '+tr("에이전트","agent") : '')+'</label>';
+      }).join("")+'</div><button class="btn" id="cbImpRun" style="margin:6px 12px; width:auto">'+tr("선택한 기록 가져오기","Import selected")+'</button>';
+    }
+    box.innerHTML = h; setMsg("");
+    var run = el("cbImpRun"); if(run) run.onclick = runImport;
+  }).catch(function(e){ setMsg(errText(e)); });
+}
+function runImport(){
+  var c = ui.importPreview; if(!c) return;
+  var evs = Array.prototype.filter.call(document.querySelectorAll(".cbImpPick"), function(b){ return b.checked; })
+    .map(function(b){ return (b.dataset.k==="add" ? c.add : c.dupe)[+b.dataset.i].ev; });
+  if(!evs.length) return;
+  if(!confirm(tr(evs.length+"건을 이 기기 기록에 추가할까요? 가져오기 전 상태는 자동 백업돼 되돌릴 수 있어요.","Add "+evs.length+" records to this device? A backup is kept so you can undo."))) return;
+  importLocalEvents(evs).then(function(r){
+    if(r.ok){ setMsg(tr(r.added+"건을 가져왔어요","Imported "+r.added)); ui.importPreview = null; render(); }
+    else setMsg(tr("가져오지 못했어요","Import failed")+" ("+r.reason+")");
+  });
+}
+
 window.CloudBridge = {
   SCHEMA:SCHEMA, LOCAL_KEY:LOCAL_KEY, ENABLED_KEY:ENABLED_KEY, IDMAP_KEY:IDMAP_KEY, SESSION_KEY:SESSION_KEY, UPLOAD_KEY_PREFIX:UPLOAD_KEY_PREFIX,
   configured:configured, isEnabled:isEnabled, sha256Hex:sha256Hex,
   makeRawBackup:makeRawBackup, verifyRawBackup:verifyRawBackup, restoreRawBackup:restoreRawBackup,
   convertEvent:convertEvent, classifyLocal:classifyLocal, toItem:toItem, assignIds:assignIds,
   signIn:signIn, signOut:signOut, api:api, makePlan:makePlan, runPlan:runPlan, readUpload:readUpload, summarizePlan:summarizePlan,
+  remoteToLocal:remoteToLocal, classifyRemote:classifyRemote, importLocalEvents:importLocalEvents, undoImport:undoImport, IMPORT_BACKUP_KEY:IMPORT_BACKUP_KEY,
   render:render, _ui:ui
 };
 try{ if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", render); else render(); }catch(e){}

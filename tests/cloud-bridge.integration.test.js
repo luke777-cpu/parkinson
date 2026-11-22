@@ -141,6 +141,37 @@ async function until(fn, ms=5000){ const t0=Date.now(); while(Date.now()-t0<ms){
   const agentRead=await client.rest(agentTok, "GET", "/diary_events?select=id");
   ok(Array.isArray(agentRead.json) && agentRead.json.length===0, "폐기 후 에이전트 조회 0건");
 
+  console.log("== 서버 기록 가져오기(앱 기록에 추가) ==");
+  w.document.getElementById("cbImpFrom").value="2026-11-11"; w.document.getElementById("cbImpTo").value="2026-11-12";
+  w.document.getElementById("cbImpPreview").click();
+  ok(await until(()=>!!w.document.getElementById("cbImpCntAdd")), "가져오기 미리보기 표시");
+  ok(w.document.getElementById("cbImpCntAdd").textContent==="1", "가져올 수 있음 1(에이전트 승인분): "+w.document.getElementById("cbImpCntAdd").textContent);
+  ok(w.document.getElementById("cbImpCntAlready").textContent==="151", "이 기기에서 올린 151건은 이미 있음: "+w.document.getElementById("cbImpCntAlready").textContent);
+  const nBefore=w.eval("db.events.length");
+  w.document.getElementById("cbImpRun").click();
+  ok(await until(()=>w.eval("db.events.length")===nBefore+1), "1건 추가");
+  const imported=JSON.parse(w.localStorage.getItem(KEY)).events.filter(e=>e.cloudId);
+  ok(imported.length===1 && imported[0].type==="state" && imported[0].output===75 && imported[0].cloudSource==="agent_request", "가져온 기록 = 승인된 상태 기록(출력 75)");
+  ok(JSON.parse(w.localStorage.getItem(KEY)).events.filter(e=>!e.cloudId).length===151, "기존 151건 그대로(추가만)");
+  w.document.getElementById("cbImpFrom").value="2026-11-11"; w.document.getElementById("cbImpTo").value="2026-11-12";
+  w.document.getElementById("cbImpPreview").click();
+  ok(await until(()=>w.document.getElementById("cbImpCntAlready") && w.document.getElementById("cbImpCntAlready").textContent==="152"), "다시 미리보기: 이미 있음 152, 가져올 것 0");
+  CB.makePlan(uid, []); // 빈 계획
+  const lc=await CB.classifyLocal(JSON.parse(w.localStorage.getItem(KEY)).events, 0, Date.now()+86400e3);
+  ok(!lc.candidates.some(c=>c.event.cloudId), "가져온 기록은 다시 올리기 대상 아님");
+  const undo=await CB.undoImport(); w.eval("db=load()");
+  ok(undo.ok && rawUnchanged(), "되돌리기로 가져오기 전 원문 복원");
+
+  console.log("== 에이전트 계정으로 앱 로그인 ==");
+  const dom2=new JSDOM(html,{runScripts:"dangerously",url:"http://127.0.0.1:8080/",pretendToBeVisual:true});
+  const w2=dom2.window; Object.defineProperty(w2,"crypto",{value:webcrypto,configurable:true}); w2.TextEncoder=TextEncoder; w2.fetch=(u,i)=>fetch(u,i); w2.confirm=()=>true;
+  w2.YAKHYO_CLOUD_CONFIG={supabaseUrl:stack.url, publishableKey:stack.publishableKey}; w2.eval(bridgeSrc);
+  w2.localStorage.setItem(w2.CloudBridge.ENABLED_KEY,"1"); w2.CloudBridge.render();
+  w2.document.getElementById("cbEmail").value=`cb-a-${tag}@example.test`; w2.document.getElementById("cbPw").value=pw;
+  w2.document.getElementById("cbLogin").click();
+  ok(await until(()=>!!w2.document.getElementById("cbAgentNotice")), "에이전트 전용 계정 안내 표시(연결 폐기 후에도)");
+  ok(!w2.document.getElementById("cbPending") && !w2.document.getElementById("cbPreview") && !w2.document.getElementById("cbImpPreview"), "승인·올리기·가져오기 버튼 숨김");
+
   console.log("== 로그아웃 ==");
   w.document.getElementById("cbLogout").click(); await tick(150);
   ok(!w.sessionStorage.getItem(CB.SESSION_KEY), "로그아웃 시 세션 삭제");

@@ -1,4 +1,4 @@
-const CACHE = "yakhyo-v2163-mcpbridge-b3";
+const CACHE = "yakhyo-v2163-mcpbridge-b4";
 const APP_SHELL = [
   "./",
   "./index.html",

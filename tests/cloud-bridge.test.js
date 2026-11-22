@@ -182,6 +182,51 @@ const VIRTUAL=[
     ok(sw.includes('"./cloud-bridge.js"') && sw.includes('"./cloud-config.js"'), "새 스크립트를 앱 셸에 포함(오프라인 로딩)");
   }
 
+
+  console.log("== G. 서버 기록 가져오기 ==");
+  {
+    const w=newWindow(); seed(w, VIRTUAL);
+    const CB=w.CloudBridge, KEY=w.eval("KEY");
+    const rows=[
+      {id:"11111111-1111-4111-8111-111111111111", kind:"med", occurred_at:"2026-11-22T07:00:00+09:00", payload:{drug:"가상약",dose_mg:100}, source:"agent_request", legacy_id:null},
+      {id:"22222222-2222-4222-8222-222222222222", kind:"state", occurred_at:"2026-11-22T08:00:00+09:00", payload:{state:"on",output:80,symptoms:["tremor"]}, source:"agent_request", legacy_id:null},
+      {id:"33333333-3333-4333-8333-333333333333", kind:"life", occurred_at:"2026-11-22T12:00:00+09:00", payload:{kind:"meal",meal_type:"점심",extras:["단백질 많음"]}, source:"agent_request", legacy_id:null},
+      {id:"44444444-4444-4444-8444-444444444444", kind:"state", occurred_at:new Date(VIRTUAL[2].ts).toISOString(), payload:{state:"on",output:80}, source:"browser_upload", legacy_id:"v3"},
+      {id:"55555555-5555-4555-8555-555555555555", kind:"state", occurred_at:new Date(VIRTUAL[1].ts).toISOString(), payload:{state:"off",output:15}, source:"agent_request", legacy_id:null},
+      {id:"66666666-6666-4666-8666-666666666666", kind:"state", occurred_at:"2026-11-22T09:00:00+09:00", payload:{state:"???"}, source:"agent_request", legacy_id:null},
+    ];
+    const m=CB.remoteToLocal(rows[0]);
+    ok(m.type==="med" && m.drug==="가상약" && m.dose===100 && m.ts===Date.parse(rows[0].occurred_at) && m.id==="cloud-"+rows[0].id && m.cloudId===rows[0].id, "복약 변환(앱 addMed 모양, cloudId 표시)");
+    const st=CB.remoteToLocal(rows[1]);
+    ok(st.type==="state" && st.output===80 && st.trend===null && st.symptoms[0]==="tremor" && st.inputMethod==="cloud_import", "상태 변환(없는 값은 null, 추정 안 함)");
+    const lf=CB.remoteToLocal(rows[2]);
+    ok(lf.type==="life" && lf.kind==="meal" && lf.mealType==="점심" && lf.extras[0]==="단백질 많음", "생활 변환");
+    const c=CB.classifyRemote(rows, w.eval("db.events"));
+    ok(c.add.length===3 && c.already.length===1 && c.dupe.length===1 && c.invalid.length===1, `분류: 새로 3·이미 1(이 기기에서 올린 것)·중복 후보 1·변환 불가 1 → ${c.add.length}/${c.already.length}/${c.dupe.length}/${c.invalid.length}`);
+    const n0=w.eval("db.events.length"), raw0=w.localStorage.getItem(KEY);
+    const r=await CB.importLocalEvents(c.add.map(x=>x.ev));
+    ok(r.ok && r.added===3, "3건 가져오기");
+    const saved=JSON.parse(w.localStorage.getItem(KEY));
+    ok(saved.events.length===n0+3 && w.eval("db.events.length")===n0+3, "앱 메모리 db와 저장소 모두 반영(save 경로)");
+    ok(saved.events.filter(e=>!e.cloudId).length===n0, "기존 기록은 그대로(추가만)");
+    ok(saved.meds.length===1 && saved.settings.notify===true, "약 목록·설정 불변");
+    const bk=JSON.parse(w.localStorage.getItem(CB.IMPORT_BACKUP_KEY));
+    ok(bk.raw===raw0 && bk.sha256===require('crypto').createHash('sha256').update(raw0,'utf8').digest('hex'), "가져오기 직전 원문 자동 백업(SHA-256)");
+    const r2=await CB.importLocalEvents(c.add.map(x=>x.ev));
+    ok(r2.ok && r2.added===0 && JSON.parse(w.localStorage.getItem(KEY)).events.length===n0+3, "같은 서버 기록 두 번 가져와도 중복 없음");
+    const c2=CB.classifyRemote(rows, w.eval("db.events"));
+    ok(c2.add.length===0 && c2.already.length===4, "다시 미리보기하면 이미 있음 4");
+    const lc=await CB.classifyLocal(w.eval("db.events"), 0, Date.now()+86400e3);
+    ok(!lc.candidates.some(x=>String(x.legacy_id).startsWith("cloud-")), "가져온 기록은 다시 올리기 후보에서 제외");
+    w.eval("renderAll()"); w.eval("switchTab('log')");
+    ok(w._errs.length===0 && w.document.body.textContent.includes("가상약"), "가져온 기록이 앱 화면에 표시, 오류 0건 "+JSON.stringify(w._errs));
+    const u=await CB.undoImport();
+    ok(u.ok && w.localStorage.getItem(KEY)===raw0 && !w.localStorage.getItem(CB.IMPORT_BACKUP_KEY), "되돌리기: 직전 원문 그대로 복원, 백업 키 정리");
+    w.localStorage.setItem(CB.IMPORT_BACKUP_KEY, JSON.stringify({...bk, raw:bk.raw+"x"}));
+    const u2=await CB.undoImport();
+    ok(!u2.ok && u2.reason==="BACKUP_CORRUPT" && w.localStorage.getItem(KEY)===raw0, "손상된 백업이면 되돌리지 않음");
+  }
+
   console.log(`\nRESULT: ${pass} passed, ${fail} failed`);
   process.exit(fail?1:0);
 })().catch(e=>{ console.error("TEST HARNESS ERROR:", e); process.exit(1); });
