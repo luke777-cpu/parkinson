@@ -48,6 +48,13 @@ function compact(o: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined));
 }
 
+const STATUS_MESSAGE: Record<string, string> = {
+  pending: "승인 대기 중입니다. 사용자가 약효일지 브라우저 화면에서 확인·승인해야 기록이 확정됩니다.",
+  approved: "이미 사용자가 승인해 확정된 요청입니다. 같은 기록이 다시 추가되지 않았습니다.",
+  rejected: "사용자가 거절한 요청입니다. 다시 기록하려면 사용자 확인 후 새 request_id로 요청하세요.",
+  expired: "승인 기한이 지난 요청입니다. 다시 기록하려면 사용자 확인 후 새 request_id로 요청하세요.",
+};
+
 async function createPending(ctx: ToolContext, kind: "med" | "state" | "life", a: { request_id: string; occurred_at: string; source_tz?: string }, payload: Record<string, unknown>) {
   const need = needScope(ctx, "request_write"); if (need) return need;
   return guard(async () => {
@@ -58,7 +65,7 @@ async function createPending(ctx: ToolContext, kind: "med" | "state" | "life", a
     const r = rows[0];
     return ok({
       pending_id: r.pending_id, status: r.status, expires_at: r.expires_at, created: r.created,
-      message: "승인 대기 중입니다. 사용자가 약효일지 브라우저 화면에서 확인·승인해야 기록이 확정됩니다.",
+      message: STATUS_MESSAGE[r.status] ?? STATUS_MESSAGE.pending,
     });
   });
 }

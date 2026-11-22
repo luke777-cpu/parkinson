@@ -160,9 +160,20 @@ describe("추가 요청 도구", () => {
     const b = parseResult((await post(toolCall("add_life_event", { ...base, kind: "meal", meal_type: "점심" }), { fake })).json);
     const c = parseResult((await post(toolCall("add_life_event", { ...base, kind: "meal", meal_type: "저녁" }), { fake })).json);
     expect(b.data.pending_id).toBe(a.data.pending_id);
+    expect(a.data.message).toMatch(/승인 대기/);
     expect(b.data.created).toBe(false);
     expect(c.isError).toBe(true);
     expect(c.data.error.code).toBe("CONFLICT");
+  });
+  it("이미 승인된 요청 재전송은 상태에 맞는 안내", async () => {
+    const fake = fakeSupabase();
+    const orig = fake.f;
+    const f = (async (u: RequestInfo | URL, init?: RequestInit) => String(u).includes("create_pending_event")
+      ? Response.json([{ pending_id: "p1", status: "approved", expires_at: "x", created: false }]) : orig(u, init)) as typeof fetch;
+    const r = parseResult((await post(toolCall("add_medication", { ...base, drug: "가상약" }), { fake: { f, calls: [] } })).json);
+    expect(r.data.status).toBe("approved");
+    expect(r.data.message).toMatch(/이미 사용자가 승인/);
+    expect(r.data.message).not.toMatch(/승인 대기/);
   });
   it("429는 Retry-After를 따라 제한적으로 재시도", async () => {
     const fake = fakeSupabase({ status429: 1 });

@@ -89,3 +89,4 @@
 - 배포 주소: `https://yakhyo-mcp-staging.luke777-cpu.workers.dev` — 사용자 PC 브라우저에서 `/healthz` → `{"ok":true}` 확인.
 - 최종 검증용 묶음(로컬 앱 사본 + Claude Code 연결 스크립트) 전달. 로컬 사본은 file:// 에서 보안 문맥·crypto.subtle·클라우드 카드 설정 정상 확인.
 - 수정: Windows에서 headersHelper가 아무것도 출력하지 않던 문제 — 직접 실행 판별이 `import.meta.url === file://${argv[1]}`라 Windows 경로(C:\ vs file:///C:/)에서 항상 거짓. realpath 비교로 수정하고 실패 이유를 토큰 파일 옆 helper.log에 기록(토큰 미기록). 사용자 Windows PC의 Claude Code 디버그 로그("did not return a valid value")로 발견.
+- 수정: 추가 요청 결과 안내 문구가 상태와 무관하게 '승인 대기'로 고정 → 상태별(pending/approved/rejected/expired) 문구. 사용자 PC Claude Code 검증 중 발견. 다음 Worker 배포 때 반영.
