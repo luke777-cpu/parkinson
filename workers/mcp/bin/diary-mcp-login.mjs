@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// 시험용 에이전트 계정으로 로그인해 "단기 액세스 토큰"만 권한 0600 파일에 저장한다(리프레시 토큰은 저장하지 않음).
+// 에이전트 계정으로 한 번 로그인해 액세스 토큰과 리프레시 토큰을 권한 0600 파일에 저장한다.
+// 이후 diary-mcp-headers.mjs가 만료 전에 스스로 갱신한다. 그만 쓸 때는 --revoke(로그아웃+파일 삭제).
 //   node diary-mcp-login.mjs --mcp-url <시험 Worker /mcp 전체 URL> --supabase-url <URL> --publishable-key <sb_publishable_...>
 //   node diary-mcp-login.mjs --revoke      # 세션 로그아웃 + 토큰 파일 삭제
 // 이메일·비밀번호는 터미널에서 입력받고 화면·셸 이력·명령줄 인자에 남기지 않는다.
@@ -26,9 +27,16 @@ function ask(q, hidden) {
 if (args.revoke) {
   if (existsSync(file)) {
     const d = JSON.parse(readFileSync(file, "utf8"));
+    let access = d.access_token;
     try {
-      await fetch(`${d.supabase_url}/auth/v1/logout?scope=global`, { method: "POST", headers: { apikey: d.publishable_key, authorization: `Bearer ${d.access_token}` } });
-    } catch { /* 네트워크 실패해도 파일은 지운다 */ }
+      // 액세스 토큰이 끝났으면 리프레시 토큰으로 한 번 갱신해야 서버 세션(리프레시 토큰 포함)을 끝낼 수 있다.
+      if (!(d.expires_at * 1000 > Date.now() + 30_000) && d.refresh_token) {
+        const r = await fetch(`${d.supabase_url}/auth/v1/token?grant_type=refresh_token`, { method: "POST", headers: { apikey: d.publishable_key, "content-type": "application/json" }, body: JSON.stringify({ refresh_token: d.refresh_token }) });
+        if (r.ok) access = (await r.json()).access_token;
+      }
+      const lo = await fetch(`${d.supabase_url}/auth/v1/logout?scope=global`, { method: "POST", headers: { apikey: d.publishable_key, authorization: `Bearer ${access}` } });
+      process.stderr.write(lo.ok ? "서버 세션을 종료했습니다.\n" : `서버 로그아웃 응답 ${lo.status} — 연결 폐기로 차단하세요.\n`);
+    } catch { process.stderr.write("서버에 연결하지 못했습니다 — 파일만 삭제합니다.\n"); }
     rmSync(file);
   }
   process.stderr.write("토큰 파일을 삭제했습니다. 필요하면 관리자에게 에이전트 연결 폐기도 요청하세요.\n");
@@ -53,6 +61,6 @@ const r = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
 if (!r.ok) { process.stderr.write(`로그인 실패(${r.status})\n`); process.exit(1); }
 const j = await r.json();
 mkdirSync(dirname(file), { recursive: true, mode: 0o700 });
-writeFileSync(file, JSON.stringify({ url: mcpUrl, supabase_url: supabaseUrl, publishable_key: key, access_token: j.access_token, expires_at: j.expires_at }), { mode: 0o600 });
+writeFileSync(file, JSON.stringify({ url: mcpUrl, supabase_url: supabaseUrl, publishable_key: key, access_token: j.access_token, refresh_token: j.refresh_token, expires_at: j.expires_at }), { mode: 0o600 });
 chmodSync(file, 0o600);
-process.stderr.write(`단기 토큰을 저장했습니다(만료: ${new Date(j.expires_at * 1000).toISOString()}). 파일: ${file}\n`);
+process.stderr.write(`로그인 정보를 저장했습니다. 이제 토큰은 자동으로 갱신됩니다(그만 쓸 때: --revoke). 파일: ${file}\n`);
