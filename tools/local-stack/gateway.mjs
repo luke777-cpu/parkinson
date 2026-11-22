@@ -25,13 +25,20 @@ function cors(req, res) {
   res.setHeader("Access-Control-Expose-Headers", "content-range");
 }
 
+// OAuth 2.1 서버 공개 엔드포인트(클라이언트가 apikey 없이 호출) — 호스팅 Supabase와 같게 apikey 검사 제외
+const OAUTH_PUBLIC = [/^\/\.well-known\//, /^\/oauth\/authorize(\?|$)/, /^\/oauth\/token(\?|$)/, /^\/oauth\/clients\/register(\?|$)/];
+
 http.createServer((req, res) => {
   cors(req, res);
+  // RFC 8414 경로 삽입형 발견 주소: /.well-known/oauth-authorization-server/auth/v1
+  if (req.url.startsWith("/.well-known/oauth-authorization-server/auth/v1") || req.url.startsWith("/.well-known/openid-configuration/auth/v1")) {
+    req.url = "/auth/v1/.well-known/" + req.url.split("/")[2];
+  }
   if (req.method === "OPTIONS") { res.writeHead(204); return res.end(); }
   const prefix = Object.keys(UPSTREAM).find((p) => req.url.startsWith(p + "/") || req.url === p);
   if (!prefix) { res.writeHead(404, { "content-type": "application/json" }); return res.end('{"message":"no route"}'); }
   const path = req.url.slice(prefix.length) || "/";
-  const isJwks = prefix === "/auth/v1" && path.startsWith("/.well-known/jwks.json");
+  const isJwks = prefix === "/auth/v1" && OAUTH_PUBLIC.some((re) => re.test(path));
   const apikey = req.headers.apikey;
   const isSecret = apikey === cfg.secretKey;
   if (!isJwks && apikey !== cfg.publishableKey && !isSecret) {

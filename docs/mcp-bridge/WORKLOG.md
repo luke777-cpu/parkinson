@@ -127,3 +127,13 @@
 ### 10-3. 다음 사용 준비
 - 시험에서 폐기한 에이전트 연결 재생성(폐기 행 삭제 후 30일 연결 생성)은 권한 확인에서 막혀 사용자가 SQL 편집기에서 실행하도록 안내.
 - PC 묶음 `yakhyo-mcp-pc.zip`: 헬퍼를 영문 경로 `%USERPROFILE%\yakhyo-mcp`에 설치·로그인·user 범위 등록하는 `1-setup-claude-code.cmd`, 가져오기 포함 시험 앱 사본, Worker 최신 소스(상태별 문구) 재배포 스크립트, 중지·정리 스크립트.
+
+## 11. OAuth 2.1 연결 (2026-11-22 오후) — 사용자 결정: Claude·ChatGPT 연결, 피클은 MCP 미지원으로 보류
+
+- 조사: ChatGPT 사용자 MCP는 OAuth/인증 없음/혼합만(헤더 토큰 불가). 피클(Pickle)은 공개 자료상 사용자 MCP 커넥터 미확인 → 보류.
+- 방식: Supabase Auth OAuth 2.1 Server를 인가 서버로 사용(별도 로그인 서버 없음). 발급 토큰은 Supabase JWT(`client_id` 포함)라 Worker 검증·RLS 그대로.
+- Worker: 보호 리소스 메타데이터, 401 챌린지, 인가 서버 메타데이터 전달, 동의 화면. 허용 Origin에 claude.ai·chatgpt.com 추가.
+- DB `20261122000200_diary_oauth_guard.sql`: OAuth 토큰의 사용자 권한 차단(RESTRICTIVE). 연결 테이블 정책은 `diary_is_agent()` 재귀를 피해 직접 조건으로.
+- 로컬 스택: GoTrue OAuth 서버 켜기, 게이트웨이가 OAuth 공개 엔드포인트·경로 삽입형 발견 주소를 apikey 없이 통과.
+- 발견·수정: Supabase는 요청 조회(사용자 연결) 전에는 거부를 받지 않음 → 차단 화면의 거부 버튼이 조회 후 거부.
+- 시험: Worker 54(OAuth 13 추가), pgTAP 40+17, 기존 전부 통과. OAuth E2E 27/27(동적 등록·PKCE·state·동의·토큰·도구 5개·추가 요청→승인 전 0→승인 후 1→재시도 1·AI 토큰으로 승인/폐기 거부·토큰 회전·본인 계정 차단·알 수 없는 앱 경고·연결 폐기 후 MCP 403·Data API 0건·폐기 계정 재동의 차단).

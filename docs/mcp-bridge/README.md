@@ -29,6 +29,7 @@ Claude Code ──(Bearer: 에이전트 단기 토큰, headersHelper)──▶ C
 - 에이전트: 연결된 사용자 **1명**의 확정 기록 조회(`read`), 자기 추가 요청 생성(`request_write`). 확정 기록 직접 삽입·수정·삭제, 요청 승인, 연결 변경 불가.
 - 사용자 식별자는 `auth.uid()`와 `diary_agent_links`에서만 결정. payload·요청 인자의 `user_id`/`owner_id`는 무시되거나 거부된다.
 - 연결 생성은 관리자(SQL 편집기)만. 연결 폐기·만료는 RLS가 호출마다 확인하므로 기존 토큰도 즉시 차단된다.
+- OAuth 토큰(외부 AI 앱이 받은 토큰, JWT `client_id` 있음)은 RESTRICTIVE 정책으로 에이전트 권한까지만: 사용자 본인 계정으로 연결을 승인해도 확정 기록 조회·추가·승인·가져오기·연결 폐기 불가.
 - 승인 함수는 `SELECT … FOR UPDATE`로 잠그고 이벤트 삽입과 상태 변경을 한 트랜잭션에서 한다. 재승인은 같은 이벤트 ID.
 
 ## MCP 도구
@@ -67,6 +68,23 @@ Docker가 되는 환경이면 `supabase start && supabase db reset --local && su
 npm i --prefix /tmp/pp puppeteer-core
 NODE_PATH=/tmp/pp/node_modules CHROME_PATH=/usr/bin/google-chrome node tools/local-stack/chrome-check.mjs
 ```
+
+OAuth 전체 흐름(실제 MCP SDK 클라이언트 + Chrome 동의 화면):
+```bash
+cd workers/mcp && npx wrangler dev --port 8787 --ip 127.0.0.1 \
+  --var SUPABASE_URL:http://127.0.0.1:54321 --var SUPABASE_PUBLISHABLE_KEY:<stack.json의 publishableKey> \
+  --var ALLOWED_ORIGINS:http://127.0.0.1:8787 &
+cd ../.. && NODE_PATH=/tmp/pp/node_modules node tools/local-stack/oauth-e2e.mjs
+```
+
+## OAuth 2.1 연결 (ChatGPT·Claude 앱)
+
+- 인가 서버 = Supabase Auth OAuth 2.1 Server(동적 클라이언트 등록, PKCE). Worker는 보호 리소스만:
+  `/.well-known/oauth-protected-resource[/mcp]`, 401 `WWW-Authenticate: Bearer resource_metadata=…`,
+  구 사양용 `/.well-known/oauth-authorization-server`(Supabase 문서 전달), 동의 화면 `/oauth/consent`.
+- 동의 화면: AI 전용 계정 로그인 → `my_agent_link` 확인(본인 계정·폐기 계정은 승인 불가, 거부만) → 앱 이름·돌아갈 주소(ChatGPT/Claude/알 수 없음 경고)·권한 표시 → 승인/거부 → 임시 세션 로그아웃. CSP nonce, `frame-ancestors 'none'`, no-store, 토큰은 메모리에만.
+- Supabase 설정: Authentication → OAuth Server 켜기, 동적 등록 켜기, 인가 경로 `/oauth/consent`, Site URL = Worker 주소(시험 프로젝트).
+- AI마다 전용 계정 + 연결을 따로 두면 하나만 골라 폐기할 수 있다. 폐기는 호출마다 확인되어 이미 받은 토큰도 즉시 막힌다.
 
 ## 시험 배포 (저장소 소유자 승인 후에만)
 

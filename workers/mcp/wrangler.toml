@@ -18,4 +18,5 @@ enabled = false
 [env.staging.vars]
 SUPABASE_URL = "https://hvfqujnazjlofjcxbeft.supabase.co"
 SUPABASE_PUBLISHABLE_KEY = "sb_publishable_giZSWsc7mnrtfb745S2S-w_TyzkzhYA"
-ALLOWED_ORIGINS = "https://luke777-cpu.github.io"
+ALLOWED_ORIGINS = "https://luke777-cpu.github.io,https://claude.ai,https://chatgpt.com"
+RESOURCE_NAME = "약효일지 (시험)"

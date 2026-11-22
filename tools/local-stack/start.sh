@@ -44,7 +44,9 @@ if ! curl -sf "http://127.0.0.1:$GOTRUE_PORT/health" >/dev/null 2>&1; then
   ( cd "$(dirname "$GOTRUE_BIN")"
     env -i PATH="$PATH" HOME="$DIR" \
       GOTRUE_API_HOST=127.0.0.1 PORT="$GOTRUE_PORT" API_EXTERNAL_URL="http://127.0.0.1:$GW_PORT/auth/v1" \
-      GOTRUE_SITE_URL="http://127.0.0.1:8080" \
+      GOTRUE_SITE_URL="${LOCAL_SITE_URL:-http://127.0.0.1:8787}" \
+      GOTRUE_OAUTH_SERVER_ENABLED=true GOTRUE_OAUTH_SERVER_ALLOW_DYNAMIC_REGISTRATION=true \
+      GOTRUE_OAUTH_SERVER_AUTHORIZATION_PATH=/oauth/consent \
       GOTRUE_DB_DRIVER=postgres \
       GOTRUE_DB_DATABASE_URL="postgres://supabase_auth_admin:local-auth-admin@127.0.0.1:$PG_PORT/postgres?search_path=auth&sslmode=disable" \
       GOTRUE_DB_MIGRATIONS_PATH="$GOTRUE_MIGRATIONS" \
