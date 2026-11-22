@@ -152,6 +152,11 @@ try {
   await tap(A, ".cbReject");
   await A.waitForFunction(() => document.getElementById("cbPendingBox").textContent.includes("대기 중인 요청이 없어요"), { timeout: 8000 });
   ok(sql(`select count(*) from public.diary_events where user_id='${uid}'`) === String(+before + 1), "승인 1건만 확정(거절분 제외)");
+  await A.waitForFunction(() => JSON.parse(localStorage.getItem("yakhyo_log_v1")).events.some((e) => e.cloudId), { timeout: 8000 });
+  const auto = await A.evaluate(() => JSON.parse(localStorage.getItem("yakhyo_log_v1")).events.filter((e) => e.cloudId));
+  ok(auto.length === 1 && auto[0].output === 20, "승인하면 이 기기 기록에 바로 추가");
+  await A.evaluate(() => CloudBridge.undoImport()); await A.reload({ waitUntil: "load" }); await toSettings(A);
+  ok((await A.evaluate(() => localStorage.getItem("yakhyo_log_v1"))) === RAW, "승인 후 자동 추가도 되돌리기 가능");
   await A.$eval("#cbDay", (e) => { e.value = "2026-11-20"; }); await tap(A, "#cbRemote");
   await A.waitForFunction(() => document.getElementById("cbRemoteBox").textContent.includes("에이전트 요청 승인"), { timeout: 8000 });
   await A.$eval("#cbRemoteBox", (el) => el.scrollIntoView({ block: "start" })); await shot(A, "06-remote-read.png");

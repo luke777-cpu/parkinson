@@ -594,8 +594,26 @@ function loadPending(){
     Array.prototype.forEach.call(box.querySelectorAll(".cbReject"), function(b){ b.onclick = function(){ decide("reject_pending_event", b.dataset.id); }; });
   }).catch(function(e){ setMsg(errText(e)); });
 }
+/* 승인한 기록을 이 기기 기록에도 바로 추가(같은 기록이 이미 있으면 건너뜀). 실패해도 승인은 유지되고 ⑤로 다시 가져올 수 있다. */
+function addApprovedToLocal(eventId){
+  if(typeof eventId!=="string" || !/^[0-9a-f-]{36}$/i.test(eventId)) return Promise.resolve({ok:false, reason:"NO_EVENT_ID"});
+  return api("GET", "/diary_events?select=id,kind,occurred_at,payload,source,legacy_id&id=eq."+encodeURIComponent(eventId)).then(function(rows){
+    var localEvents = (typeof db!=="undefined" && db && Array.isArray(db.events)) ? db.events : readLocalDb().events; // eslint-disable-line no-undef
+    var c = classifyRemote(rows||[], localEvents);
+    if(c.already.length || c.dupe.length) return {ok:true, added:0, skipped:true};
+    return importLocalEvents(c.add.map(function(x){ return x.ev; }));
+  }).catch(function(){ return {ok:false, reason:"FETCH"}; });
+}
 function decide(fn, id){
-  api("POST", "/rpc/"+fn, {p_pending_id:id}).then(function(){ setMsg(fn==="approve_pending_event"?tr("승인했어요","Approved"):tr("거절했어요","Rejected")); loadPending(); })
+  api("POST", "/rpc/"+fn, {p_pending_id:id}).then(function(res){
+    if(fn!=="approve_pending_event"){ setMsg(tr("거절했어요","Rejected")); loadPending(); return; }
+    return addApprovedToLocal(res).then(function(r){
+      setMsg(r.ok && r.added ? tr("승인했고 내 기록에 추가했어요","Approved and added to your records")
+        : r.ok ? tr("승인했어요(같은 기록이 이미 있어 추가하지 않았어요)","Approved (same record already here)")
+        : tr("승인했어요. 내 기록 추가는 ⑤ 서버 기록 가져오기로 해 주세요","Approved. Use ⑤ Import to add it to your records"));
+      loadPending();
+    });
+  })
     .catch(function(e){ setMsg(e.status===410 ? tr("만료되었거나 이미 처리된 요청이에요","Expired or already decided") : errText(e)); loadPending(); });
 }
 function loadRemoteDay(){

@@ -111,6 +111,10 @@ async function until(fn, ms=5000){ const t0=Date.now(); while(Date.now()-t0<ms){
   const approveBtn=[...w.document.querySelectorAll("#cbPendingBox .li")].find(li=>li.textContent.includes("출력 75")).querySelector(".cbApprove");
   approveBtn.click();
   ok(await until(()=>w.document.querySelectorAll(".cbApprove").length===1), "승인 후 목록 1건");
+  ok(await until(()=>w.eval("db.events.some(e=>e.cloudSource==='agent_request' && e.output===75)")), "승인한 기록이 이 기기 기록에 바로 추가됨");
+  ok(w.eval("db.events.length")===152 && JSON.parse(w.localStorage.getItem(KEY)).events.length===152, "추가는 1건, 저장까지 확인");
+  ok(!!w.localStorage.getItem("yakhyo_log_v1_before_cloud_import"), "추가 전 상태 백업");
+  w.localStorage.setItem(KEY, raw); w.eval("db=load()");
   w.document.querySelector(".cbReject").click();
   ok(await until(()=>w.document.getElementById("cbPendingBox").textContent.includes("대기 중인 요청이 없어요")), "거절 후 목록 비움");
   ok(seedMod.sql(`select count(*) from public.diary_events where user_id='${uid}' and source='agent_request'`)==="1", "승인 1건만 확정");
