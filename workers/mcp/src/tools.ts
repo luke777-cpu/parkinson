@@ -92,7 +92,7 @@ export function buildServer(ctx: ToolContext): McpServer {
     description: "복약 기록 추가를 요청합니다(승인 대기). 사용자가 말한 약 이름·용량·시각만 넣으세요.",
     inputSchema: z.strictObject({
       request_id: requestId, occurred_at: occurredAt, source_tz: sourceTz,
-      drug: z.string().min(1).max(80).regex(/^[^\p{Cc}]+$/u).refine((s) => s.trim() === s, "앞뒤 공백 없이").describe("사용자가 말한 약 이름 그대로"),
+      drug: z.string().min(1).max(80).regex(/^[^\x00-\x1F\x7F-\x9F]+$/).refine((s) => s.trim() === s, "앞뒤 공백 없이").describe("사용자가 말한 약 이름 그대로"),
       dose_mg: z.number().gt(0).max(5000).optional().describe("mg 단위 숫자. 단위가 mg가 아니거나 모르면 생략(환산·추정 금지)"),
     }),
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
