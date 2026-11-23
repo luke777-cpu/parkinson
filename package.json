@@ -4,7 +4,9 @@
   "private": true,
   "description": "약효일지 — 파킨슨 출력 중심 복약 일지 PWA (테스트 러너 포함)",
   "scripts": {
-    "test": "node tests/phs-engine.test.js && node tests/phs-integration.test.js"
+    "test": "node tests/phs-engine.test.js && node tests/phs-integration.test.js",
+    "test:bridge": "node tests/cloud-bridge.test.js && node tests/bridge-schema-sync.test.js",
+    "test:bridge:integration": "tools/local-stack/run-pgtap.sh && node --test supabase/tests-api/data-api.test.mjs && node tests/cloud-bridge.integration.test.js && npm --prefix workers/mcp run test:integration"
   },
   "devDependencies": {
     "jsdom": "^29.1.1"
