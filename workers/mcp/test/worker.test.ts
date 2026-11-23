@@ -27,7 +27,7 @@ async function token(o: { sub?: string; iss?: string; aud?: string; role?: strin
 }
 
 interface Call { path: string; body: unknown }
-function fakeSupabase(opts: { link?: boolean; pendingConflict?: boolean; events?: unknown[]; status429?: number } = {}) {
+function fakeSupabase(opts: { link?: boolean; pendingConflict?: boolean; events?: unknown[]; status429?: number; auto?: boolean | string; noAgentFn?: boolean } = {}) {
   const calls: Call[] = [];
   let left429 = opts.status429 ?? 0;
   const pending = new Map<string, { id: string; hash: string }>();
@@ -41,12 +41,16 @@ function fakeSupabase(opts: { link?: boolean; pendingConflict?: boolean; events?
     if (u.pathname.endsWith("/rpc/my_agent_link")) {
       return Response.json(opts.link === false ? [] : [{ owner_id: OWNER, scopes: ["read", "request_write"], expires_at: "2099-01-01T00:00:00Z" }]);
     }
-    if (u.pathname.endsWith("/rpc/create_pending_event")) {
+    const isAgentFn = u.pathname.endsWith("/rpc/create_agent_event");
+    if (isAgentFn && opts.noAgentFn) return Response.json({ code: "PGRST202", message: "Could not find the function" }, { status: 404 });
+    if (u.pathname.endsWith("/rpc/create_pending_event") || isAgentFn) {
       const key = body.p_request_id; const hash = JSON.stringify([body.p_kind, body.p_occurred_at, body.p_payload]);
       const prev = pending.get(key);
       if (prev && prev.hash !== hash) return Response.json({ code: "PT409", message: "CONFLICT: request_id already used with different content" }, { status: 409 });
       if (!prev) pending.set(key, { id: crypto.randomUUID(), hash });
-      return Response.json([{ pending_id: pending.get(key)!.id, status: "pending", expires_at: "2026-11-25T00:00:00Z", created: !prev }]);
+      const auto = isAgentFn && opts.auto === true;
+      return Response.json([{ pending_id: pending.get(key)!.id, status: auto ? "approved" : "pending", expires_at: "2026-11-25T00:00:00Z", created: !prev,
+        ...(isAgentFn ? { event_id: auto ? "11111111-1111-4111-8111-111111111111" : null, auto, auto_reason: auto ? null : (typeof opts.auto === "string" ? opts.auto : "AUTO_OFF") } : {}) }]);
     }
     if (u.pathname.endsWith("/diary_events")) return Response.json((opts.events ?? []).map((e) => ({ ...(e as object), state: (e as { payload?: { state?: string } }).payload?.state ?? null })));
     return new Response("{}", { status: 404 });
@@ -134,18 +138,18 @@ describe("추가 요청 도구", () => {
     const r = parseResult(json);
     expect(r.isError).toBe(false);
     expect(r.data.status).toBe("pending");
-    const call = fake.calls.find((c) => c.path.includes("create_pending_event"))!;
+    const call = fake.calls.find((c) => c.path.includes("create_agent_event"))!;
     expect(call.body).toEqual({ p_request_id: "req-test-0001", p_kind: "med", p_occurred_at: base.occurred_at, p_source_tz: "Asia/Seoul", p_payload: { drug: "가상약", dose_mg: 100 } });
   });
   it("용량을 모르면 비워 둔다(추정해 채우지 않음)", async () => {
     const { fake } = await post(toolCall("add_medication", { ...base, drug: "가상약" }));
-    expect((fake.calls.find((c) => c.path.includes("create_pending_event"))!.body as { p_payload: unknown }).p_payload).toEqual({ drug: "가상약" });
+    expect((fake.calls.find((c) => c.path.includes("create_agent_event"))!.body as { p_payload: unknown }).p_payload).toEqual({ drug: "가상약" });
   });
   it("자유 메모·user_id 같은 허용 외 필드는 거부", async () => {
     for (const extra of [{ memo: "자유 텍스트" }, { user_id: "x" }, { owner_id: "x" }]) {
       const { json, fake } = await post(toolCall("add_state", { ...base, state: "on", ...extra }));
       expect(json.result?.isError ?? !!json.error).toBe(true);
-      expect(fake.calls.some((c) => c.path.includes("create_pending_event"))).toBe(false);
+      expect(fake.calls.some((c) => /create_(pending|agent)_event/.test(c.path))).toBe(false);
     }
   });
   it("오프셋 없는 시각·잘못된 상태·범위 밖 출력은 거부", async () => {
@@ -168,12 +172,41 @@ describe("추가 요청 도구", () => {
   it("이미 승인된 요청 재전송은 상태에 맞는 안내", async () => {
     const fake = fakeSupabase();
     const orig = fake.f;
-    const f = (async (u: RequestInfo | URL, init?: RequestInit) => String(u).includes("create_pending_event")
-      ? Response.json([{ pending_id: "p1", status: "approved", expires_at: "x", created: false }]) : orig(u, init)) as typeof fetch;
+    const f = (async (u: RequestInfo | URL, init?: RequestInit) => /create_(pending|agent)_event/.test(String(u))
+      ? Response.json([{ pending_id: "p1", status: "approved", expires_at: "x", created: false, auto: false }]) : orig(u, init)) as typeof fetch;
     const r = parseResult((await post(toolCall("add_medication", { ...base, drug: "가상약" }), { fake: { f, calls: [] } })).json);
     expect(r.data.status).toBe("approved");
     expect(r.data.message).toMatch(/이미 사용자가 승인/);
     expect(r.data.message).not.toMatch(/승인 대기/);
+  });
+  it("바로 기록 켜짐: recorded + 취소 안내, 재시도는 '이미 바로 기록'", async () => {
+    const fake = fakeSupabase({ auto: true });
+    const a = parseResult((await post(toolCall("add_medication", { ...base, drug: "가상약" }), { fake })).json);
+    expect(a.data.status).toBe("recorded");
+    expect(a.data.event_id).toBeTruthy();
+    expect(a.data.message).toMatch(/바로 기록했습니다/);
+    expect(a.data.message).toMatch(/24시간/);
+    expect(a.data.expires_at).toBeUndefined();
+    const b = parseResult((await post(toolCall("add_medication", { ...base, drug: "가상약" }), { fake })).json);
+    expect(b.data.message).toMatch(/이미 바로 기록된/);
+    expect(fake.calls.some((c) => c.path.endsWith("/rpc/create_agent_event"))).toBe(true);
+  });
+  it("바로 기록 켜졌지만 한도 걸림: 이유를 붙여 승인 대기", async () => {
+    const r = parseResult((await post(toolCall("add_medication", { ...base, drug: "가상약" }), { fake: fakeSupabase({ auto: "NEAR_DUPLICATE" }) })).json);
+    expect(r.data.status).toBe("pending");
+    expect(r.data.auto_reason).toBe("NEAR_DUPLICATE");
+    expect(r.data.message).toMatch(/가까운 시각에 비슷한 기록/);
+  });
+  it("바로 기록 꺼짐: 이유 없이 일반 승인 대기 문구", async () => {
+    const r = parseResult((await post(toolCall("add_medication", { ...base, drug: "가상약" }), { fake: fakeSupabase() })).json);
+    expect(r.data.auto_reason).toBeUndefined();
+    expect(r.data.message).toMatch(/^승인 대기 중/);
+  });
+  it("DB에 새 함수가 없으면 기존 승인 대기 함수로", async () => {
+    const fake = fakeSupabase({ noAgentFn: true });
+    const r = parseResult((await post(toolCall("add_medication", { ...base, drug: "가상약" }), { fake })).json);
+    expect(r.data.status).toBe("pending");
+    expect(fake.calls.map((c) => c.path.split("/").pop())).toEqual(expect.arrayContaining(["create_agent_event", "create_pending_event"]));
   });
   it("429는 Retry-After를 따라 제한적으로 재시도", async () => {
     const fake = fakeSupabase({ status429: 1 });

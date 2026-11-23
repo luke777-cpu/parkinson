@@ -121,3 +121,44 @@ describe("가상 기록 추가 요청 → 승인 → 조회 → 주간 집계 �
     expect(res.status).toBe(403);
   });
 });
+
+describe("바로 기록 스위치: 켬 → 즉시 기록 → 한도는 대기 → 앱에서 취소 → 끔", () => {
+  const tag = randomBytes(3).toString("hex");
+  const pw = randomUUID();
+  let userId: string, agentId: string, userTok: string, agentTok: string;
+  beforeAll(async () => {
+    userId = await createUser(`e2e-au-${tag}@example.test`, pw);
+    agentId = await createUser(`e2e-aa-${tag}@example.test`, pw);
+    sql(`insert into public.diary_agent_links(agent_id, owner_id, expires_at) values ('${agentId}','${userId}', now() + interval '1 day')`);
+    userTok = await login(`e2e-au-${tag}@example.test`, pw);
+    agentTok = await login(`e2e-aa-${tag}@example.test`, pw);
+  });
+  it("전체 흐름", async () => {
+    const client = await connect(agentTok);
+    const t = (m: number) => new Date(Date.now() - m * 60_000).toISOString().replace(/\.\d+Z$/, "Z");
+    const off = data(await client.callTool({ name: "add_medication", arguments: { request_id: `au-${tag}-0`, occurred_at: t(90), drug: "가상약A", dose_mg: 100 } }));
+    expect(off.status).toBe("pending");
+    expect(off.auto_reason).toBeUndefined();
+    // 에이전트는 스위치를 못 켬
+    expect((await rpc(agentTok, "set_agent_auto_write", { p_agent_id: agentId, p_on: true })).status).toBe(403);
+    expect((await rpc(userTok, "set_agent_auto_write", { p_agent_id: agentId, p_on: true })).json).toBe(true);
+    const on = data(await client.callTool({ name: "add_medication", arguments: { request_id: `au-${tag}-1`, occurred_at: t(20), drug: "가상약B", dose_mg: 50 } }));
+    expect(on.status).toBe("recorded");
+    expect(on.message).toMatch(/바로 기록했습니다/);
+    const near = data(await client.callTool({ name: "add_medication", arguments: { request_id: `au-${tag}-2`, occurred_at: t(10), drug: "가상약B", dose_mg: 50 } }));
+    expect(near.status).toBe("pending");
+    expect(near.auto_reason).toBe("NEAR_DUPLICATE");
+    const today = t(0).slice(0, 10);
+    void today;
+    const list = (await rpc(userTok, "list_my_auto_events", {})).json as { event_id: string }[];
+    expect(list.map((x) => x.event_id)).toEqual([on.event_id]);
+    expect((await rpc(userTok, "undo_auto_event", { p_event_id: on.event_id })).json).toBe("undone");
+    expect(sql(`select count(*) from public.diary_events where id = '${on.event_id}'`)).toBe("0");
+    const again = data(await client.callTool({ name: "add_medication", arguments: { request_id: `au-${tag}-1`, occurred_at: t(20), drug: "가상약B", dose_mg: 50 } }));
+    expect(again.status).toBe("undone");
+    expect((await rpc(userTok, "set_agent_auto_write", { p_agent_id: agentId, p_on: false })).json).toBe(false);
+    const after = data(await client.callTool({ name: "add_state", arguments: { request_id: `au-${tag}-3`, occurred_at: t(5), state: "on" } }));
+    expect(after.status).toBe("pending");
+    await client.close();
+  });
+});

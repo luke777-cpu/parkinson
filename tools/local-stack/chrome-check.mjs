@@ -55,6 +55,7 @@ const RAW = JSON.stringify({ events: [
 const browser = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || "/usr/bin/google-chrome", headless: true, args: ["--no-sandbox", "--lang=ko-KR"], downloadBehavior: { policy: "allow", downloadPath: DL } });
 async function openApp(ctx) {
   const page = await ctx.newPage();
+  await page.evaluateOnNewDocument(() => { window.CLOUD_BRIDGE_NO_AUTOSYNC = true; }); // 승인·가져오기 단계를 따로 확인하려고 자동 받아오기는 끔(통합 시험에서 따로 확인)
   await page.setViewport({ width: 420, height: 900, deviceScaleFactor: 1 });
   page.on("dialog", (d) => d.accept());
   page._errors = [];

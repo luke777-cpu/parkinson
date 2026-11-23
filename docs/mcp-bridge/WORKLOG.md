@@ -143,3 +143,13 @@
 - AI 전용 계정: luke777@daum.net(Claude Code, 연결 재생성), luke77@daum.net(Claude 앱), luke77@hitel.net(ChatGPT). 30일.
 - Claude 앱: 동적 등록→동의→토큰→조회·추가 요청→앱 승인→확정·재시도 중복 없음 확인.
 - ChatGPT: 연결은 됐으나 도구 목록 갱신 실패("앱을 업데이트할 수 없습니다"). 원인 = 약 이름 패턴 `\p{Cc}`(JS 전용)를 ChatGPT(파이썬) 백엔드가 처리 못함 → `\x00-\x1F\x7F-\x9F`로 교체, 이식성 회귀 시험 추가, 재배포 후 조회 성공(확정 2건).
+
+## 12. AI별 "바로 기록" 스위치 (2026-11-23) — 사용자 결정: 복용 포함 전부 바로, 한도 + 24시간 취소, AI별 버튼
+- DB `20261123000000_diary_auto_write.sql`: 연결에 `auto_write`(기본 꺼짐)·`label`, 출처 `agent_auto`, 요청 상태 `undone`.
+  `create_agent_event`(요청 + 스위치 켜짐·한도 통과 시 즉시 확정), `set_agent_auto_write`(직접 로그인한 주인만),
+  `list_my_auto_events`, `undo_auto_event`(24시간 안, 서버 삭제 + 요청 행 undone). 계속 SECURITY INVOKER + RLS + 트랜잭션 GUC.
+  한도: 최근 24시간~5분 뒤, 용량 있음·≤1000mg, 같은 내용 확정 기록 없음, 근접 기록(같은 약 30분·상태 10분·같은 생활 종류 30분) 없음, 시간당 20건.
+- Worker: `create_agent_event` 사용(없으면 기존 함수로), 결과 `status: recorded` + 취소 안내, 한도에 걸리면 이유를 붙여 승인 대기.
+- 앱: ④ 연결에 이름·"바로 기록 켜기/끄기"(켤 때 위험·한도 안내), ⑥ 바로 기록 목록·취소(서버와 이 기기 함께 삭제),
+  로그인 상태에서 화면을 열거나 돌아오면 AI 기록 자동 받아오기(5분 간격) + 승인 대기 건수 안내. 처리방침 문구 갱신.
+- 시험: pgTAP 40+17+33, Data API 11, Worker 60, 통합 4, 앱 통합 67, Chrome 27, OAuth E2E 27 — 전부 통과.

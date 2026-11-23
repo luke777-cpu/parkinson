@@ -64,7 +64,10 @@ select throws_ok($$ insert into public.diary_events (user_id, kind, occurred_at,
   values (auth.uid(), 'med', now(), 'Asia/Seoul', '{"drug":"x"}', 'agent_request', null) $$,
   '42501', null, '사용자가 agent_request 출처 직접 삽입 거부');
 select throws_ok($$ update public.diary_events set occurred_at = now() $$, '42501', null, '확정 기록 수정 권한 없음');
-select throws_ok($$ delete from public.diary_events $$, '42501', null, '확정 기록 삭제 권한 없음');
+-- 20261123: 삭제 권한은 자동 확정 기록 취소 함수(diary.undo GUC) 경로에만 RLS로 열림 → 직접 삭제는 0건
+create temp table _cnt as select count(*)::int n from public.diary_events;
+delete from public.diary_events;
+select is((select count(*)::int from public.diary_events), (select n from _cnt), '확정 기록 직접 삭제 불가(0건)');
 select pg_temp.as_admin();
 
 -- 사용자 B: A 기록이 보이지 않음 (관리자 문맥에서 원래 행 존재 확인)

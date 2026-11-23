@@ -423,7 +423,7 @@ function render(){
   }
   var on = isEnabled(), s = getSession();
   var h = '<div class="li"><div class="grow"><div class="name">'+tr("클라우드 연동 (시험)","Cloud sync (beta)")+'</div><div class="meta">'+
-    tr("켜고 로그인하면 미리보기에서 고른 복약·상태·생활 기록만 시험 서버(Supabase)에 저장할 수 있어요. 자동으로 보내지는 기록은 없고, 메모·약 목록·알림·설정은 보내지 않아요. 연결한 AI 에이전트는 여기 저장된 기록을 읽고 추가 요청을 보낼 수 있어요(확정은 승인할 때만).","When on and signed in, only the med/state/life records you pick in the preview can be stored on a test server (Supabase). Nothing is sent automatically; notes, med list, reminders and settings are never sent. A linked AI agent can read the stored records and send add requests (confirmed only when you approve).")+' <a href="privacy.html" target="_blank" rel="noopener">'+tr("개인정보 처리방침","Privacy policy")+'</a>'+
+    tr("켜고 로그인하면 미리보기에서 고른 복약·상태·생활 기록만 시험 서버(Supabase)에 저장할 수 있어요. 자동으로 보내지는 기록은 없고, 메모·약 목록·알림·설정은 보내지 않아요. 연결한 AI 에이전트는 여기 저장된 기록을 읽고 추가 요청을 보낼 수 있어요(확정은 승인할 때만. ④에서 '바로 기록'을 켠 AI는 한도 안에서 바로 기록되고 24시간 안에 ⑥에서 취소할 수 있어요). 로그인해 두면 AI 기록은 이 기기 기록에 자동으로 추가돼요.","When on and signed in, only the med/state/life records you pick in the preview can be stored on a test server (Supabase). Nothing is sent automatically; notes, med list, reminders and settings are never sent. A linked AI agent can read the stored records and send add requests (confirmed only when you approve, unless you turn on direct recording for that AI in ④ — undo within 24h in ⑥). While signed in, AI records are added to this device automatically.")+' <a href="privacy.html" target="_blank" rel="noopener">'+tr("개인정보 처리방침","Privacy policy")+'</a>'+
     '</div></div><button class="btn ghost" id="cbToggle" style="width:auto">'+(on?tr("끄기","Turn off"):tr("켜기","Turn on"))+'</button></div>';
   h += backupRowHtml();
   if(on){
@@ -453,6 +453,7 @@ function render(){
         '<button class="btn ghost" id="cbImpPreview" style="width:auto">'+tr("미리보기","Preview")+'</button>'+
         (localStorage.getItem(IMPORT_BACKUP_KEY) ? '<button class="btn ghost" id="cbImpUndo" style="width:auto">'+tr("직전 가져오기 되돌리기","Undo last import")+'</button>' : '')+
         '</div><div id="cbImpBox"></div>';
+      h += '<div class="li" style="flex-wrap:wrap; gap:6px"><div class="name" style="width:100%">'+tr("⑥ 바로 기록된 것(24시간 안 취소)","⑥ Direct records (undo within 24h)")+'</div><button class="btn ghost" id="cbAuto" style="width:auto">'+tr("목록 보기","Show")+'</button></div><div id="cbAutoBox"></div>';
     }
   }
   h += '<div class="meta" id="cbMsg" role="status" style="padding:8px 12px">'+esc(ui.msg)+'</div>';
@@ -467,13 +468,15 @@ function render(){
     var em = el("cbEmail").value.trim(), pw = el("cbPw").value;
     el("cbPw").value = "";
     setMsg(tr("로그인 중…","Signing in…"));
-    signIn(em, pw).then(function(){ setMsg(tr("로그인했어요","Signed in")); render(); }).catch(function(e){ setMsg(errText(e)); });
+    signIn(em, pw).then(function(){ setMsg(tr("로그인했어요","Signed in")); lastSync = 0; render(); }).catch(function(e){ setMsg(errText(e)); });
   };
   var lo = el("cbLogout"); if(lo) lo.onclick = function(){ signOut().then(function(){ setMsg(""); render(); }); };
   var pv = el("cbPreview"); if(pv) pv.onclick = doPreview;
   var pe = el("cbPending"); if(pe) pe.onclick = loadPending;
   var rm = el("cbRemote"); if(rm) rm.onclick = loadRemoteDay;
   var lk = el("cbLinks"); if(lk) lk.onclick = loadLinks;
+  var au = el("cbAuto"); if(au) au.onclick = loadAutoEvents;
+  if(on && s && !s.is_agent) syncAgentRecords(false);
   var ip = el("cbImpPreview"); if(ip) ip.onclick = previewImport;
   var iu = el("cbImpUndo"); if(iu) iu.onclick = function(){
     if(!confirm(tr("직전 '서버 기록 가져오기' 전 상태로 되돌릴까요? 그 뒤에 새로 적은 기록도 함께 사라집니다.","Restore the state before the last import? Records added after it will also be removed."))) return;
@@ -622,25 +625,101 @@ function loadRemoteDay(){
   api("GET", "/diary_events?select=id,kind,occurred_at,payload,source&occurred_at=gte."+encodeURIComponent(new Date(start).toISOString())+
     "&occurred_at=lt."+encodeURIComponent(new Date(start+86400000).toISOString())+"&order=occurred_at.asc,id.asc&limit=200").then(function(rows){
     box.innerHTML = (rows && rows.length) ? rows.map(function(r){
-      return '<div class="li"><div class="grow"><div class="name">'+esc(fmtKst(r.occurred_at))+' · '+esc(payloadText(r.kind, r.payload))+'</div><div class="meta">'+(r.source==="agent_request"?tr("에이전트 요청 승인","Agent request"):tr("기기에서 올림","Uploaded"))+'</div></div></div>';
+      return '<div class="li"><div class="grow"><div class="name">'+esc(fmtKst(r.occurred_at))+' · '+esc(payloadText(r.kind, r.payload))+'</div><div class="meta">'+(r.source==="agent_request"?tr("에이전트 요청 승인","Agent request"):r.source==="agent_auto"?tr("AI 바로 기록","AI direct"):tr("기기에서 올림","Uploaded"))+'</div></div></div>';
     }).join("") : '<div class="meta" style="padding:6px 12px">'+tr("공유된 기록이 없어요","No shared records")+'</div>';
   }).catch(function(e){ setMsg(errText(e)); });
 }
+var agentLabels = {};
+function agentName(id){ return agentLabels[id] || (String(id||"").slice(0,8)+"…"); }
+function fetchLinks(){
+  var s = getSession();
+  return api("GET", "/diary_agent_links?select=agent_id,label,scopes,expires_at,revoked_at,auto_write&owner_id=eq."+encodeURIComponent(s.user_id)+"&order=created_at.asc").then(function(rows){
+    (rows||[]).forEach(function(r){ if(r.label) agentLabels[r.agent_id] = r.label; });
+    return rows || [];
+  });
+}
 function loadLinks(){
-  var box = el("cbLinksBox"), s = getSession();
-  api("GET", "/diary_agent_links?select=agent_id,scopes,expires_at,revoked_at&owner_id=eq."+encodeURIComponent(s.user_id)).then(function(rows){
-    box.innerHTML = (rows && rows.length) ? rows.map(function(r){
+  var box = el("cbLinksBox");
+  fetchLinks().then(function(rows){
+    box.innerHTML = rows.length ? rows.map(function(r){
       var active = !r.revoked_at && Date.parse(r.expires_at) > Date.now();
-      return '<div class="li"><div class="grow"><div class="name">'+esc(r.agent_id.slice(0,8))+'… · '+esc((r.scopes||[]).join(","))+'</div><div class="meta">'+
-        (active ? tr("만료","Expires")+' '+esc(fmtKst(r.expires_at)) : (r.revoked_at?tr("폐기됨","Revoked"):tr("만료됨","Expired")))+'</div></div>'+
-        (active ? '<button class="btn danger cbRevoke" style="width:auto" data-id="'+esc(r.agent_id)+'">'+tr("연결 폐기","Revoke")+'</button>' : '')+'</div>';
+      return '<div class="li" style="flex-wrap:wrap; gap:6px"><div class="grow"><div class="name">'+esc(agentName(r.agent_id))+'</div><div class="meta">'+
+        (active ? tr("만료","Expires")+' '+esc(fmtKst(r.expires_at))+' · '+(r.auto_write?'<b>'+tr("바로 기록 켜짐","Direct record ON")+'</b>':tr("승인 후 기록","Approve first")) : (r.revoked_at?tr("폐기됨","Revoked"):tr("만료됨","Expired")))+'</div></div>'+
+        (active ? '<button class="btn ghost cbAuto" style="width:auto" data-id="'+esc(r.agent_id)+'" data-on="'+(r.auto_write?"1":"0")+'">'+(r.auto_write?tr("바로 기록 끄기","Turn off direct"):tr("바로 기록 켜기","Turn on direct"))+'</button>'+
+                  '<button class="btn danger cbRevoke" style="width:auto" data-id="'+esc(r.agent_id)+'">'+tr("연결 폐기","Revoke")+'</button>' : '')+'</div>';
     }).join("") : '<div class="meta" style="padding:6px 12px">'+tr("연결된 에이전트가 없어요","No agent links")+'</div>';
     Array.prototype.forEach.call(box.querySelectorAll(".cbRevoke"), function(b){ b.onclick = function(){
       if(!confirm(tr("이 에이전트 연결을 폐기할까요? 즉시 접근이 막혀요.","Revoke this agent link? Access stops immediately."))) return;
       api("POST", "/rpc/revoke_agent_link", {p_agent_id:b.dataset.id}).then(function(){ setMsg(tr("연결을 폐기했어요","Link revoked")); loadLinks(); }).catch(function(e){ setMsg(errText(e)); });
     }; });
+    Array.prototype.forEach.call(box.querySelectorAll(".cbAuto"), function(b){ b.onclick = function(){
+      var turnOn = b.dataset.on!=="1", name = agentName(b.dataset.id);
+      if(turnOn && !confirm(tr(
+        name+"에 '바로 기록'을 켤까요?\n\n· 이 AI의 요청이 승인 없이 바로 기록됩니다(복용 포함).\n· 다음은 자동으로 승인 대기로 보냅니다: 24시간보다 오래되거나 미래인 시각, 용량 없음·1000mg 초과, 같은 기록, 가까운 시각의 비슷한 기록(같은 약 30분·상태 10분), 1시간 20건 초과.\n· 바로 기록된 것은 24시간 안에 ⑥에서 취소할 수 있어요.\n· AI가 잘못 알아들은 내용도 그대로 들어갈 수 있어요.",
+        "Turn on direct recording for "+name+"?\n\nIts requests (including medications) will be recorded without approval, except: times older than 24h or in the future, missing dose or >1000 mg, duplicates, similar records close in time, >20/hour — those still wait for approval. You can undo direct records within 24 hours in ⑥."))) return;
+      api("POST", "/rpc/set_agent_auto_write", {p_agent_id:b.dataset.id, p_on:turnOn}).then(function(v){
+        setMsg(v ? tr(name+": 바로 기록을 켰어요","Direct recording on") : tr(name+": 바로 기록을 껐어요(승인 후 기록)","Direct recording off")); loadLinks();
+      }).catch(function(e){ setMsg(errText(e)); });
+    }; });
   }).catch(function(e){ setMsg(errText(e)); });
 }
+
+/* ---------- ⑥ 바로 기록된 것(24시간 안 취소) ---------- */
+function removeLocalByCloudId(cloudId){
+  var appDb = (typeof db!=="undefined") ? db : null; // eslint-disable-line no-undef
+  if(!appDb || !Array.isArray(appDb.events) || typeof save!=="function") return false; // eslint-disable-line no-undef
+  var before = appDb.events.length;
+  appDb.events = appDb.events.filter(function(e){ return !(e && e.cloudId===cloudId); });
+  if(appDb.events.length===before) return false;
+  save(); // eslint-disable-line no-undef
+  try{ if(typeof renderAll==="function") renderAll(); }catch(e){} // eslint-disable-line no-undef
+  return true;
+}
+function loadAutoEvents(){
+  var box = el("cbAutoBox");
+  fetchLinks().catch(function(){}).then(function(){ return api("POST", "/rpc/list_my_auto_events", {}); }).then(function(rows){
+    box.innerHTML = (rows && rows.length) ? rows.map(function(r){
+      return '<div class="li"><div class="grow"><div class="name">'+esc(fmtKst(r.occurred_at))+' · '+esc(payloadText(r.kind, r.payload))+'</div><div class="meta">'+
+        esc(agentName(r.agent_id))+' · '+tr("취소 가능","Undo until")+' '+esc(fmtKst(r.undo_until))+'</div></div>'+
+        '<button class="btn danger cbUndo" style="width:auto" data-id="'+esc(r.event_id)+'">'+tr("취소","Undo")+'</button></div>';
+    }).join("") : '<div class="meta" style="padding:6px 12px">'+tr("최근 24시간 바로 기록된 것이 없어요","Nothing recorded directly in the last 24 hours")+'</div>';
+    Array.prototype.forEach.call(box.querySelectorAll(".cbUndo"), function(b){ b.onclick = function(){
+      if(!confirm(tr("이 기록을 취소할까요? 서버와 이 기기 기록에서 함께 지워져요.","Undo this record? It will be removed from the server and this device."))) return;
+      api("POST", "/rpc/undo_auto_event", {p_event_id:b.dataset.id}).then(function(){
+        removeLocalByCloudId(b.dataset.id); setMsg(tr("취소했어요","Undone")); loadAutoEvents();
+      }).catch(function(e){
+        if(e.status===404){ removeLocalByCloudId(b.dataset.id); setMsg(tr("이미 취소된 기록이에요","Already undone")); loadAutoEvents(); }
+        else setMsg(e.status===410 ? tr("24시간이 지나 취소할 수 없어요","More than 24 hours passed") : errText(e));
+      });
+    }; });
+  }).catch(function(e){ setMsg(errText(e)); });
+}
+
+/* ---------- 자동 받아오기: 로그인 상태에서 화면을 열거나 돌아올 때 AI 기록을 내 기록에 추가 ---------- */
+var lastSync = 0, syncing = false;
+var SYNC_MIN_GAP_MS = 5*60*1000;
+function syncAgentRecords(force){
+  var s = getSession();
+  if(!configured() || !isEnabled() || !s || s.is_agent || syncing) return Promise.resolve(null);
+  if(window.CLOUD_BRIDGE_NO_AUTOSYNC && !force) return Promise.resolve(null); /* 시험 도구 전용 */
+  if(!force && Date.now()-lastSync < SYNC_MIN_GAP_MS) return Promise.resolve(null);
+  syncing = true; lastSync = Date.now();
+  var since = new Date(Date.now()-7*86400000).toISOString();
+  return api("GET", "/diary_events?select=id,kind,occurred_at,payload,source,legacy_id&source=in.(agent_request,agent_auto)&created_at=gte."+encodeURIComponent(since)+"&order=occurred_at.asc,id.asc&limit=500").then(function(rows){
+    var localEvents = (typeof db!=="undefined" && db && Array.isArray(db.events)) ? db.events : readLocalDb().events; // eslint-disable-line no-undef
+    var c = classifyRemote(rows||[], localEvents);
+    return importLocalEvents(c.add.map(function(x){ return x.ev; }));
+  }).then(function(r){
+    return api("POST", "/rpc/list_my_pending_events", {}).catch(function(){ return []; }).then(function(p){
+      var n = (p||[]).filter(function(x){ return x.status==="pending"; }).length, parts = [];
+      if(r && r.ok && r.added) parts.push(tr("AI 기록 "+r.added+"건을 내 기록에 추가했어요","Added "+r.added+" AI record(s)"));
+      if(n) parts.push(tr("승인 대기 "+n+"건","Pending "+n));
+      if(parts.length) setMsg(parts.join(" · "));
+      return {added: r && r.added || 0, pending: n};
+    });
+  }).catch(function(){ return null; }).finally(function(){ syncing = false; });
+}
+try{ document.addEventListener("visibilitychange", function(){ if(document.visibilityState==="visible") syncAgentRecords(false); }); }catch(e){}
 
 function previewImport(){
   var from = kstStart(el("cbImpFrom").value), to = kstStart(el("cbImpTo").value) + 86400000, box = el("cbImpBox");
@@ -682,6 +761,7 @@ function runImport(){
 }
 
 window.CloudBridge = {
+  syncAgentRecords:syncAgentRecords, removeLocalByCloudId:removeLocalByCloudId,
   SCHEMA:SCHEMA, LOCAL_KEY:LOCAL_KEY, ENABLED_KEY:ENABLED_KEY, IDMAP_KEY:IDMAP_KEY, SESSION_KEY:SESSION_KEY, UPLOAD_KEY_PREFIX:UPLOAD_KEY_PREFIX,
   configured:configured, isEnabled:isEnabled, sha256Hex:sha256Hex,
   makeRawBackup:makeRawBackup, verifyRawBackup:verifyRawBackup, restoreRawBackup:restoreRawBackup,

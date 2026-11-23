@@ -1,4 +1,5 @@
-// MCP 도구 정의. 추가 도구는 "승인 대기 요청"만 만든다(확정은 브라우저에서 사용자가).
+// MCP 도구 정의. 추가 도구는 요청을 만든다: 기본은 승인 대기, 사용자가 이 AI에 "바로 기록"을 켜 두었고
+// 한도 검사를 통과하면 서버가 즉시 확정한다(24시간 안 사용자 취소 가능).
 // 수정·삭제·임의 SQL 도구는 제공하지 않는다.
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
@@ -49,24 +50,53 @@ function compact(o: Record<string, unknown>): Record<string, unknown> {
 }
 
 const STATUS_MESSAGE: Record<string, string> = {
-  pending: "승인 대기 중입니다. 사용자가 약효일지 브라우저 화면에서 확인·승인해야 기록이 확정됩니다.",
+  pending: "승인 대기 중입니다. 사용자가 약효일지 앱에서 확인·승인해야 기록이 확정됩니다.",
   approved: "이미 사용자가 승인해 확정된 요청입니다. 같은 기록이 다시 추가되지 않았습니다.",
   rejected: "사용자가 거절한 요청입니다. 다시 기록하려면 사용자 확인 후 새 request_id로 요청하세요.",
   expired: "승인 기한이 지난 요청입니다. 다시 기록하려면 사용자 확인 후 새 request_id로 요청하세요.",
+  undone: "바로 기록됐다가 사용자가 취소한 요청입니다. 다시 기록하려면 사용자 확인 후 새 request_id로 요청하세요.",
 };
+const AUTO_DONE = "바로 기록했습니다(이 AI에 바로 기록이 켜져 있음). 사용자가 24시간 안에 앱에서 취소할 수 있습니다.";
+const AUTO_AGAIN = "이미 바로 기록된 요청입니다. 같은 기록이 다시 추가되지 않았습니다.";
+/** 바로 기록이 켜져 있어도 승인 대기로 보낸 이유(사용자에게 그대로 전할 수 있는 말). 꺼져 있으면 이유를 붙이지 않는다. */
+const AUTO_REASON: Record<string, string> = {
+  TIME_WINDOW: "최근 24시간 안의 시각이 아니어서",
+  DOSE_MISSING: "복용 용량(mg)이 없어서",
+  DOSE_LIMIT: "용량이 1000mg을 넘어서",
+  DUPLICATE: "같은 내용의 확정 기록이 이미 있어서",
+  NEAR_DUPLICATE: "가까운 시각에 비슷한 기록이 이미 있어서",
+  RATE_LIMIT: "최근 1시간 자동 기록이 너무 많아서",
+  NO_READ_SCOPE: "중복 확인 권한이 없어서",
+};
+
+interface AgentEventRow { pending_id: string; status: string; expires_at: string; created: boolean; event_id?: string | null; auto?: boolean; auto_reason?: string | null }
 
 async function createPending(ctx: ToolContext, kind: "med" | "state" | "life", a: { request_id: string; occurred_at: string; source_tz?: string }, payload: Record<string, unknown>) {
   const need = needScope(ctx, "request_write"); if (need) return need;
   return guard(async () => {
-    const rows = await dataApi(ctx.env, ctx.token, "POST", "/rpc/create_pending_event", {
+    const body = {
       p_request_id: a.request_id, p_kind: kind, p_occurred_at: a.occurred_at,
       p_source_tz: a.source_tz ?? TIMEZONE, p_payload: compact(payload),
-    }, { fetchImpl: ctx.fetchImpl }) as { pending_id: string; status: string; expires_at: string; created: boolean }[];
+    };
+    let rows: AgentEventRow[];
+    try {
+      rows = await dataApi(ctx.env, ctx.token, "POST", "/rpc/create_agent_event", body, { fetchImpl: ctx.fetchImpl }) as AgentEventRow[];
+    } catch (e) {
+      // DB에 아직 새 함수가 없으면(배포 순서) 기존 승인 대기 함수로
+      if (e instanceof DataApiError && e.status === 404) {
+        rows = await dataApi(ctx.env, ctx.token, "POST", "/rpc/create_pending_event", body, { fetchImpl: ctx.fetchImpl }) as AgentEventRow[];
+      } else throw e;
+    }
     const r = rows[0];
-    return ok({
-      pending_id: r.pending_id, status: r.status, expires_at: r.expires_at, created: r.created,
-      message: STATUS_MESSAGE[r.status] ?? STATUS_MESSAGE.pending,
-    });
+    const auto = r.auto === true && r.status === "approved";
+    const reason = r.auto_reason && AUTO_REASON[r.auto_reason] ? AUTO_REASON[r.auto_reason] : null;
+    let message = auto ? (r.created ? AUTO_DONE : AUTO_AGAIN) : (STATUS_MESSAGE[r.status] ?? STATUS_MESSAGE.pending);
+    if (!auto && r.status === "pending" && reason) message = `바로 기록이 켜져 있지만 ${reason} 승인 대기로 보냈습니다. ` + message;
+    return ok(compact({
+      pending_id: r.pending_id, status: auto ? "recorded" : r.status, expires_at: auto ? undefined : r.expires_at,
+      created: r.created, event_id: auto ? r.event_id ?? undefined : undefined,
+      auto_reason: !auto && reason ? r.auto_reason : undefined, message,
+    }));
   });
 }
 
@@ -84,12 +114,12 @@ function decodeCursor(c: string): [string, string] | null {
 
 export function buildServer(ctx: ToolContext): McpServer {
   const server = new McpServer({ name: "yakhyo-diary", version: "0.1.0" }, {
-    instructions: "약효일지(파킨슨 복약·상태·생활 기록) 브리지입니다. 추가 도구는 승인 대기 요청만 만들며, 사용자가 브라우저에서 승인해야 확정됩니다. 용량·단위·상태·시각을 추정해 채우지 말고 모르면 사용자에게 물으세요. 요약은 관측된 시간 관계일 뿐 약효나 용량 변경을 판단하지 않습니다.",
+    instructions: "약효일지(파킨슨 복약·상태·생활 기록) 브리지입니다. 추가 도구는 기본적으로 승인 대기 요청을 만들며 사용자가 앱에서 승인해야 확정됩니다. 사용자가 이 AI에 바로 기록을 켜 두었으면 한도 안에서 즉시 기록되고(status: recorded), 24시간 안에 사용자가 취소할 수 있습니다. 결과의 message를 사용자에게 그대로 전하세요. 용량·단위·상태·시각을 추정해 채우지 말고 모르면 사용자에게 물으세요. 요약은 관측된 시간 관계일 뿐 약효나 용량 변경을 판단하지 않습니다.",
   });
 
   server.registerTool("add_medication", {
     title: "복약 기록 추가 요청",
-    description: "복약 기록 추가를 요청합니다(승인 대기). 사용자가 말한 약 이름·용량·시각만 넣으세요.",
+    description: "복약 기록 추가를 요청합니다. 기본은 승인 대기이고, 사용자가 이 AI에 바로 기록을 켜 두었으면 즉시 기록될 수 있습니다. 사용자가 말한 약 이름·용량·시각만 넣으세요.",
     inputSchema: z.strictObject({
       request_id: requestId, occurred_at: occurredAt, source_tz: sourceTz,
       drug: z.string().min(1).max(80).regex(/^[^\x00-\x1F\x7F-\x9F]+$/).refine((s) => s.trim() === s, "앞뒤 공백 없이").describe("사용자가 말한 약 이름 그대로"),
@@ -100,7 +130,7 @@ export function buildServer(ctx: ToolContext): McpServer {
 
   server.registerTool("add_state", {
     title: "상태 기록 추가 요청",
-    description: "ON/OFF 등 상태 관측 기록 추가를 요청합니다(승인 대기).",
+    description: "ON/OFF 등 상태 관측 기록 추가를 요청합니다(기본 승인 대기, 바로 기록이 켜져 있으면 즉시 기록될 수 있음).",
     inputSchema: z.strictObject({
       request_id: requestId, occurred_at: occurredAt, source_tz: sourceTz,
       state: z.enum(AGENT_STATE_VALUES).describe("wake=기상, off=OFF, rising=상승 전환기, on=ON, falling=하강 전환기"),
@@ -118,7 +148,7 @@ export function buildServer(ctx: ToolContext): McpServer {
 
   server.registerTool("add_life_event", {
     title: "생활 기록 추가 요청",
-    description: "수면·식사·운동·배변·몸 상태 기록 추가를 요청합니다(승인 대기). 자유 메모는 받지 않습니다.",
+    description: "수면·식사·운동·배변·몸 상태 기록 추가를 요청합니다(기본 승인 대기, 바로 기록이 켜져 있으면 즉시 기록될 수 있음). 자유 메모는 받지 않습니다.",
     inputSchema: z.strictObject({
       request_id: requestId, occurred_at: occurredAt, source_tz: sourceTz,
       kind: z.enum(LIFE_KINDS),

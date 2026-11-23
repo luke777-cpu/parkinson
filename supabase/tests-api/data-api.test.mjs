@@ -74,7 +74,8 @@ test("에이전트: 직접 확정·수정·삭제·승인 거부, 연결 사용�
   const upd = await rest(tAgA, "PATCH", `/diary_events?legacy_id=eq.a-${run}-1`, { occurred_at: "2026-11-21T00:00:00Z" });
   assert.ok([401, 403].includes(upd.status));
   const del = await rest(tAgA, "DELETE", `/diary_events?legacy_id=eq.a-${run}-1`);
-  assert.ok([401, 403].includes(del.status));
+  // 20261123: 삭제 권한은 자동 기록 취소 함수 경로에만 RLS로 열림 → 직접 삭제는 거부 또는 0건(아래에서 그대로 남았는지 확인)
+  assert.ok([204, 401, 403].includes(del.status));
   const read = await rest(tAgA, "GET", `/diary_events?legacy_id=eq.a-${run}-1&select=id`);
   assert.equal(read.json.length, 1);
   const readB = await rest(tAgB, "GET", `/diary_events?legacy_id=eq.a-${run}-1&select=id`);
